@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { DownOutlined, EnvironmentOutlined } from "@ant-design/icons-vue";
 import { cities, navItems } from "../mock/policyNews";
 import logoImg from "../assets/logo-full.png";
@@ -12,6 +12,11 @@ defineOptions({ name: "AppHeader" });
 const activeNav = defineModel<string>("activeNav", { default: "home" });
 const currentCity = defineModel<string>("currentCity", { default: "郑州市" });
 const loginOpen = ref(false);
+const scrolled = ref(false);
+
+function onScroll() {
+  scrolled.value = window.scrollY > 8;
+}
 
 function onCitySelect({ key }: { key: string | number }) {
   currentCity.value = String(key);
@@ -24,10 +29,19 @@ function onNavClick({ key }: { key: string | number }) {
 function openLogin() {
   loginOpen.value = true;
 }
+
+onMounted(() => {
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+});
+
+onUnmounted(() => {
+  window.removeEventListener("scroll", onScroll);
+});
 </script>
 
 <template>
-  <a-layout-header class="app-header">
+  <a-layout-header class="app-header" :class="{ 'is-scrolled': scrolled }">
     <div class="header-inner">
       <div class="header-left">
         <div class="logo" @click="activeNav = 'home'">
@@ -88,6 +102,13 @@ function openLogin() {
   background: transparent !important;
   border-bottom: none;
   box-shadow: none;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+
+  &.is-scrolled {
+    background: #fff !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    padding-bottom: 17px !important;
+  }
 }
 
 .header-inner {

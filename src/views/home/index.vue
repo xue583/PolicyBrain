@@ -622,7 +622,7 @@ function goNews() {
   flex-direction: column;
   height: 100%;
   background: var(--pb-card);
-  border-radius: var(--pb-radius);
+  border-radius: 20px;
   padding: 4px 24px 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
@@ -835,7 +835,7 @@ function goNews() {
 
 .industry-card {
   padding: 18px 16px 16px;
-  border-radius: 24px;
+  border-radius: 20px;
   background-color: #eef5ff;
   background-size: cover;
   background-position: top center;
@@ -916,7 +916,7 @@ function goNews() {
 .info-card {
   flex: 1;
   background: var(--pb-card);
-  border-radius: var(--pb-radius);
+  border-radius: 20px;
   padding: 18px 16px 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
