@@ -362,7 +362,7 @@ function openDetail(item: PolicyItem) {
   left: 0;
   top: 0;
   width: 100%;
-  height: 760px;
+  height: 33%;
   opacity: 1;
   background-repeat: no-repeat;
   background-position: left top;
@@ -416,7 +416,7 @@ function openDetail(item: PolicyItem) {
   position: relative;
   display: flex;
   align-items: center;
-  width: 1200px;
+  width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
   padding: 112px 0 40px;
@@ -475,7 +475,7 @@ function openDetail(item: PolicyItem) {
 .page-content {
   position: relative;
   z-index: 1;
-  width: 1200px;
+  width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
   padding: 16px 0 40px;
@@ -673,7 +673,7 @@ function openDetail(item: PolicyItem) {
 }
 
 .footer-inner {
-  width: 1200px;
+  width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
 }

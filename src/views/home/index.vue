@@ -6,7 +6,7 @@ import {
   ClockCircleOutlined,
   EnvironmentOutlined,
   ArrowRightOutlined,
-  WechatOutlined,
+  CommentOutlined,
 } from "@ant-design/icons-vue";
 import {
   featureCards,
@@ -47,21 +47,25 @@ const iconMap: Record<string, string> = {
   workbench: iconWorkbench,
 };
 
-function onSearch() {
+const onSearch = () => {
   // placeholder
 }
 
-function loadMore() {
+const loadMore = () => {
   visibleNews.value = homeNewsList;
 }
 
-function applyHot(word: string) {
+const applyHot = (word: string) => {
   keyword.value = word;
   onSearch();
 }
 
-function goNews() {
+const goNews = () => {
   emit("navigate", "news");
+}
+
+const openBeian = () => {
+  window.open("https://beian.miit.gov.cn/");
 }
 </script>
 
@@ -261,7 +265,7 @@ function goNews() {
             <div class="info-block">
               <h4>联系我们</h4>
               <p><PhoneOutlined /> 客服电话：13838137683</p>
-              <p><WechatOutlined /> 客服微信：13838137683</p>
+              <p><CommentOutlined /> 客服微信：13838137683</p>
               <p><ClockCircleOutlined /> 工作时间：周一至周五 9:00-18:00</p>
             </div>
 
@@ -276,15 +280,18 @@ function goNews() {
             <div class="qr-row">
               <div class="qr-item">
                 <img :src="qrMini" alt="微信小程序" />
-                <button type="button" class="qr-btn">关注微信小程序</button>
+                <a-button type="primary" class="qr-btn"
+                  >关注微信小程序</a-button
+                >
               </div>
               <div class="qr-item">
                 <img :src="qrWechat" alt="公众号" />
-                <button type="button" class="qr-btn">政策宝公众号</button>
+                <a-button type="primary" class="qr-btn">政策宝公众号</a-button>
               </div>
             </div>
-
-            <p class="copyright">Copyright © 2026 政策大脑 AI Policy Brain</p>
+            <a-divider />
+            <p>版权所有：河南政策大脑数字科技有限公司</p>
+            <p class="beian-link" @click="openBeian">Copyright @ 2026·豫ICP备2026034913号-1</p>
           </div>
         </aside>
       </div>
@@ -320,30 +327,13 @@ function goNews() {
   left: 0;
   top: 0;
   width: 100%;
-  height: 55%;
+  height: 52%;
   background-image: var(--home-bg-sm);
   background-repeat: no-repeat;
   background-position: left top;
   background-size: 100% 70%;
   pointer-events: none;
   z-index: 0;
-
-  &::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(70% - 200px);
-    height: 280px;
-    background: linear-gradient(
-      180deg,
-      rgba(240, 242, 245, 0) 0%,
-      rgba(240, 242, 245, 0.45) 40%,
-      #f0f2f5 60%,
-      #f0f2f5 100%
-    );
-    pointer-events: none;
-  }
 }
 
 @media (min-width: 1440px) {
@@ -366,7 +356,7 @@ function goNews() {
 }
 
 .hero-inner {
-  width: 1200px;
+  width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
   padding: 108px 0 200px;
@@ -941,13 +931,14 @@ function goNews() {
 
     .anticon {
       margin-right: 6px;
-      color: var(--pb-primary);
+      vertical-align: middle;
     }
   }
 
   .address {
     display: flex;
-    align-items: flex-start;
+    justify-content: flex-start;
+    align-items: center;
     gap: 4px;
 
     .anticon {
@@ -997,18 +988,16 @@ function goNews() {
 .qr-btn {
   height: 26px;
   padding: 0 8px;
-  border: 1px solid var(--pb-primary);
   border-radius: 4px;
-  background: #fff;
-  color: var(--pb-primary);
+  color: white;
   font-size: 12px;
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
+}
 
-  &:hover {
-    background: #e6f4ff;
-  }
+.beian-link {
+  cursor: pointer;
 }
 
 .copyright {
