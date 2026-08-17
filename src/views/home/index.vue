@@ -49,24 +49,24 @@ const iconMap: Record<string, string> = {
 
 const onSearch = () => {
   // placeholder
-}
+};
 
 const loadMore = () => {
   visibleNews.value = homeNewsList;
-}
+};
 
 const applyHot = (word: string) => {
   keyword.value = word;
   onSearch();
-}
+};
 
 const goNews = () => {
   emit("navigate", "news");
-}
+};
 
 const openBeian = () => {
   window.open("https://beian.miit.gov.cn/");
-}
+};
 </script>
 
 <template>
@@ -291,7 +291,9 @@ const openBeian = () => {
             </div>
             <a-divider />
             <p>版权所有：河南政策大脑数字科技有限公司</p>
-            <p class="beian-link" @click="openBeian">Copyright @ 2026·豫ICP备2026034913号-1</p>
+            <p class="beian-link" @click="openBeian">
+              Copyright @ 2026·豫ICP备2026034913号-1
+            </p>
           </div>
         </aside>
       </div>
@@ -396,7 +398,7 @@ const openBeian = () => {
   display: flex;
   justify-content: center;
   gap: 28px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   padding-left: 4px;
 }
 
