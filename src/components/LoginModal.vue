@@ -1,189 +1,281 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
-import { QrcodeOutlined } from "@ant-design/icons-vue";
-import frameBg from "../assets/login/header-bg.png";
-import closeIcon from "../assets/login/close.png";
-import stepAccount from "../assets/login/register/step-account.png";
-import stepIdentityActive from "../assets/login/register/step-identity-active.png";
-import stepIdentityInactive from "../assets/login/register/step-identity-inactive.png";
-import stepAuthActive from "../assets/login/register/step-auth-active.png";
-import stepAuthInactive from "../assets/login/register/step-auth-inactive.png";
-import vipBanner from "../assets/login/register/vip-banner.png";
-import vipBadge from "../assets/login/register/vip-badge.png";
-import roleEnterprise from "../assets/login/register/role-enterprise.png";
-import roleService from "../assets/login/register/role-service.png";
+import { computed, reactive, ref, watch } from 'vue'
+import { QrcodeOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import frameBg from '../assets/login/header-bg.png'
+import closeIcon from '../assets/login/close.png'
+import stepAccount from '../assets/login/register/step-account.png'
+import stepIdentityActive from '../assets/login/register/step-identity-active.png'
+import stepIdentityInactive from '../assets/login/register/step-identity-inactive.png'
+import stepAuthActive from '../assets/login/register/step-auth-active.png'
+import stepAuthInactive from '../assets/login/register/step-auth-inactive.png'
+import vipBanner from '../assets/login/register/vip-banner.png'
+import vipBadge from '../assets/login/register/vip-badge.png'
+import roleEnterprise from '../assets/login/register/role-enterprise.png'
+import roleService from '../assets/login/register/role-service.png'
+import { ApiError } from '@/utils/request'
+import { useAuthStore } from '@/stores/auth'
+import { PolicyUserType } from '@/api/auth'
+import LoginForm from './login/LoginForm.vue'
+import RegisterStepAccount from './login/RegisterStepAccount.vue'
+import RegisterStepIdentity from './login/RegisterStepIdentity.vue'
+import RegisterStepAuth from './login/RegisterStepAuth.vue'
 
-defineOptions({ name: "LoginModal" });
+const auth = useAuthStore()
 
-const open = defineModel<boolean>("open", { default: false });
+defineOptions({ name: 'LoginModal' })
 
-type AuthTab = "login" | "register";
-type AuthMode = "phone" | "qrcode";
-type RegisterStep = 1 | 2 | 3;
-type IdentityRole = "enterprise" | "service" | "";
+const open = defineModel<boolean>('open', { default: false })
+const emit = defineEmits<{
+  success: []
+}>()
 
-const tab = ref<AuthTab>("login");
-const mode = ref<AuthMode>("phone");
-const registerStep = ref<RegisterStep>(1);
-const phone = ref("");
-const code = ref("");
-const phoneError = ref("");
-const countdown = ref(0);
-const identity = ref<IdentityRole>("");
-const identityError = ref("");
-const formError = ref("");
+const submitting = ref(false)
+const sendingCode = ref(false)
+
+type AuthTab = 'login' | 'register'
+type AuthMode = 'phone' | 'qrcode'
+type RegisterStep = 1 | 2 | 3
+type IdentityRole = PolicyUserType | ''
+
+const tab = ref<AuthTab>('login')
+const mode = ref<AuthMode>('phone')
+const registerStep = ref<RegisterStep>(1)
+const phone = ref('')
+const code = ref('')
+const phoneError = ref('')
+const countdown = ref(0)
+const identity = ref<IdentityRole>('')
+const identityError = ref('')
+const formError = ref('')
 
 const authForm = reactive({
-  companyName: "",
-  creditCode: "",
-  position: "",
-  nickname: "",
-  inviteCode: "",
-});
+  companyName: '',
+  unifiedSocialCreditCode: '',
+  jobTitle: '',
+  nickname: '',
+  invitationCode: '',
+})
 
-let timer: ReturnType<typeof setInterval> | null = null;
+let timer: ReturnType<typeof setInterval> | null = null
 
-const loginTitle = "欢迎登录政策大脑平台";
-const registerTitle = "注册政策大脑会员";
+const registerTitle = '注册政策大脑会员'
 
 const codeBtnText = computed(() =>
-  countdown.value > 0 ? `${countdown.value}s` : "获取验证码",
-);
+  countdown.value > 0 ? `${countdown.value}s` : '获取验证码',
+)
 
 /** a-steps 的 current 从 0 起 */
-const stepsCurrent = computed(() => registerStep.value - 1);
+const stepsCurrent = computed(() => registerStep.value - 1)
 
 const registerSteps = computed(() => [
   {
-    title: "1、账户验证",
+    title: '1、账户验证',
     icon: stepAccount,
   },
   {
-    title: "2、身份选择",
-    icon:
-      registerStep.value >= 2 ? stepIdentityActive : stepIdentityInactive,
+    title: '2、身份选择',
+    icon: registerStep.value >= 2 ? stepIdentityActive : stepIdentityInactive,
   },
   {
-    title: "3、身份认证",
+    title: '3、身份认证',
     icon: registerStep.value >= 3 ? stepAuthActive : stepAuthInactive,
   },
-]);
+])
 
 const roles = [
   {
-    key: "enterprise" as const,
-    title: "企业专员",
-    desc: "负责所在企业的政策管理与申报",
+    key: PolicyUserType.EnterpriseSpecialist,
+    title: '企业专员',
+    desc: '负责所在企业的政策管理与申报',
     icon: roleEnterprise,
   },
   {
-    key: "service" as const,
-    title: "企服人员",
-    desc: "负责所在企业的政策管理与申报",
+    key: PolicyUserType.EnterpriseService,
+    title: '企服人员',
+    desc: '负责所在企业的政策管理与申报',
     icon: roleService,
   },
-];
+]
+
+const stopCountdown = () => {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+  countdown.value = 0
+}
+
+const resetAll = () => {
+  tab.value = 'login'
+  mode.value = 'phone'
+  registerStep.value = 1
+  phone.value = ''
+  code.value = ''
+  phoneError.value = ''
+  identity.value = ''
+  identityError.value = ''
+  formError.value = ''
+  sendingCode.value = false
+  authForm.companyName = ''
+  authForm.unifiedSocialCreditCode = ''
+  authForm.jobTitle = ''
+  authForm.nickname = ''
+  authForm.invitationCode = ''
+  stopCountdown()
+}
 
 watch(open, (v) => {
-  if (v) resetAll();
-});
+  if (v) resetAll()
+  else stopCountdown()
+})
 
-function resetAll() {
-  tab.value = "login";
-  mode.value = "phone";
-  registerStep.value = 1;
-  phone.value = "";
-  code.value = "";
-  phoneError.value = "";
-  identity.value = "";
-  identityError.value = "";
-  formError.value = "";
-  authForm.companyName = "";
-  authForm.creditCode = "";
-  authForm.position = "";
-  authForm.nickname = "";
-  authForm.inviteCode = "";
+const close = () => {
+  open.value = false
 }
 
-function close() {
-  open.value = false;
+const switchTab = (next: AuthTab) => {
+  tab.value = next
+  phoneError.value = ''
+  identityError.value = ''
+  formError.value = ''
+  mode.value = 'phone'
+  registerStep.value = 1
 }
 
-function switchTab(next: AuthTab) {
-  tab.value = next;
-  phoneError.value = "";
-  identityError.value = "";
-  formError.value = "";
-  mode.value = "phone";
-  registerStep.value = 1;
+const toggleQr = () => {
+  mode.value = mode.value === 'phone' ? 'qrcode' : 'phone'
+  phoneError.value = ''
 }
 
-function toggleQr() {
-  mode.value = mode.value === "phone" ? "qrcode" : "phone";
-  phoneError.value = "";
-}
-
-function validatePhone(value: string) {
+const validatePhone = (value: string) => {
   if (!value || !/^1\d{10}$/.test(value)) {
-    phoneError.value = "请输入正确的11位手机号";
-    return false;
+    phoneError.value = '请输入正确的11位手机号'
+    return false
   }
-  phoneError.value = "";
-  return true;
+  phoneError.value = ''
+  return true
 }
 
-function onPhoneBlur() {
-  if (phone.value) validatePhone(phone.value);
+const onPhoneBlur = () => {
+  if (phone.value) validatePhone(phone.value)
 }
 
-function sendCode() {
-  if (countdown.value > 0) return;
-  if (!validatePhone(phone.value)) return;
-  countdown.value = 60;
-  timer && clearInterval(timer);
+const startCountdown = () => {
+  stopCountdown()
+  countdown.value = 60
   timer = setInterval(() => {
-    countdown.value -= 1;
-    if (countdown.value <= 0 && timer) {
-      clearInterval(timer);
-      timer = null;
-    }
-  }, 1000);
+    countdown.value -= 1
+    if (countdown.value <= 0) stopCountdown()
+  }, 1000)
 }
 
-function onLoginSubmit() {
-  if (!validatePhone(phone.value)) return;
-  if (!code.value.trim()) {
-    phoneError.value = "请输入短信验证码";
-    return;
+const sendCode = async () => {
+  if (countdown.value > 0 || sendingCode.value) return
+  if (!validatePhone(phone.value)) return
+  sendingCode.value = true
+  try {
+    await auth.requestSmsCode(phone.value)
+    message.success('验证码已发送')
+    startCountdown()
+  } catch (err) {
+    phoneError.value =
+      err instanceof ApiError ? err.message : '验证码发送失败，请稍后重试'
+  } finally {
+    sendingCode.value = false
   }
-  close();
 }
 
-function goRegisterStep2() {
-  if (!validatePhone(phone.value)) return;
-  if (!code.value.trim()) {
-    phoneError.value = "请输入短信验证码";
-    return;
+const onLoginSubmit = async () => {
+  if (submitting.value) return
+  if (!validatePhone(phone.value)) return
+  if (!/^\d{4}$/.test(code.value.trim())) {
+    phoneError.value = '请输入4位短信验证码'
+    return
   }
-  registerStep.value = 2;
+  submitting.value = true
+  try {
+    await auth.loginBySms(phone.value, code.value.trim())
+    message.success('登录成功')
+    emit('success')
+    close()
+  } catch (err) {
+    phoneError.value =
+      err instanceof ApiError ? err.message : '登录失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
 }
 
-function goRegisterStep3() {
+const goRegisterStep2 = async () => {
+  if (submitting.value) return
+  if (!validatePhone(phone.value)) return
+  if (!/^\d{4}$/.test(code.value.trim())) {
+    phoneError.value = '请输入4位短信验证码'
+    return
+  }
+  submitting.value = true
+  try {
+    // 预校验可选；失败时仍允许用户改码重试
+    await auth.verifyRegisterCode(phone.value, code.value.trim())
+    registerStep.value = 2
+  } catch (err) {
+    phoneError.value =
+      err instanceof ApiError ? err.message : '验证码校验失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+const goRegisterStep3 = () => {
   if (!identity.value) {
-    identityError.value = "请选择使用身份";
-    return;
+    identityError.value = '请选择使用身份'
+    return
   }
-  identityError.value = "";
-  registerStep.value = 3;
+  identityError.value = ''
+  registerStep.value = 3
 }
 
-function submitRegister() {
-  if (!authForm.companyName.trim() || !authForm.creditCode.trim()) {
-    formError.value = "请填写带 * 的必填信息";
-    return;
+const submitRegister = async () => {
+  if (submitting.value) return
+  const creditRequired = identity.value === PolicyUserType.EnterpriseSpecialist
+  if (
+    !authForm.companyName.trim() ||
+    (creditRequired && !authForm.unifiedSocialCreditCode.trim())
+  ) {
+    formError.value = '请填写带 * 的必填信息'
+    return
   }
-  formError.value = "";
-  close();
+  if (!validatePhone(phone.value) || !/^\d{4}$/.test(code.value.trim())) {
+    formError.value = '请返回账户验证步骤检查手机号与验证码'
+    return
+  }
+  formError.value = ''
+  submitting.value = true
+  try {
+    await auth.loginBySms(phone.value, code.value.trim())
+    try {
+      await auth.updateProfile({
+        identity: identity.value || undefined,
+        companyName: authForm.companyName.trim(),
+        unifiedSocialCreditCode:
+          authForm.unifiedSocialCreditCode.trim() || undefined,
+        jobTitle: authForm.jobTitle.trim() || undefined,
+        nickname: authForm.nickname.trim() || undefined,
+        invitationCode: authForm.invitationCode.trim() || undefined,
+      })
+    } catch {
+      // 资料更新失败不影响已建立的会话
+    }
+    message.success('注册成功')
+    emit('success')
+    close()
+  } catch (err) {
+    formError.value =
+      err instanceof ApiError ? err.message : '注册失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -197,7 +289,12 @@ function submitRegister() {
           role="dialog"
           aria-modal="true"
         >
-          <button type="button" class="login-close" aria-label="关闭" @click="close">
+          <button
+            type="button"
+            class="login-close"
+            aria-label="关闭"
+            @click="close"
+          >
             <img :src="closeIcon" alt="" />
           </button>
 
@@ -218,63 +315,21 @@ function submitRegister() {
 
             <div class="login-body">
               <template v-if="mode === 'phone'">
-                <!-- LOGIN -->
-                <template v-if="tab === 'login'">
-                  <p class="login-welcome">{{ loginTitle }}</p>
+                <LoginForm
+                  v-if="tab === 'login'"
+                  v-model:phone="phone"
+                  v-model:code="code"
+                  :phone-error="phoneError"
+                  :countdown="countdown"
+                  :sending-code="sendingCode"
+                  :submitting="submitting"
+                  :code-btn-text="codeBtnText"
+                  @switch-tab="switchTab"
+                  @blur-phone="onPhoneBlur"
+                  @send-code="sendCode"
+                  @submit="onLoginSubmit"
+                />
 
-                  <div class="login-tabs">
-                    <button
-                      type="button"
-                      class="login-tab active"
-                      @click="switchTab('login')"
-                    >
-                      登录
-                    </button>
-                    <button
-                      type="button"
-                      class="login-tab"
-                      @click="switchTab('register')"
-                    >
-                      注册
-                    </button>
-                  </div>
-
-                  <p v-if="phoneError" class="login-error">{{ phoneError }}</p>
-                  <div v-else class="login-error-slot" />
-
-                  <input
-                    v-model="phone"
-                    class="login-input"
-                    type="tel"
-                    maxlength="11"
-                    placeholder="请输入手机号"
-                    @blur="onPhoneBlur"
-                  />
-
-                  <div class="login-code-row">
-                    <input
-                      v-model="code"
-                      class="login-input login-input--code"
-                      type="text"
-                      maxlength="6"
-                      placeholder="请输入短信验证码"
-                    />
-                    <button
-                      type="button"
-                      class="code-btn"
-                      :disabled="countdown > 0"
-                      @click="sendCode"
-                    >
-                      {{ codeBtnText }}
-                    </button>
-                  </div>
-
-                  <button type="button" class="login-submit" @click="onLoginSubmit">
-                    登录账号
-                  </button>
-                </template>
-
-                <!-- REGISTER -->
                 <template v-else>
                   <p class="login-welcome">{{ registerTitle }}</p>
 
@@ -309,216 +364,64 @@ function submitRegister() {
                     </a-step>
                   </a-steps>
 
-                  <!-- Step 1: account -->
-                  <template v-if="registerStep === 1">
-                    <div
-                      class="vip-banner"
-                      :style="{ backgroundImage: `url(${vipBanner})` }"
-                    >
-                      <div class="vip-banner-copy">
-                        <div class="vip-banner-title">
-                          <span>新用户会员礼遇</span>
-                          <img :src="vipBadge" alt="VIP" class="vip-badge" />
-                        </div>
-                        <p class="vip-banner-desc">
-                          完成注册与身份认证，即可获赠3个月VIP
-                        </p>
-                      </div>
-                    </div>
+                  <RegisterStepAccount
+                    v-if="registerStep === 1"
+                    v-model:phone="phone"
+                    v-model:code="code"
+                    :phone-error="phoneError"
+                    :countdown="countdown"
+                    :sending-code="sendingCode"
+                    :submitting="submitting"
+                    :code-btn-text="codeBtnText"
+                    :vip-banner="vipBanner"
+                    :vip-badge="vipBadge"
+                    @blur-phone="onPhoneBlur"
+                    @send-code="sendCode"
+                    @next="goRegisterStep2"
+                  />
 
-                    <p v-if="phoneError" class="login-error">{{ phoneError }}</p>
-                    <div v-else class="login-error-slot" />
+                  <RegisterStepIdentity
+                    v-else-if="registerStep === 2"
+                    :identity="identity"
+                    :identity-error="identityError"
+                    :roles="roles"
+                    @update:identity="
+                      identity = $event
+                      identityError = ''
+                    "
+                    @prev="registerStep = 1"
+                    @next="goRegisterStep3"
+                  />
 
-                    <input
-                      v-model="phone"
-                      class="login-input"
-                      type="tel"
-                      maxlength="11"
-                      placeholder="请输入手机号"
-                      @blur="onPhoneBlur"
-                    />
-
-                    <div class="login-code-row">
-                      <input
-                        v-model="code"
-                        class="login-input login-input--code"
-                        type="text"
-                        maxlength="6"
-                        placeholder="请输入短信验证码"
-                      />
-                      <button
-                        type="button"
-                        class="code-btn"
-                        :disabled="countdown > 0"
-                        @click="sendCode"
-                      >
-                        {{ codeBtnText }}
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      class="login-submit"
-                      @click="goRegisterStep2"
-                    >
-                      下一步：选择身份
-                    </button>
-                  </template>
-
-                  <!-- Step 2: identity -->
-                  <template v-else-if="registerStep === 2">
-                    <div class="identity-head">
-                      <h3>您主要如何使用平台？</h3>
-                      <p>身份必选，会员价格和核心权益保持一致</p>
-                    </div>
-
-                    <p v-if="identityError" class="login-error">
-                      {{ identityError }}
-                    </p>
-
-                    <div class="identity-list">
-                      <button
-                        v-for="role in roles"
-                        :key="role.key"
-                        type="button"
-                        class="identity-card"
-                        :class="{ selected: identity === role.key }"
-                        @click="
-                          identity = role.key;
-                          identityError = '';
-                        "
-                      >
-                        <img :src="role.icon" :alt="role.title" class="identity-icon" />
-                        <div class="identity-meta">
-                          <strong>{{ role.title }}</strong>
-                          <span>{{ role.desc }}</span>
-                        </div>
-                        <span class="identity-check" />
-                      </button>
-                    </div>
-
-                    <div class="reg-actions">
-                      <button
-                        type="button"
-                        class="btn-ghost"
-                        @click="registerStep = 1"
-                      >
-                        上一步：账户验证
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-primary"
-                        @click="goRegisterStep3"
-                      >
-                        下一步：身份认证
-                      </button>
-                    </div>
-                  </template>
-
-                  <!-- Step 3: auth form — multi formItem per row -->
-                  <template v-else>
-                    <div class="auth-head">
-                      <h3>企业专业认证资料</h3>
-                      <p>带*的信息用于确认服务身份</p>
-                    </div>
-
-                    <p v-if="formError" class="login-error">{{ formError }}</p>
-
-                    <div class="auth-form">
-                      <div class="form-row">
-                        <label class="form-item">
-                          <span class="form-label"
-                            ><i>*</i>公司名称或简称</span
-                          >
-                          <input
-                            v-model="authForm.companyName"
-                            class="form-input"
-                            placeholder="请输入内容"
-                          />
-                        </label>
-                      </div>
-
-                      <div class="form-row">
-                        <label class="form-item">
-                          <span class="form-label"
-                            ><i>*</i>统一社会信用代码</span
-                          >
-                          <input
-                            v-model="authForm.creditCode"
-                            class="form-input"
-                            placeholder="请输入内容"
-                          />
-                        </label>
-                      </div>
-
-                      <div class="form-row form-row--2">
-                        <label class="form-item">
-                          <span class="form-label">职务</span>
-                          <input
-                            v-model="authForm.position"
-                            class="form-input"
-                            placeholder="请输入内容"
-                          />
-                        </label>
-                        <label class="form-item">
-                          <span class="form-label">个人昵称</span>
-                          <input
-                            v-model="authForm.nickname"
-                            class="form-input"
-                            placeholder="请输入内容"
-                          />
-                        </label>
-                      </div>
-
-                      <div class="form-row">
-                        <label class="form-item">
-                          <span class="form-label">邀请人邀请码</span>
-                          <input
-                            v-model="authForm.inviteCode"
-                            class="form-input"
-                            placeholder="请输入内容"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    <div
-                      class="vip-banner vip-banner--auth"
-                      :style="{ backgroundImage: `url(${vipBanner})` }"
-                    >
-                      <div class="vip-banner-copy">
-                        <div class="vip-banner-title">
-                          <span>认证礼遇</span>
-                        </div>
-                        <p class="vip-banner-desc">
-                          提交后自动获赠3个月VIP，后期更有专属工作台板块上线，敬请期待
-                        </p>
-                      </div>
-                    </div>
-
-                    <div class="reg-actions">
-                      <button
-                        type="button"
-                        class="btn-ghost"
-                        @click="registerStep = 2"
-                      >
-                        上一步：身份选择
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-primary"
-                        @click="submitRegister"
-                      >
-                        下一步：完成认证并领取VIP
-                      </button>
-                    </div>
-                  </template>
+                  <RegisterStepAuth
+                    v-else
+                    :identity="identity"
+                    :form-error="formError"
+                    :submitting="submitting"
+                    :vip-banner="vipBanner"
+                    :company-name="authForm.companyName"
+                    :unified-social-credit-code="
+                      authForm.unifiedSocialCreditCode
+                    "
+                    :job-title="authForm.jobTitle"
+                    :nickname="authForm.nickname"
+                    :invitation-code="authForm.invitationCode"
+                    @update:company-name="authForm.companyName = $event"
+                    @update:unified-social-credit-code="
+                      authForm.unifiedSocialCreditCode = $event
+                    "
+                    @update:job-title="authForm.jobTitle = $event"
+                    @update:nickname="authForm.nickname = $event"
+                    @update:invitation-code="authForm.invitationCode = $event"
+                    @prev="registerStep = 2"
+                    @submit="submitRegister"
+                  />
                 </template>
               </template>
 
               <div v-else class="login-qr">
                 <p class="login-welcome">
-                  微信扫码{{ tab === "login" ? "登录" : "注册" }}
+                  微信扫码{{ tab === 'login' ? '登录' : '注册' }}
                 </p>
                 <div class="qr-box">
                   <QrcodeOutlined class="qr-placeholder" />
@@ -533,7 +436,7 @@ function submitRegister() {
   </Teleport>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
 .login-overlay {
   position: fixed;
   inset: 0;
@@ -620,7 +523,7 @@ function submitRegister() {
   width: 28px;
   height: 28px;
   border-radius: 4px;
-  background: #1677ff;
+  background: var(--pb-primary);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -659,18 +562,18 @@ function submitRegister() {
   cursor: pointer;
 
   &.active {
-    color: #1677ff;
+    color: var(--pb-primary);
     font-weight: 600;
 
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       left: 50%;
       bottom: 0;
       width: 28px;
       height: 3px;
       border-radius: 2px;
-      background: #1677ff;
+      background: var(--pb-primary);
       transform: translateX(-50%);
     }
   }
@@ -726,7 +629,7 @@ function submitRegister() {
   border: none;
   border-radius: 6px;
   background: #e8f1ff;
-  color: #1677ff;
+  color: var(--pb-primary);
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
@@ -748,7 +651,7 @@ function submitRegister() {
   height: 46px;
   border: none;
   border-radius: 8px;
-  background: #1677ff;
+  background: var(--pb-primary);
   color: #fff;
   font-size: 15px;
   font-weight: 500;
@@ -779,7 +682,7 @@ function submitRegister() {
 
   /* 自绘连线：当前节点右缘 → 下一节点左缘 */
   :deep(.ant-steps-item:not(:last-child)::after) {
-    content: "";
+    content: '';
     position: absolute;
     top: 14px;
     left: calc(50% + 18px);
@@ -790,7 +693,7 @@ function submitRegister() {
   }
 
   :deep(.ant-steps-item-finish:not(:last-child)::after) {
-    border-top: 1px solid #1677ff;
+    border-top: 1px solid var(--pb-primary);
   }
 
   :deep(.ant-steps-item-container) {
@@ -848,7 +751,7 @@ function submitRegister() {
 
   :deep(.ant-steps-item-process .ant-steps-item-title),
   :deep(.ant-steps-item-finish .ant-steps-item-title) {
-    color: #1677ff !important;
+    color: var(--pb-primary) !important;
     font-weight: 500;
   }
 }
@@ -952,15 +855,17 @@ function submitRegister() {
   background: #f5f8fc;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 
   &.selected {
-    border-color: #1677ff;
+    border-color: var(--pb-primary);
     background: #f0f6ff;
 
     .identity-check {
-      border-color: #1677ff;
-      background: #1677ff;
+      border-color: var(--pb-primary);
+      background: var(--pb-primary);
 
       &::after {
         opacity: 1;
@@ -1005,7 +910,7 @@ function submitRegister() {
   background: #fff;
 
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     left: 6px;
     top: 3px;
@@ -1026,10 +931,10 @@ function submitRegister() {
 .btn-ghost {
   flex: 1;
   height: 46px;
-  border: 1px solid #1677ff;
+  border: 1px solid var(--pb-primary);
   border-radius: 8px;
   background: #fff;
-  color: #1677ff;
+  color: var(--pb-primary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -1117,7 +1022,7 @@ function submitRegister() {
   }
 
   &:focus {
-    border-color: #1677ff;
+    border-color: var(--pb-primary);
     box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
   }
 }
@@ -1158,7 +1063,9 @@ function submitRegister() {
   transition: opacity 0.2s ease;
 
   .login-dialog {
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      opacity 0.2s ease;
   }
 }
 

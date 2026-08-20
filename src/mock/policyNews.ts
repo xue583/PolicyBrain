@@ -1,6 +1,16 @@
+import type { PolicyInfoType, PolicyLevel } from './filters'
+
+export type { PolicyInfoType, PolicyLevel }
+export { regions, industries, policyLevels, infoTypes } from './filters'
+
 export interface PolicyTag {
   text: string
   color: string
+}
+
+export interface PolicyAttachment {
+  name: string
+  url: string
 }
 
 export interface PolicyItem {
@@ -13,6 +23,46 @@ export interface PolicyItem {
   endDate: string
   department: string
   daysRemaining: number
+  region: string
+  industry: string
+  level: PolicyLevel
+  infoType: PolicyInfoType
+  content: string
+  attachments: PolicyAttachment[]
+  originalUrl: string
+}
+
+const defaultAttachments: PolicyAttachment[] = [
+  {
+    name: '1. 《郑州市科技计划项目管理办法（征求意见稿）》.wps',
+    url: '#',
+  },
+  {
+    name: '2. 《郑州市科技协同创新项目实施细则》（征求意见稿）.docx',
+    url: '#',
+  },
+]
+
+const buildContent = (title: string, department: string): string => {
+  return [
+    `<p>郑东新区管委会各有关单位、区直各部门，各有关单位：</p>`,
+    `<p>为深入贯彻落实创新驱动发展战略，做好相关申报组织工作，现将《${title}》有关事项通知如下：</p>`,
+    `<p><strong>一、申报要求</strong></p>`,
+    `<p>（一）申报单位应为在本市依法注册、具有独立法人资格的企事业单位、高校院所或其他组织，具备完成项目所需的研发基础与组织实施能力。</p>`,
+    `<p>（二）申报项目应符合当年度指南方向，研究内容清晰、目标可考核，不得与已获财政支持项目重复申报。</p>`,
+    `<p>（三）申报材料应真实、完整、规范，按要求通过指定系统提交，逾期不予受理。</p>`,
+    `<p><strong>二、推荐渠道</strong></p>`,
+    `<p>（一）区属企事业单位、高校院所由所属主管部门或园区管委会审核推荐。</p>`,
+    `<p>（二）其他符合条件的单位按属地原则，向所在区县科技管理部门提出申请。</p>`,
+    `<p><strong>三、申报程序</strong></p>`,
+    `<p>（一）网上填报：登录指定申报系统填写信息并上传材料。</p>`,
+    `<p>（二）形式审查：推荐单位对申报材料完整性、合规性进行审查。</p>`,
+    `<p>（三）专家评审：组织专家对通过形式审查的项目进行评审论证。</p>`,
+    `<p>（四）结果公示：评审结果按规定程序公示，公示无异议后按程序办理。</p>`,
+    `<p><strong>四、其他事项</strong></p>`,
+    `<p>请各单位高度重视，认真组织申报。具体事项可咨询${department}，联系电话：0371-12345678。</p>`,
+    `<p>特此通知。</p>`,
+  ].join('')
 }
 
 export const navItems = [
@@ -25,62 +75,65 @@ export const navItems = [
   { key: 'api', label: 'API接口' },
 ]
 
-export function getSubPageHero(pageKey: string) {
+const heroByPage: Record<
+  string,
+  {
+    slogan: string
+    description: string
+    searchPlaceholder: string
+    hideSearch?: boolean
+  }
+> = {
+  news: {
+    slogan: '政策脉动，一手掌握',
+    description:
+      '支持省、市、区县三级筛选，支持20000页内跳转，深分页最多追赶100页',
+    searchPlaceholder: '搜索政策关键词或项目名称',
+  },
+  'policy-db': {
+    slogan: '三级政策，一库全收，决策快人一步。',
+    description:
+      '支持省、市、区县三级筛选，支持20000页内跳转，分页最多追赶100页',
+    searchPlaceholder: '搜索政策标题',
+  },
+  'invest-db': {
+    slogan: '汇集数据，实时动态',
+    description:
+      '专注于项目维度的数据整合，汇聚了区域内的招商项目信息、开工项目数、项目总投资及落地数量等关键数据',
+    searchPlaceholder: '搜索项目名称、代码或单位',
+    hideSearch: true,
+  },
+  export: {
+    slogan: '数据资产，一键下载',
+    description:
+      '提供高级搜索、批量查询功能，精准筛选企业数据，支持多格式一键导出，便于研究分析与报告撰写。',
+    searchPlaceholder: '',
+    hideSearch: true,
+  },
+}
+
+const defaultHero = {
+  slogan: '政策脉动，一手掌握',
+  description:
+    '支持省、市、区县三级筛选，支持20000页内跳转，深分页最多追赶100页',
+  searchPlaceholder: '搜索政策关键词或项目名称',
+  hideSearch: false,
+}
+
+export const getSubPageHero = (pageKey: string) => {
   const label = navItems.find((item) => item.key === pageKey)?.label ?? ''
   return {
-    slogan: '政策脉动，一手掌握',
     title: label,
-    description: '支持省、市、区县三级筛选，支持20000页内跳转，深分页最多追赶100页',
-    searchPlaceholder: '搜索政策关键词或项目名称',
+    ...(heroByPage[pageKey] ?? defaultHero),
   }
 }
 
-export const regions = [
-  '北京市',
-  '天津市',
-  '河北省',
-  '山西省',
-  '内蒙古自治区',
-  '辽宁省',
-  '吉林省',
-  '黑龙江省',
-  '上海市',
-  '江苏省',
-  '浙江省',
-  '安徽省',
-  '福建省',
-  '江西省',
-  '山东省',
-  '河南省',
-]
-
-export const industries = [
-  '采矿业',
-  '电力、热力、燃气及水生产和供应业',
-  '房地产业',
-  '建筑业',
-  '交通运输、仓储和邮政业',
-  '教育',
-  '金融业',
-  '居民服务、修理和其他服务业',
-]
-
-export const policyLevels = [
-  { label: '国家级', value: 'national' },
-  { label: '省级', value: 'provincial' },
-  { label: '市级', value: 'municipal' },
-  { label: '区级', value: 'district' },
-]
-
-export const infoTypes = [
-  { label: '申报中', value: 'applying' },
-  { label: '公示中', value: 'publicizing' },
-  { label: '新发文', value: 'new' },
-]
-
 export const cities = ['郑州市', '洛阳市', '开封市', '新乡市', '许昌市']
 
-export const mockPolicies: PolicyItem[] = [
+const policySeeds: Omit<
+  PolicyItem,
+  'content' | 'attachments' | 'originalUrl'
+>[] = [
   {
     id: 1,
     title: '关于印发郑州市推进人工智能创新发展若干措施的通知',
@@ -96,6 +149,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-08-16',
     department: '郑州市科学技术局',
     daysRemaining: 0,
+    region: '河南省',
+    industry: '信息技术',
+    level: 'municipal',
+    infoType: 'new',
   },
   {
     id: 2,
@@ -112,6 +169,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-07-10',
     department: '郑州市工业和信息化局',
     daysRemaining: 0,
+    region: '河南省',
+    industry: '高新技术',
+    level: 'municipal',
+    infoType: 'applying',
   },
   {
     id: 3,
@@ -128,6 +189,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-06-20',
     department: '郑州市科学技术局',
     daysRemaining: 0,
+    region: '河南省',
+    industry: '高新技术',
+    level: 'municipal',
+    infoType: 'applying',
   },
   {
     id: 4,
@@ -144,6 +209,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-05-08',
     department: '郑州市发展和改革委员会',
     daysRemaining: 0,
+    region: '河南省',
+    industry: '信息技术',
+    level: 'municipal',
+    infoType: 'publicizing',
   },
   {
     id: 5,
@@ -160,6 +229,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-04-22',
     department: '郑州市统计局',
     daysRemaining: 0,
+    region: '河南省',
+    industry: '信息技术',
+    level: 'municipal',
+    infoType: 'new',
   },
   {
     id: 6,
@@ -176,6 +249,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-09-15',
     department: '郑州市工业和信息化局',
     daysRemaining: 45,
+    region: '河南省',
+    industry: '制造业',
+    level: 'municipal',
+    infoType: 'new',
   },
   {
     id: 7,
@@ -192,6 +269,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-09-02',
     department: '河南省科学技术厅',
     daysRemaining: 28,
+    region: '河南省',
+    industry: '高新技术',
+    level: 'provincial',
+    infoType: 'applying',
   },
   {
     id: 8,
@@ -208,6 +289,10 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-10-09',
     department: '郑州市工业和信息化局',
     daysRemaining: 60,
+    region: '河南省',
+    industry: '制造业',
+    level: 'municipal',
+    infoType: 'applying',
   },
   {
     id: 9,
@@ -224,5 +309,20 @@ export const mockPolicies: PolicyItem[] = [
     endDate: '2026-08-27',
     department: '郑州市科学技术局',
     daysRemaining: 15,
+    region: '河南省',
+    industry: '高新技术',
+    level: 'municipal',
+    infoType: 'new',
   },
 ]
+
+export const mockPolicies: PolicyItem[] = policySeeds.map((item) => ({
+  ...item,
+  content: buildContent(item.title, item.department),
+  attachments: defaultAttachments,
+  originalUrl: 'https://www.zhengzhou.gov.cn/',
+}))
+
+export const getPolicyById = (id: number): PolicyItem | undefined => {
+  return mockPolicies.find((item) => item.id === id)
+}

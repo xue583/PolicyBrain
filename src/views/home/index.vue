@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   RightOutlined,
   PhoneOutlined,
@@ -7,66 +8,102 @@ import {
   EnvironmentOutlined,
   ArrowRightOutlined,
   CommentOutlined,
-} from "@ant-design/icons-vue";
+} from '@ant-design/icons-vue'
 import {
   featureCards,
   hotKeywords,
   industryTags,
   homeNewsList,
-} from "../../mock/home";
-import heroDecorSm from "../../assets/home/hero-decor-sm.png";
-import heroDecorMd from "../../assets/home/hero-decor-1x.png";
-import heroDecorLg from "../../assets/home/hero-decor.png";
-import promoBanner from "../../assets/home/promo-banner.png";
-import iconPolicy from "../../assets/home/icon-policy.png";
-import iconEnterprise from "../../assets/home/icon-enterprise.png";
-import iconRobot from "../../assets/home/robot.png";
-import iconWorkbench from "../../assets/home/icon-workbench.svg";
-import iconIndustry from "../../assets/home/icon-industry.png";
-import industryBg from "../../assets/home/industry-card-bg.png";
-import infoTitleBg from "../../assets/home/info-title-bg.png";
-import featureCardBg from "../../assets/home/feature-card-bg.png";
-import qrMini from "../../assets/home/qr-miniprogram.png";
-import qrWechat from "../../assets/home/qr-wechat.png";
+  homeFollowList,
+} from '../../mock/home'
+import { SITE } from '@/constants/site'
+import { navItems } from '@/mock/policyNews'
+import SiteQrBlock from '@/components/SiteQrBlock.vue'
+import heroDecorSm from '../../assets/home/hero-decor-sm.png'
+import promoBanner from '../../assets/home/promo-banner.png'
+import iconPolicy from '../../assets/home/icon-policy.png'
+import iconEnterprise from '../../assets/home/icon-enterprise.png'
+import iconRobot from '../../assets/home/robot.png'
+import iconWorkbench from '../../assets/home/icon-workbench.svg'
+import iconIndustry from '../../assets/home/icon-industry.png'
+import industryBg from '../../assets/home/industry-card-bg.png'
+import infoTitleBg from '../../assets/home/info-title-bg.png'
+import featureCardBg from '../../assets/home/feature-card-bg.png'
 
-defineOptions({ name: "HomePage" });
+defineOptions({ name: 'HomePage' })
 
-const emit = defineEmits<{
-  navigate: [key: string];
-}>();
+const router = useRouter()
+const searchType = ref<'policy' | 'enterprise'>('policy')
+const keyword = ref('')
+const newsTab = ref<'news' | 'follow'>('news')
+const newsLimit = ref(5)
 
-const searchType = ref<"policy" | "enterprise">("policy");
-const keyword = ref("");
-const newsTab = ref("news");
-const visibleNews = ref(homeNewsList.slice(0, 5));
+watch(newsTab, () => {
+  newsLimit.value = 5
+})
+const heroBgMd = ref('')
+const heroBgLg = ref('')
 
 const iconMap: Record<string, string> = {
   policy: iconPolicy,
   enterprise: iconEnterprise,
   robot: iconRobot,
   workbench: iconWorkbench,
-};
+}
+
+const currentNews = computed(() =>
+  newsTab.value === 'follow' ? homeFollowList : homeNewsList,
+)
+
+const visibleNews = computed(() => currentNews.value.slice(0, newsLimit.value))
 
 const onSearch = () => {
-  // placeholder
-};
+  const q = keyword.value.trim()
+  const name = searchType.value === 'enterprise' ? 'enterprise-db' : 'news'
+  void router.push(q ? { name, query: { q } } : { name })
+}
 
 const loadMore = () => {
-  visibleNews.value = homeNewsList;
-};
+  newsLimit.value = currentNews.value.length
+}
 
 const applyHot = (word: string) => {
-  keyword.value = word;
-  onSearch();
-};
+  keyword.value = word
+  onSearch()
+}
 
 const goNews = () => {
-  emit("navigate", "news");
-};
+  void router.push({ name: 'news' })
+}
+
+const goNav = (key: string) => {
+  void router.push({ name: key })
+}
 
 const openBeian = () => {
-  window.open("https://beian.miit.gov.cn/");
-};
+  window.open(SITE.icpUrl, '_blank', 'noopener,noreferrer')
+}
+
+const loadHeroDecor = () => {
+  if (window.innerWidth >= 1920 && !heroBgLg.value) {
+    void import('../../assets/home/hero-decor.png').then((mod) => {
+      heroBgLg.value = mod.default
+    })
+  } else if (window.innerWidth >= 1440 && !heroBgMd.value) {
+    void import('../../assets/home/hero-decor-1x.png').then((mod) => {
+      heroBgMd.value = mod.default
+    })
+  }
+}
+
+onMounted(() => {
+  loadHeroDecor()
+  window.addEventListener('resize', loadHeroDecor, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', loadHeroDecor)
+})
 </script>
 
 <template>
@@ -75,8 +112,8 @@ const openBeian = () => {
       class="page-bg"
       :style="{
         '--home-bg-sm': `url(${heroDecorSm})`,
-        '--home-bg-md': `url(${heroDecorMd})`,
-        '--home-bg-lg': `url(${heroDecorLg})`,
+        '--home-bg-md': heroBgMd ? `url(${heroBgMd})` : `url(${heroDecorSm})`,
+        '--home-bg-lg': heroBgLg ? `url(${heroBgLg})` : `url(${heroDecorSm})`,
       }"
     />
 
@@ -182,7 +219,7 @@ const openBeian = () => {
             </button>
           </div>
 
-          <ul class="news-list">
+          <ul v-if="visibleNews.length" class="news-list">
             <li
               v-for="item in visibleNews"
               :key="item.id"
@@ -218,7 +255,22 @@ const openBeian = () => {
             </li>
           </ul>
 
-          <button type="button" class="load-more" @click="loadMore">
+          <a-empty
+            v-else
+            class="follow-empty"
+            :description="
+              newsTab === 'follow'
+                ? '暂无关注动态，登录后可关注政策'
+                : '暂无资讯'
+            "
+          />
+
+          <button
+            v-if="visibleNews.length && newsLimit < currentNews.length"
+            type="button"
+            class="load-more"
+            @click="loadMore"
+          >
             点击加载更多
           </button>
         </section>
@@ -253,46 +305,36 @@ const openBeian = () => {
             <div class="info-block">
               <h4>关于公司</h4>
               <div class="info-links">
-                <a>政治资讯</a>
-                <a>政策数据库</a>
-                <a>企业数据库</a>
-                <a>投资项目库</a>
-                <a>数据导出</a>
-                <a>API接口</a>
+                <a
+                  v-for="item in navItems.filter((n) => n.key !== 'home')"
+                  :key="item.key"
+                  @click="goNav(item.key)"
+                >
+                  {{ item.label }}
+                </a>
               </div>
             </div>
 
             <div class="info-block">
               <h4>联系我们</h4>
-              <p><PhoneOutlined /> 客服电话：13838137683</p>
-              <p><CommentOutlined /> 客服微信：13838137683</p>
-              <p><ClockCircleOutlined /> 工作时间：周一至周五 9:00-18:00</p>
+              <p><PhoneOutlined /> 客服电话：{{ SITE.phone }}</p>
+              <p><CommentOutlined /> 客服微信：{{ SITE.wechat }}</p>
+              <p><ClockCircleOutlined /> 工作时间：{{ SITE.workHours }}</p>
             </div>
 
             <div class="info-block">
               <h4>公司信息</h4>
               <p class="address">
                 <EnvironmentOutlined />
-                <span>河南省郑州市高新技术产业开发区</span>
+                <span>{{ SITE.address }}</span>
               </p>
             </div>
 
-            <div class="qr-row">
-              <div class="qr-item">
-                <img :src="qrMini" alt="微信小程序" />
-                <a-button type="primary" class="qr-btn"
-                  >关注微信小程序</a-button
-                >
-              </div>
-              <div class="qr-item">
-                <img :src="qrWechat" alt="公众号" />
-                <a-button type="primary" class="qr-btn">政策宝公众号</a-button>
-              </div>
-            </div>
+            <SiteQrBlock variant="sidebar" />
             <a-divider />
-            <p>版权所有：河南政策大脑数字科技有限公司</p>
+            <p>版权所有：{{ SITE.company }}</p>
             <p class="beian-link" @click="openBeian">
-              Copyright @ 2026·豫ICP备2026034913号-1
+              Copyright @ 2026·{{ SITE.icp }}
             </p>
           </div>
         </aside>
@@ -320,7 +362,7 @@ const openBeian = () => {
   background: #f0f2f5;
   color: var(--pb-text);
   font-family:
-    "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -417,7 +459,7 @@ const openBeian = () => {
     font-weight: 600;
 
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       left: 50%;
       bottom: 0;
@@ -583,7 +625,7 @@ const openBeian = () => {
 .promo-banner {
   display: block;
   width: 100%;
-  height: 160px;
+  height: 200px;
   margin-bottom: 20px;
   background-size: cover;
   background-position: center;
@@ -640,7 +682,7 @@ const openBeian = () => {
     font-weight: 600;
 
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       left: 0;
       right: 0;
@@ -827,7 +869,7 @@ const openBeian = () => {
 
 .industry-card {
   padding: 18px 16px 16px;
-  border-radius: 20px;
+  border-radius: 30px;
   background-color: #eef5ff;
   background-size: cover;
   background-position: top center;

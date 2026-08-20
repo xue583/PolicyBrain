@@ -1,59 +1,90 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { SearchOutlined } from "@ant-design/icons-vue";
-import { getSubPageHero, navItems } from "../mock/policyNews";
-import logoLightImg from "../assets/logo-light.png";
-import heroBg from "../assets/hero-bg.png";
-import qrMini from "../assets/home/qr-miniprogram.png";
-import qrWechat from "../assets/home/qr-wechat.png";
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { SearchOutlined } from '@ant-design/icons-vue'
+import { getSubPageHero, navItems } from '@/mock/policyNews'
+import { SITE } from '@/constants/site'
+import SiteQrBlock from '@/components/SiteQrBlock.vue'
+import logoLightImg from '@/assets/logo-light.png'
+import heroBg from '@/assets/hero-bg.png'
 
-defineOptions({ name: "SubPageLayout" });
+defineOptions({ name: 'SubPageLayout' })
 
-const props = defineProps<{
-  pageKey: string;
-}>();
+const route = useRoute()
+const router = useRouter()
 
-const emit = defineEmits<{
-  navigate: [key: string];
-}>();
-
-const keyword = ref("");
-const hero = computed(() => getSubPageHero(props.pageKey));
+const pageKey = computed(() => (route.meta.navKey as string) || '')
+const hideHero = computed(() => Boolean(route.meta.hideHero))
+const hero = computed(() => getSubPageHero(pageKey.value))
+const keyword = ref(String(route.query.q ?? ''))
 
 watch(
-  () => props.pageKey,
-  () => {
-    keyword.value = "";
+  () => route.query.q,
+  (q) => {
+    const next = String(q ?? '')
+    if (keyword.value !== next) keyword.value = next
   },
-);
+)
 
-function onFooterNav(key: string) {
-  emit("navigate", key);
+watch(pageKey, () => {
+  if (!route.query.q) keyword.value = ''
+})
+
+watch(keyword, (val) => {
+  const q = val.trim()
+  const current = String(route.query.q ?? '')
+  if (q === current) return
+  void router.replace({ query: q ? { q } : {} })
+})
+
+const applyKeyword = () => {
+  const q = keyword.value.trim()
+  const current = String(route.query.q ?? '')
+  if (q === current) return
+  void router.replace({ query: q ? { q } : {} })
+}
+
+const onFooterNav = (key: string) => {
+  void router.push({ name: key })
+}
+
+const openBeian = () => {
+  window.open(SITE.icpUrl, '_blank', 'noopener,noreferrer')
 }
 </script>
 
 <template>
   <div class="sub-page">
-    <div class="page-bg" :style="{ backgroundImage: `url(${heroBg})` }" />
+    <div
+      v-if="!hideHero"
+      class="page-bg"
+      :style="{ backgroundImage: `url(${heroBg})` }"
+    />
 
-    <section class="hero">
-      <div class="hero-inner">
+    <section v-if="!hideHero" class="hero">
+      <div class="hero-inner" :class="{ 'no-search': hero.hideSearch }">
         <div class="hero-copy">
           <p class="hero-slogan">{{ hero.slogan }}</p>
           <h1>{{ hero.title }}</h1>
           <p class="hero-desc">{{ hero.description }}</p>
-          <div class="search-bar">
+          <div v-if="!hero.hideSearch" class="search-bar">
             <a-input
               v-model:value="keyword"
               size="large"
               allow-clear
               :placeholder="hero.searchPlaceholder"
+              @press-enter="applyKeyword"
             >
               <template #prefix>
                 <SearchOutlined />
               </template>
             </a-input>
-            <a-button type="primary" size="large" class="search-btn">
+            <a-button
+              type="primary"
+              size="large"
+              class="search-btn"
+              @click="applyKeyword"
+            >
               搜索
             </a-button>
           </div>
@@ -61,8 +92,10 @@ function onFooterNav(key: string) {
       </div>
     </section>
 
-    <div class="page-content">
-      <slot :keyword="keyword" />
+    <div class="page-content" :class="{ 'is-detail': hideHero }">
+      <a-card class="content-card" :bordered="false">
+        <router-view />
+      </a-card>
     </div>
 
     <footer class="page-footer">
@@ -85,29 +118,25 @@ function onFooterNav(key: string) {
 
         <div class="footer-main">
           <div class="footer-col contact">
-            <p><strong>客服热线：</strong>400-000-0000</p>
-            <p><strong>工作时间：</strong>周一至周五 9:00-18:00</p>
-            <p><strong>联系地址：</strong>河南省郑州市金水区某某大厦</p>
+            <p><strong>客服热线：</strong>{{ SITE.phone }}</p>
+            <p><strong>工作时间：</strong>{{ SITE.workHours }}</p>
+            <p><strong>联系地址：</strong>{{ SITE.address }}</p>
           </div>
           <div class="footer-col disclaimer">
             <p>
-              本平台所发布的政策信息均来源于公开渠道，仅供参考。具体申报条件、材料要求及办理流程以主管部门正式文件为准。平台不对因信息使用产生的任何直接或间接损失承担责任。如有疑问，请咨询相关主管部门或平台客服。
+              免责声明:以上信息基于公开信息得出，由于存在更新延迟，不保证数据与实际数据相符，仅供参考，不构成任何明示或暗示的观点或保证。
+            </p>
+            <p>
+              隐私服务:以上信息虽基于公开信息得出，但我们非常尊重个人隐私和意愿，若企业数据库中联系方式对您带来困扰，请联系客服删除此项。
             </p>
           </div>
           <div class="footer-col qr">
-            <div class="qr-item">
-              <img :src="qrWechat" alt="关注微信公众号" />
-              <span>关注微信公众号</span>
-            </div>
-            <div class="qr-item">
-              <img :src="qrMini" alt="政策大脑小程序" />
-              <span>政策大脑小程序</span>
-            </div>
+            <SiteQrBlock variant="footer" />
           </div>
         </div>
 
-        <div class="footer-bottom">
-          Copyright © 2026 政策大脑 AI Policy Brain　豫ICP备00000000号-1
+        <div class="footer-bottom" @click="openBeian">
+          Copyright © 2026 {{ SITE.name }} {{ SITE.englishName }} {{ SITE.icp }}
         </div>
       </div>
     </footer>
@@ -120,7 +149,7 @@ function onFooterNav(key: string) {
   min-height: calc(100vh - 64px);
   margin-top: -64px;
   overflow-x: hidden;
-  background: #f0f2f5;
+  background: var(--pb-bg);
 }
 
 .page-bg {
@@ -137,7 +166,7 @@ function onFooterNav(key: string) {
   z-index: 0;
 
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     left: 0;
     right: 0;
@@ -186,6 +215,14 @@ function onFooterNav(key: string) {
   max-width: calc(100% - 32px);
   margin: 0 auto;
   padding: 150px 0 72px;
+
+  &.no-search {
+    padding-bottom: 48px;
+
+    .hero-copy {
+      max-width: 760px;
+    }
+  }
 }
 
 .hero-copy {
@@ -203,7 +240,7 @@ function onFooterNav(key: string) {
     margin: 0 0 15px;
     font-size: 40px;
     font-weight: 700;
-    color: #1677ff;
+    color: var(--pb-primary);
     line-height: 1.2;
   }
 
@@ -247,6 +284,29 @@ function onFooterNav(key: string) {
   padding: 16px 0 40px;
   min-height: 600px;
   background: transparent;
+
+  &.is-detail {
+    padding-top: 88px;
+  }
+}
+
+.content-card {
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  :deep(.ant-card-body) {
+    padding: 30px;
+  }
+}
+
+.page-content.is-detail .content-card {
+  background: transparent;
+  box-shadow: none;
+
+  :deep(.ant-card-body) {
+    padding: 0;
+    font-size: 16px !important;
+  }
 }
 
 .page-footer {
@@ -275,6 +335,7 @@ function onFooterNav(key: string) {
 .footer-nav {
   display: flex;
   flex-wrap: wrap;
+  margin: 0 auto;
   gap: 20px;
 
   a {
@@ -309,28 +370,7 @@ function onFooterNav(key: string) {
 
 .disclaimer p {
   color: rgba(255, 255, 255, 0.55);
-}
-
-.qr {
-  display: flex;
-  gap: 16px;
-  justify-content: flex-end;
-}
-
-.qr-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-
-  img {
-    width: 88px;
-    height: 88px;
-    object-fit: contain;
-    border-radius: 4px;
-    background: #fff;
-  }
+  margin: 0 auto;
 }
 
 .footer-bottom {
@@ -339,6 +379,7 @@ function onFooterNav(key: string) {
   text-align: center;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
 }
 
 @media (max-width: 992px) {
@@ -356,10 +397,6 @@ function onFooterNav(key: string) {
 
   .footer-main {
     grid-template-columns: 1fr;
-  }
-
-  .qr {
-    justify-content: flex-start;
   }
 }
 </style>

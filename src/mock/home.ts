@@ -40,7 +40,12 @@ export const featureCards = [
   },
 ]
 
-export const hotKeywords = ['高新技术企业', '数字化转型', '人工智能', '专精特新']
+export const hotKeywords = [
+  '高新技术企业',
+  '数字化转型',
+  '人工智能',
+  '专精特新',
+]
 
 export const industryTags = [
   '能源矿产',
@@ -144,5 +149,32 @@ export const homeNewsList: HomeNewsItem[] = [
     department: '河南省科学技术厅',
     status: 'applying',
     statusText: '正在申报',
+  },
+]
+
+export const homeFollowList: HomeNewsItem[] = [
+  {
+    id: 101,
+    title: '您关注的「高新技术企业认定」有新的申报通知',
+    tags: [
+      { text: '关注动态', tone: 'blue' },
+      { text: '高新技术', tone: 'green' },
+    ],
+    time: '今天',
+    department: '郑州市科学技术局',
+    status: 'applying',
+    statusText: '正在申报',
+  },
+  {
+    id: 102,
+    title: '关注政策「专精特新培育」即将截止，请尽快完成材料准备',
+    tags: [
+      { text: '关注动态', tone: 'orange' },
+      { text: '专精特新', tone: 'purple' },
+    ],
+    time: '昨天',
+    department: '郑州市工业和信息化局',
+    status: 'remaining',
+    statusText: '仅剩7天',
   },
 ]

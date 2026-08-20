@@ -1,51 +1,93 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
-import { DownOutlined, EnvironmentOutlined } from "@ant-design/icons-vue";
-import { cities, navItems } from "../mock/policyNews";
-import logoImg from "../assets/logo-full.png";
-import robotImg from "../assets/home/robot.png";
-import mobileImg from "../assets/home/container-1.png";
-import LoginModal from "./LoginModal.vue";
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { DownOutlined, EnvironmentOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { cities, navItems } from '@/mock/policyNews'
+import { useAuthStore } from '@/stores/auth'
+import { onNeedLogin } from '@/utils/auth'
+import logoImg from '@/assets/logo-full.png'
+import robotImg from '@/assets/home/robot.png'
+import mobileImg from '@/assets/home/container-1.png'
+import LoginModal from './LoginModal.vue'
 
-defineOptions({ name: "AppHeader" });
+defineOptions({ name: 'AppHeader' })
 
-const activeNav = defineModel<string>("activeNav", { default: "home" });
-const currentCity = defineModel<string>("currentCity", { default: "郑州市" });
-const loginOpen = ref(false);
-const scrolled = ref(false);
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const { isLoggedIn, user } = storeToRefs(auth)
 
-function onScroll() {
-  scrolled.value = window.scrollY > 8;
+const currentCity = ref('郑州市')
+const loginOpen = ref(false)
+const scrolled = ref(false)
+
+const activeNav = computed(() => (route.meta.navKey as string) || 'home')
+
+let offNeedLogin: (() => void) | undefined
+
+const onScroll = () => {
+  scrolled.value = window.scrollY > 8
 }
 
-function onCitySelect({ key }: { key: string | number }) {
-  currentCity.value = String(key);
+const onCitySelect = ({ key }: { key: string | number }) => {
+  currentCity.value = String(key)
 }
 
-function onNavClick({ key }: { key: string | number }) {
-  activeNav.value = String(key);
+const onNavClick = ({ key }: { key: string | number }) => {
+  const name = String(key)
+  if (route.name !== name) {
+    void router.push({ name })
+  }
 }
 
-function openLogin() {
-  loginOpen.value = true;
+const goHome = () => {
+  void router.push({ name: 'home' })
+}
+
+const openLogin = () => {
+  loginOpen.value = true
+}
+
+const displayName = () => {
+  return (
+    (user.value?.nickname as string) ||
+    (user.value?.phone as string) ||
+    '已登录'
+  )
+}
+
+const onLogout = async () => {
+  await auth.logout()
+  message.success('已退出登录')
 }
 
 onMounted(() => {
-  onScroll();
-  window.addEventListener("scroll", onScroll, { passive: true });
-});
+  onScroll()
+  window.addEventListener('scroll', onScroll, { passive: true })
+  offNeedLogin = onNeedLogin(() => {
+    loginOpen.value = true
+  })
+  void auth.hydrateUser()
+})
 
 onUnmounted(() => {
-  window.removeEventListener("scroll", onScroll);
-});
+  window.removeEventListener('scroll', onScroll)
+  offNeedLogin?.()
+})
 </script>
 
 <template>
   <a-layout-header class="app-header" :class="{ 'is-scrolled': scrolled }">
     <div class="header-inner">
       <div class="header-left">
-        <div class="logo" @click="activeNav = 'home'">
-          <img :src="logoImg" alt="政策大脑 POLICY BRAIN" />
+        <div class="logo" @click="goHome">
+          <img
+            :src="logoImg"
+            alt="政策大脑 POLICY BRAIN"
+            fetchpriority="high"
+          />
         </div>
 
         <a-dropdown>
@@ -81,7 +123,23 @@ onUnmounted(() => {
           <img :src="mobileImg" alt="" class="mobile-icon" />
           <span>移动端</span>
         </a>
-        <a-button type="primary" class="login-btn" @click="openLogin">
+
+        <template v-if="isLoggedIn">
+          <a-dropdown>
+            <a class="user-entry" @click.prevent>
+              <span>{{ displayName() }}</span>
+              <DownOutlined class="user-arrow" />
+            </a>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item key="logout" @click="onLogout"
+                  >退出登录</a-menu-item
+                >
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </template>
+        <a-button v-else type="primary" class="login-btn" @click="openLogin">
           登录/注册
         </a-button>
       </div>
@@ -102,7 +160,9 @@ onUnmounted(() => {
   background: transparent !important;
   border-bottom: none;
   box-shadow: none;
-  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
 
   &.is-scrolled {
     background: #fff !important;
@@ -156,7 +216,7 @@ onUnmounted(() => {
   padding-left: 17px;
 
   .city-pin {
-    color: #1677ff;
+    color: var(--pb-primary);
     font-size: 13px;
   }
 
@@ -186,16 +246,16 @@ onUnmounted(() => {
     }
 
     &:hover {
-      color: #1677ff !important;
+      color: var(--pb-primary) !important;
     }
   }
 
   :deep(.ant-menu-item-selected) {
-    color: #1677ff !important;
+    color: var(--pb-primary) !important;
     font-weight: 500;
 
     &::after {
-      border-bottom-color: #1677ff !important;
+      border-bottom-color: var(--pb-primary) !important;
     }
   }
 }
@@ -216,7 +276,7 @@ onUnmounted(() => {
     line-height: 1;
 
     &:hover {
-      color: #1677ff;
+      color: var(--pb-primary);
     }
   }
 
@@ -258,6 +318,24 @@ onUnmounted(() => {
     font-size: 13px;
     font-weight: 500;
     box-shadow: 0 4px 10px rgba(22, 119, 255, 0.28);
+  }
+
+  .user-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #333;
+    font-size: 14px;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--pb-primary);
+    }
+  }
+
+  .user-arrow {
+    font-size: 10px;
+    color: #999;
   }
 }
 
