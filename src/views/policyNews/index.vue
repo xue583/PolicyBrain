@@ -22,7 +22,6 @@ defineOptions({ name: 'PolicyNews' })
 const route = useRoute()
 const router = useRouter()
 
-const activeTab = ref<'normal' | 'expired'>('normal')
 const currentPage = ref(1)
 const pageSize = 10
 const showMoreRegions = ref(false)
@@ -68,7 +67,6 @@ const visibleIndustries = computed(() =>
 
 const filteredList = computed(() =>
   filterPolicyNews(mockPolicies, {
-    status: activeTab.value,
     keyword: keyword.value,
     region: filters.region,
     industries: filters.industries,
@@ -125,10 +123,6 @@ watch(
   },
 )
 
-const onTabChange = () => {
-  currentPage.value = 1
-}
-
 const onFilterChange = () => {
   currentPage.value = 1
 }
@@ -142,103 +136,94 @@ const openDetail = (item: PolicyItem) => {
   <div class="policy-news">
     <!-- Filters -->
     <div class="filter-panel">
-      <div class="filter-row">
-        <span class="filter-label">省市地区：</span>
-        <div class="filter-options">
-          <a
-            v-for="region in visibleRegions"
-            :key="region"
-            class="region-link"
-            :class="{ active: filters.region === region }"
-            @click="selectRegion(region)"
-          >
-            {{ region }}
-          </a>
-          <a class="more-link" @click="showMoreRegions = !showMoreRegions">
-            {{ showMoreRegions ? '收起' : '更多' }}
-            <DownOutlined :class="{ rotated: showMoreRegions }" />
-          </a>
-        </div>
-      </div>
-
-      <div class="filter-row">
-        <span class="filter-label">行业分类：</span>
-        <div class="filter-options">
-          <a-checkbox-group
-            v-model:value="filters.industries"
-            :options="visibleIndustries"
-            @change="onFilterChange"
-          />
-          <a
-            class="more-link"
-            @click="showMoreIndustries = !showMoreIndustries"
-          >
-            {{ showMoreIndustries ? '收起' : '更多' }}
-            <DownOutlined :class="{ rotated: showMoreIndustries }" />
-          </a>
-        </div>
-      </div>
-
-      <div class="filter-row">
-        <span class="filter-label">政策级别：</span>
-        <div class="filter-options">
-          <a-checkbox-group
-            v-model:value="filters.levels"
-            :options="policyLevels"
-            @change="onFilterChange"
-          />
-        </div>
-      </div>
-
-      <div class="filter-row">
-        <span class="filter-label">资讯类型：</span>
-        <div class="filter-options">
-          <a-checkbox-group
-            v-model:value="filters.infoTypes"
-            :options="infoTypes"
-            @change="onFilterChange"
-          />
-        </div>
-      </div>
-
-      <div class="selected-section">
-        <div class="filter-row selected-row">
-          <span class="filter-label">已选条件：</span>
-          <div class="selected-tags">
-            <template v-if="selectedConditions.length">
-              <a-tag
-                v-for="item in selectedConditions"
-                :key="item.key"
-                closable
-                class="condition-tag"
-                @close="removeCondition(item.key)"
-              >
-                {{ item.label }}
-              </a-tag>
-            </template>
-            <span v-else class="empty-selected">暂无筛选条件</span>
+      <a-card style="border-radius: 20px">
+        <div class="filter-row">
+          <span class="filter-label">省市地区：</span>
+          <div class="filter-options">
+            <a
+              v-for="region in visibleRegions"
+              :key="region"
+              class="region-link"
+              :class="{ active: filters.region === region }"
+              @click="selectRegion(region)"
+            >
+              {{ region }}
+            </a>
+            <a class="more-link" @click="showMoreRegions = !showMoreRegions">
+              {{ showMoreRegions ? '收起' : '更多' }}
+              <DownOutlined :class="{ rotated: showMoreRegions }" />
+            </a>
           </div>
-          <a
-            v-if="selectedConditions.length"
-            class="clear-link"
-            @click="clearConditions"
-          >
-            <DeleteOutlined />
-            删除
-          </a>
         </div>
 
-        <a-divider class="tabs-divider" dashed />
+        <div class="filter-row">
+          <span class="filter-label">行业分类：</span>
+          <div class="filter-options">
+            <a-checkbox-group
+              v-model:value="filters.industries"
+              :options="visibleIndustries"
+              @change="onFilterChange"
+            />
+            <a
+              class="more-link"
+              @click="showMoreIndustries = !showMoreIndustries"
+            >
+              {{ showMoreIndustries ? '收起' : '更多' }}
+              <DownOutlined :class="{ rotated: showMoreIndustries }" />
+            </a>
+          </div>
+        </div>
 
-        <a-tabs
-          v-model:activeKey="activeTab"
-          class="list-tabs"
-          @change="onTabChange"
-        >
-          <a-tab-pane key="normal" tab="正常资讯" />
-          <a-tab-pane key="expired" tab="已过期资讯" />
-        </a-tabs>
-      </div>
+        <div class="filter-row">
+          <span class="filter-label">政策级别：</span>
+          <div class="filter-options">
+            <a-checkbox-group
+              v-model:value="filters.levels"
+              :options="policyLevels"
+              @change="onFilterChange"
+            />
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">资讯类型：</span>
+          <div class="filter-options">
+            <a-checkbox-group
+              v-model:value="filters.infoTypes"
+              :options="infoTypes"
+              @change="onFilterChange"
+            />
+          </div>
+        </div>
+
+        <div class="selected-section">
+          <div class="filter-row selected-row">
+            <span class="filter-label">已选条件：</span>
+            <div class="selected-tags">
+              <template v-if="selectedConditions.length">
+                <a-tag
+                  v-for="item in selectedConditions"
+                  :key="item.key"
+                  closable
+                  class="condition-tag"
+                  @close="removeCondition(item.key)"
+                >
+                  {{ item.label }}
+                </a-tag>
+              </template>
+              <span v-else class="empty-selected">暂无筛选条件</span>
+            </div>
+            <a
+              v-if="selectedConditions.length"
+              class="clear-link"
+              @click="clearConditions"
+            >
+              <DeleteOutlined />
+              删除
+            </a>
+          </div>
+        </div>
+      </a-card>
     </div>
 
     <!-- Tips -->
@@ -320,7 +305,7 @@ const openDetail = (item: PolicyItem) => {
 .filter-panel {
   padding: 0 0 8px;
   margin-bottom: 12px;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .filter-row {
@@ -349,7 +334,7 @@ const openDetail = (item: PolicyItem) => {
   min-width: 0;
 
   :global(.ant-checkbox-wrapper) {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 
@@ -441,30 +426,14 @@ const openDetail = (item: PolicyItem) => {
   border-color: #f0f0f0;
 }
 
-.list-tabs {
-  margin-top: 0;
-
-  :deep(.ant-tabs-nav) {
-    margin-bottom: 0;
-
-    &::before {
-      border-bottom: none;
-    }
-  }
-
-  :deep(.ant-tabs-tab) {
-    padding: 10px 0;
-    font-size: 15px;
-  }
-}
-
 .result-bar {
-  padding: 10px 20px;
+  padding-left: 20px;
   margin-bottom: 16px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 18px;
   color: #343434;
   background: var(--result-bar-bg) no-repeat;
+  background-size: 94px 26px;
 }
 
 .list-section {
@@ -533,7 +502,7 @@ const openDetail = (item: PolicyItem) => {
   }
 
   &.expired {
-    background: #bfbfbf;
+    background: linear-gradient(90deg, #bfbfbf 0%, #ed790100 100%);
   }
 }
 

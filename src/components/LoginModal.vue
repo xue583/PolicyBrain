@@ -227,6 +227,11 @@ const goRegisterStep2 = async () => {
   }
 }
 
+const onIdentityChange = (value: PolicyUserType) => {
+  identity.value = value
+  identityError.value = ''
+}
+
 const goRegisterStep3 = () => {
   if (!identity.value) {
     identityError.value = '请选择使用身份'
@@ -385,10 +390,7 @@ const submitRegister = async () => {
                     :identity="identity"
                     :identity-error="identityError"
                     :roles="roles"
-                    @update:identity="
-                      identity = $event
-                      identityError = ''
-                    "
+                    @update:identity="onIdentityChange"
                     @prev="registerStep = 1"
                     @next="goRegisterStep3"
                   />

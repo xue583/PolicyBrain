@@ -24,6 +24,7 @@ const loginOpen = ref(false)
 const scrolled = ref(false)
 
 const activeNav = computed(() => (route.meta.navKey as string) || 'home')
+const isHome = computed(() => activeNav.value === 'home')
 
 let offNeedLogin: (() => void) | undefined
 
@@ -79,7 +80,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <a-layout-header class="app-header" :class="{ 'is-scrolled': scrolled }">
+  <a-layout-header
+    class="app-header"
+    :class="{ 'is-scrolled': scrolled, 'is-solid': !isHome }"
+  >
     <div class="header-inner">
       <div class="header-left">
         <div class="logo" @click="goHome">
@@ -155,7 +159,7 @@ onUnmounted(() => {
   top: 0;
   z-index: 100;
   height: 64px;
-  padding: 17px 0 0;
+  padding: 17px 0 17px;
   line-height: 64px;
   background: transparent !important;
   border-bottom: none;
@@ -164,8 +168,12 @@ onUnmounted(() => {
     background-color 0.25s ease,
     box-shadow 0.25s ease;
 
-  &.is-scrolled {
+  &.is-scrolled,
+  &.is-solid {
     background: #fff !important;
+  }
+
+  &.is-scrolled {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     padding-bottom: 17px !important;
   }

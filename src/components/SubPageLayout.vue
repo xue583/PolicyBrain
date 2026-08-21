@@ -7,6 +7,9 @@ import { SITE } from '@/constants/site'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
 import logoLightImg from '@/assets/logo-light.png'
 import heroBg from '@/assets/hero-bg.png'
+import policyDbBg from '@/assets/policy-db-bg.png'
+import enterpriseDbBg from '@/assets/enterprise-db-bg.png'
+import exportBanner from '@/assets/export/banner@2x.png'
 
 defineOptions({ name: 'SubPageLayout' })
 
@@ -16,6 +19,13 @@ const router = useRouter()
 const pageKey = computed(() => (route.meta.navKey as string) || '')
 const hideHero = computed(() => Boolean(route.meta.hideHero))
 const hero = computed(() => getSubPageHero(pageKey.value))
+const heroBgByPage: Record<string, string> = {
+  'policy-db': policyDbBg,
+  'enterprise-db': enterpriseDbBg,
+  export: exportBanner,
+}
+const currentHeroBg = computed(() => heroBgByPage[pageKey.value] ?? heroBg)
+const isFullBanner = computed(() => pageKey.value === 'export')
 const keyword = ref(String(route.query.q ?? ''))
 
 watch(
@@ -56,13 +66,23 @@ const openBeian = () => {
 <template>
   <div class="sub-page">
     <div
-      v-if="!hideHero"
+      v-if="!hideHero && !isFullBanner"
       class="page-bg"
-      :style="{ backgroundImage: `url(${heroBg})` }"
+      :style="{ backgroundImage: `url(${currentHeroBg})` }"
     />
 
-    <section v-if="!hideHero" class="hero">
-      <div class="hero-inner" :class="{ 'no-search': hero.hideSearch }">
+    <section
+      v-if="!hideHero"
+      class="hero"
+      :class="{ 'full-banner': isFullBanner }"
+    >
+      <img
+        v-if="isFullBanner"
+        class="hero-banner"
+        :src="currentHeroBg"
+        alt="数据导出"
+      />
+      <div v-else class="hero-inner" :class="{ 'no-search': hero.hideSearch }">
         <div class="hero-copy">
           <p class="hero-slogan">{{ hero.slogan }}</p>
           <h1>{{ hero.title }}</h1>
@@ -93,9 +113,10 @@ const openBeian = () => {
     </section>
 
     <div class="page-content" :class="{ 'is-detail': hideHero }">
-      <a-card class="content-card" :bordered="false">
+      <router-view />
+      <!-- <a-card class="content-card" :bordered="false">
         <router-view />
-      </a-card>
+      </a-card> -->
     </div>
 
     <footer class="page-footer">
@@ -147,7 +168,6 @@ const openBeian = () => {
 .sub-page {
   position: relative;
   min-height: calc(100vh - 64px);
-  margin-top: -64px;
   overflow-x: hidden;
   background: var(--pb-bg);
 }
@@ -157,30 +177,13 @@ const openBeian = () => {
   left: 0;
   top: 0;
   width: 100%;
-  height: 40%;
+  height: 386px;
   opacity: 1;
   background-repeat: no-repeat;
   background-position: left top;
-  background-size: 100% 70%;
+  background-size: 100% 100%;
   pointer-events: none;
   z-index: 0;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(70% - 200px);
-    height: 280px;
-    background: linear-gradient(
-      180deg,
-      rgba(240, 242, 245, 0) 0%,
-      rgba(240, 242, 245, 0.45) 40%,
-      #f0f2f5 60%,
-      #f0f2f5 100%
-    );
-    pointer-events: none;
-  }
 }
 
 .logo {
@@ -205,6 +208,16 @@ const openBeian = () => {
   z-index: 1;
   width: 100%;
   background: transparent;
+
+  &.full-banner {
+    line-height: 0;
+  }
+}
+
+.hero-banner {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .hero-inner {
@@ -214,7 +227,7 @@ const openBeian = () => {
   width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
-  padding: 150px 0 72px;
+  padding: 50px 0 35px;
 
   &.no-search {
     padding-bottom: 48px;
@@ -231,14 +244,14 @@ const openBeian = () => {
 
   .hero-slogan {
     margin: 0 0 8px;
-    font-size: 16px;
+    font-size: 36px;
     color: #3d5a80;
     letter-spacing: 1px;
   }
 
   h1 {
     margin: 0 0 15px;
-    font-size: 40px;
+    font-size: 64px;
     font-weight: 700;
     color: var(--pb-primary);
     line-height: 1.2;
@@ -246,7 +259,7 @@ const openBeian = () => {
 
   .hero-desc {
     margin: 0 0 20px;
-    font-size: 13px;
+    font-size: 16px;
     color: #343434;
   }
 }
@@ -286,7 +299,7 @@ const openBeian = () => {
   background: transparent;
 
   &.is-detail {
-    padding-top: 88px;
+    padding-top: 24px;
   }
 }
 

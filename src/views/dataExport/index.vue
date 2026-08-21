@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import {
-  CloudUploadOutlined,
   DownloadOutlined,
   DownOutlined,
-  FileSearchOutlined,
   FileTextOutlined,
   RightOutlined,
 } from '@ant-design/icons-vue'
@@ -14,6 +12,7 @@ import {
   ageOptions,
   capitalOptions,
   economyOptions,
+  electronicsIndustry,
   exportEnterpriseTotal,
   exportIndustries,
   hotPolicies,
@@ -25,6 +24,13 @@ import {
 } from '../../mock/dataExport'
 import ExportEmptyState from './ExportEmptyState.vue'
 import ExportResultTable from './ExportResultTable.vue'
+import searchIcon from '../../assets/export/search.png'
+import search2Icon from '../../assets/export/search2.png'
+import stepDownloadIcon from '../../assets/export/download.png'
+import stepUploadIcon from '../../assets/export/upload-icon.png'
+import stepExportIcon from '../../assets/export/export-icon.png'
+import stepArrowIcon from '../../assets/export/step-arrow.png'
+import upload3dIcon from '../../assets/export/upload.png'
 
 defineOptions({ name: 'DataExport' })
 
@@ -33,11 +39,11 @@ type FilterTab = 'policy' | 'basic'
 type FilterKey = 'industry' | 'ip' | 'capital' | 'age' | 'economy'
 
 const mode = ref<QueryMode>('advanced')
-const filterTab = ref<FilterTab>('policy')
-const hasSearched = ref(false)
+const filterTab = ref<FilterTab>('basic')
+const searchedTab = ref<FilterTab>('basic')
+const hasSearched = ref(true)
 const currentPage = ref(1)
 const pageSize = 10
-const batchStep = ref(2)
 const uploadedName = ref('')
 
 const filters = reactive({
@@ -45,7 +51,7 @@ const filters = reactive({
   policies: [] as string[],
   year: 2026 as number | null,
   province: '河南省',
-  industry: '',
+  industry: electronicsIndustry,
   ip: '',
   capital: '',
   age: '',
@@ -53,7 +59,7 @@ const filters = reactive({
 })
 
 const openGroups = reactive<Record<FilterKey | 'province', boolean>>({
-  province: true,
+  province: false,
   industry: false,
   ip: false,
   capital: false,
@@ -74,13 +80,18 @@ const filteredList = computed(() => {
     const kw = filters.keyword.trim()
     if (kw && !item.name.includes(kw) && !item.address.includes(kw))
       return false
-    if (filters.year && item.year !== filters.year) return false
-    if (
-      filters.policies.length &&
-      !filters.policies.some((p) => item.policies.includes(p))
-    ) {
-      return false
+
+    if (searchedTab.value === 'policy') {
+      if (filters.year && item.year !== filters.year) return false
+      if (
+        filters.policies.length &&
+        !filters.policies.some((p) => item.policies.includes(p))
+      ) {
+        return false
+      }
+      return true
     }
+
     if (filters.province && item.province !== filters.province) return false
     if (filters.industry && item.industry !== filters.industry) return false
     if (filters.ip && !item.ipTypes.includes(filters.ip)) return false
@@ -158,12 +169,19 @@ const resetFilters = () => {
   filters.age = ''
   filters.economy = ''
   hasSearched.value = false
+  searchedTab.value = filterTab.value
   currentPage.value = 1
-  openGroups.province = true
+  openGroups.province = filterTab.value === 'basic'
+  openGroups.industry = false
+  openGroups.ip = false
+  openGroups.capital = false
+  openGroups.age = false
+  openGroups.economy = false
 }
 
 const viewResults = () => {
   hasSearched.value = true
+  searchedTab.value = filterTab.value
   currentPage.value = 1
   openGroups.province = false
   openGroups.industry = false
@@ -175,9 +193,6 @@ const viewResults = () => {
 
 const switchMode = (next: QueryMode) => {
   mode.value = next
-  if (next === 'batch') {
-    batchStep.value = uploadedName.value ? 3 : 2
-  }
 }
 
 const downloadCsv = (filename: string, rows: string[][]) => {
@@ -232,7 +247,6 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   }
   uploadedName.value = file.name
   hasSearched.value = true
-  batchStep.value = 3
   currentPage.value = 1
   message.success('名单已上传，已匹配查询结果')
   return false
@@ -249,7 +263,7 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
         @click="switchMode('advanced')"
       >
         <span class="mode-icon search">
-          <FileSearchOutlined />
+          <img :src="search2Icon" alt="" />
         </span>
         <span class="mode-copy">
           <span class="mode-title">
@@ -267,7 +281,7 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
         @click="switchMode('batch')"
       >
         <span class="mode-icon upload">
-          <CloudUploadOutlined />
+          <img :src="searchIcon" alt="" />
         </span>
         <span class="mode-copy">
           <span class="mode-title">
@@ -280,217 +294,217 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     </div>
 
     <div v-if="mode === 'advanced'" class="workspace">
-      <aside class="filter-sider">
-        <div class="filter-tabs">
-          <button
-            type="button"
-            :class="{ active: filterTab === 'policy' }"
-            @click="filterTab = 'policy'"
-          >
-            ·
-          </button>
-          <button
-            type="button"
-            :class="{ active: filterTab === 'basic' }"
-            @click="filterTab = 'basic'"
-          >
-            基本筛选
-          </button>
-        </div>
-
-        <div class="filter-body">
-          <template v-if="filterTab === 'policy'">
-            <label class="field-label">搜索政策名称</label>
-            <a-input
-              v-model:value="filters.keyword"
-              allow-clear
-              placeholder="请输入政策名称关键词搜索"
-            />
-
-            <label class="field-label">热门政策</label>
-            <div class="tag-grid">
-              <button
-                v-for="item in hotPolicies"
-                :key="item"
-                type="button"
-                class="filter-tag"
-                :class="{ active: filters.policies.includes(item) }"
-                @click="togglePolicy(item)"
-              >
-                {{ item }}
-              </button>
-            </div>
-
-            <label class="field-label">认定年度</label>
-            <div class="tag-grid years">
-              <button
-                v-for="year in policyYears"
-                :key="year"
-                type="button"
-                class="filter-tag"
-                :class="{ active: filters.year === year }"
-                @click="selectYear(year)"
-              >
-                {{ year }}
-              </button>
-            </div>
-          </template>
-
-          <template v-else>
-            <label class="field-label">关键词搜索</label>
-            <a-input
-              v-model:value="filters.keyword"
-              allow-clear
-              placeholder="请输入政策名称关键词搜索"
-            />
-
-            <div class="filter-group">
-              <button
-                type="button"
-                class="group-head"
-                @click="toggleGroup('province')"
-              >
-                <span>注册地址</span>
-                <span
-                  v-if="filters.province && !openGroups.province"
-                  class="group-value"
-                >
-                  {{ filters.province }}
-                </span>
-                <DownOutlined :class="{ rotated: openGroups.province }" />
-              </button>
-              <div v-show="openGroups.province" class="tag-grid">
-                <button
-                  v-for="item in provinces"
-                  :key="item"
-                  type="button"
-                  class="filter-tag"
-                  :class="{ active: filters.province === item }"
-                  @click="selectProvince(item)"
-                >
-                  {{ item }}
-                </button>
-              </div>
-            </div>
-
-            <div
-              v-for="group in groupMeta"
-              :key="group.key"
-              class="filter-group"
+      <a-card class="filter-card" :bordered="false">
+        <aside class="filter-sider">
+          <div class="filter-tabs">
+            <button
+              type="button"
+              :class="{ active: filterTab === 'policy' }"
+              @click="filterTab = 'policy'"
             >
-              <button
-                type="button"
-                class="group-head"
-                @click="toggleGroup(group.key)"
-              >
-                <span>{{ group.label }}</span>
-                <span
-                  v-if="filters[group.key] && !openGroups[group.key]"
-                  class="group-value"
-                >
-                  {{ filters[group.key] }}
-                </span>
-                <DownOutlined :class="{ rotated: openGroups[group.key] }" />
-              </button>
-              <div v-show="openGroups[group.key]" class="tag-grid">
+              政策资讯
+            </button>
+            <button
+              type="button"
+              :class="{ active: filterTab === 'basic' }"
+              @click="filterTab = 'basic'"
+            >
+              基本筛选
+            </button>
+          </div>
+
+          <div class="filter-body">
+            <template v-if="filterTab === 'policy'">
+              <label class="field-label">搜索政策名称</label>
+              <a-input
+                v-model:value="filters.keyword"
+                allow-clear
+                placeholder="请输入政策名称关键词搜索"
+              />
+
+              <label class="field-label">热门政策</label>
+              <div class="tag-grid">
                 <button
-                  v-for="item in group.options"
+                  v-for="item in hotPolicies"
                   :key="item"
                   type="button"
                   class="filter-tag"
-                  :class="{ active: filters[group.key] === item }"
-                  @click="selectOption(group.key, item)"
+                  :class="{ active: filters.policies.includes(item) }"
+                  @click="togglePolicy(item)"
                 >
                   {{ item }}
                 </button>
               </div>
-            </div>
-          </template>
-        </div>
 
-        <div class="filter-actions">
-          <a-button class="reset-btn" @click="resetFilters">重置筛选</a-button>
-          <a-button type="primary" class="view-btn" @click="viewResults">
-            <FileTextOutlined />
-            查看结果
-          </a-button>
-        </div>
-      </aside>
+              <label class="field-label">认定年度</label>
+              <div class="tag-grid years">
+                <button
+                  v-for="year in policyYears"
+                  :key="year"
+                  type="button"
+                  class="filter-tag"
+                  :class="{ active: filters.year === year }"
+                  @click="selectYear(year)"
+                >
+                  {{ year }}
+                </button>
+              </div>
+            </template>
 
-      <section class="result-pane">
-        <ExportEmptyState
-          v-if="!hasSearched"
-          title="无查询结果"
-          description="请选择筛选条件后点击「查看结果」"
-          note="可筛选郑州企业，支持一键导出 Excel"
-        />
+            <template v-else>
+              <label class="field-label">关键词搜索</label>
+              <a-input
+                v-model:value="filters.keyword"
+                allow-clear
+                placeholder="请输入政策名称关键词搜索"
+              />
 
-        <ExportEmptyState
-          v-else-if="!total"
-          title="无查询结果"
-          description="未找到符合条件的企业，请调整筛选后再试"
-        />
+              <div class="filter-group">
+                <button
+                  type="button"
+                  class="group-head"
+                  @click="toggleGroup('province')"
+                >
+                  <span>注册地址</span>
+                  <span
+                    v-if="filters.province && !openGroups.province"
+                    class="group-value"
+                  >
+                    {{ filters.province }}
+                  </span>
+                  <DownOutlined :class="{ rotated: openGroups.province }" />
+                </button>
+                <div v-show="openGroups.province" class="tag-grid">
+                  <button
+                    v-for="item in provinces"
+                    :key="item"
+                    type="button"
+                    class="filter-tag"
+                    :class="{ active: filters.province === item }"
+                    @click="selectProvince(item)"
+                  >
+                    {{ item }}
+                  </button>
+                </div>
+              </div>
 
-        <ExportResultTable
-          v-else
-          :columns="columns"
-          :list="pagedList"
-          :total="total"
-          :current-page="currentPage"
-          :page-size="pageSize"
-          count-text=""
-          @update:current-page="currentPage = $event"
-          @export="exportExcel"
-        >
-          <template #count>
-            <span class="result-count">
-              共收录
-              <em>{{ exportEnterpriseTotal.toLocaleString('zh-CN') }}</em>
-              家企业
-            </span>
-          </template>
-        </ExportResultTable>
-      </section>
+              <div
+                v-for="group in groupMeta"
+                :key="group.key"
+                class="filter-group"
+              >
+                <button
+                  type="button"
+                  class="group-head"
+                  @click="toggleGroup(group.key)"
+                >
+                  <span>{{ group.label }}</span>
+                  <span
+                    v-if="filters[group.key] && !openGroups[group.key]"
+                    class="group-value"
+                  >
+                    {{ filters[group.key] }}
+                  </span>
+                  <DownOutlined :class="{ rotated: openGroups[group.key] }" />
+                </button>
+                <div v-show="openGroups[group.key]" class="tag-grid">
+                  <button
+                    v-for="item in group.options"
+                    :key="item"
+                    type="button"
+                    class="filter-tag"
+                    :class="{ active: filters[group.key] === item }"
+                    @click="selectOption(group.key, item)"
+                  >
+                    {{ item }}
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="filter-actions">
+            <a-button class="reset-btn" @click="resetFilters"
+              >重置筛选</a-button
+            >
+            <a-button type="primary" class="view-btn" @click="viewResults">
+              <FileTextOutlined />
+              查看结果
+            </a-button>
+          </div>
+        </aside>
+      </a-card>
+
+      <a-card class="result-card" :bordered="false">
+        <section class="result-pane">
+          <ExportEmptyState
+            v-if="!hasSearched"
+            title="无查询结果"
+            description="请选择筛选条件后点击“查看结果”"
+            note="筛选符合条件的郑州企业，支持一键导出Excel"
+          />
+
+          <ExportEmptyState
+            v-else-if="!total"
+            title="无查询结果"
+            description="未找到符合条件的企业，请调整筛选后再试"
+          />
+
+          <ExportResultTable
+            v-else
+            :columns="columns"
+            :list="pagedList"
+            :total="total"
+            :current-page="currentPage"
+            :page-size="pageSize"
+            count-text=""
+            @update:current-page="currentPage = $event"
+            @export="exportExcel"
+          >
+            <template #count>
+              <span class="result-count">
+                共收录
+                <em>{{ exportEnterpriseTotal.toLocaleString('zh-CN') }}</em>
+                家企业
+              </span>
+            </template>
+          </ExportResultTable>
+        </section>
+      </a-card>
     </div>
 
     <div v-else class="batch-panel">
       <div class="batch-steps">
-        <div
-          class="step"
-          :class="{ done: batchStep > 1, current: batchStep === 1 }"
-        >
-          <span class="step-index">1</span>
+        <div class="step">
+          <img class="step-icon" :src="stepDownloadIcon" alt="" />
           <div class="step-copy">
             <strong>第一步：下载Excel模板</strong>
-            <p>按标准格式填写企业名称</p>
+            <p>下载标准模板，按照模板格式填入企业名称</p>
             <a-button
               type="primary"
               ghost
               size="small"
-              @click="downloadTemplate"
+              @click.stop="downloadTemplate"
             >
               <DownloadOutlined />
               下载模板
             </a-button>
           </div>
+          <img class="step-arrow" :src="stepArrowIcon" alt="" />
         </div>
-        <span class="step-line" />
-        <div
-          class="step"
-          :class="{ done: batchStep > 2, current: batchStep === 2 }"
-        >
-          <span class="step-index">2</span>
+        <div class="step">
+          <img class="step-icon" :src="stepUploadIcon" alt="" />
           <div class="step-copy">
             <strong>第二步：上传企业名单</strong>
-            <p>上传已填写的 Excel 文件</p>
+            <p>上传填写好的Excel文件进行批量查询</p>
           </div>
+          <img class="step-arrow" :src="stepArrowIcon" alt="" />
         </div>
-        <span class="step-line" />
-        <div class="step" :class="{ current: batchStep === 3 }">
-          <span class="step-index">3</span>
+        <div class="step">
+          <img class="step-icon" :src="stepExportIcon" alt="" />
           <div class="step-copy">
             <strong>第三步：导出查询结果</strong>
-            <p>查看结果并一键导出 Excel</p>
+            <p>查看查询结果并一键导出Excel</p>
           </div>
         </div>
       </div>
@@ -502,14 +516,11 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
         :show-upload-list="true"
         :before-upload="beforeUpload"
       >
-        <p class="ant-upload-drag-icon">
-          <CloudUploadOutlined />
-        </p>
+        <img class="upload-visual" :src="upload3dIcon" alt="" />
         <p class="upload-title">将文件拖拽到此处或 <em>点击上传</em></p>
-        <p class="upload-sub">下载 Excel 示例文件并填充企业名录信息</p>
+        <p class="upload-sub">下载Excel示例文件并填充企业名录信息</p>
         <p class="upload-hint">
-          文件大小不超过 5MB · 仅支持 Excel 格式（.xls / .xlsx） · 单次查询限
-          500 家企业
+          文件大小不超过5M · 仅支持Excel格式(.xls/.xlsx) · 单次查询限500家企业
         </p>
         <a-button type="primary" class="pick-btn">选择文件</a-button>
       </a-upload-dragger>
@@ -542,11 +553,17 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  margin-top: -130px;
+}
+
+.filter-card,
+.result-card {
+  border-radius: 20px;
 }
 
 .mode-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  align-items: center;
   gap: 16px;
 }
 
@@ -554,7 +571,8 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   display: flex;
   align-items: center;
   gap: 16px;
-  min-height: 88px;
+  width: 236px;
+  height: 98px;
   padding: 16px 24px;
   text-align: left;
   background: #fff;
@@ -567,14 +585,21 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     box-shadow 0.2s,
     background 0.2s;
 
-  &:hover {
+  &:hover:not(.active) {
     border-color: var(--pb-primary);
   }
 
   &.active {
-    background: linear-gradient(90deg, #e8f3ff 0%, #f5f9ff 100%);
-    border-color: var(--pb-primary);
-    box-shadow: 0 8px 20px rgba(22, 119, 255, 0.12);
+    border-color: transparent;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: url('../../assets/export/bottom.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    background-origin: border-box;
+    background-clip: border-box;
+    box-shadow: none;
   }
 }
 
@@ -585,10 +610,14 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  font-size: 24px;
-  color: var(--pb-primary);
-  background: #e6f4ff;
   flex-shrink: 0;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }
 
 .mode-copy {
@@ -613,12 +642,12 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 
 .mode-desc {
   font-size: 13px;
-  color: #8c8c8c;
+  color: #0e5dd8;
 }
 
 .workspace {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 30% minmax(0, 1fr);
   gap: 24px;
   min-height: 560px;
   align-items: stretch;
@@ -645,7 +674,7 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     padding: 0 0 10px;
     background: none;
     border: none;
-    font-size: 15px;
+    font-size: 20px;
     color: #8c8c8c;
     cursor: pointer;
 
@@ -677,8 +706,8 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 .field-label {
   display: block;
   margin: 12px 0 8px;
-  font-size: 13px;
-  color: #8c8c8c;
+  font-size: 16px;
+  color: #333333;
 }
 
 .tag-grid {
@@ -696,9 +725,9 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   padding: 4px 10px;
   border: 1px solid #f0f0f0;
   border-radius: 4px;
-  background: #fafafa;
-  color: #434343;
-  font-size: 12px;
+  background: #eeeeee;
+  color: #6f6f6f;
+  font-size: 14px;
   line-height: 20px;
   cursor: pointer;
   transition: all 0.15s;
@@ -771,43 +800,6 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 
 .result-pane {
   min-width: 0;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 460px;
-  text-align: center;
-  color: #8c8c8c;
-
-  h3 {
-    margin: 8px 0 6px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #434343;
-  }
-
-  p {
-    margin: 0;
-    font-size: 13px;
-  }
-}
-
-.empty-icon {
-  width: 120px;
-  height: 120px;
-
-  svg {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-.empty-note {
-  margin-top: 8px !important;
-  color: #bfbfbf;
 }
 
 .result-toolbar {
@@ -904,92 +896,106 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 .batch-panel {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
 }
 
 .batch-steps {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
-  align-items: start;
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 24px 0;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.06);
 }
 
 .step {
+  position: relative;
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 12px;
-  color: #8c8c8c;
+  min-width: 0;
+  padding: 8px 28px;
 
-  &.current,
-  &.done {
-    color: var(--pb-primary);
-
-    .step-index {
-      background: var(--pb-primary);
-      color: #fff;
-    }
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: -22px;
+    bottom: 16px;
+    height: 167px;
+    right: 0;
+    width: 1px;
+    border-right: 1px solid #d8d8d8;
   }
 }
 
-.step-index {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #f0f0f0;
-  color: #8c8c8c;
-  font-weight: 600;
+.step-icon {
+  height: 109px;
   flex-shrink: 0;
+  object-fit: contain;
+}
+
+.step-arrow {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  transform: translate(50%, -50%);
+  background: #fff;
+  object-fit: contain;
 }
 
 .step-copy {
   min-width: 0;
+  padding-top: 2px;
 
   strong {
     display: block;
-    margin-bottom: 4px;
-    font-size: 15px;
-    color: inherit;
+    margin-bottom: 6px;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 22px;
+    color: #262626;
   }
 
   p {
     margin: 0 0 10px;
-    font-size: 12px;
-    color: #8c8c8c;
+    font-size: 14px;
+    line-height: 20px;
+    color: #333333;
   }
-}
-
-.step-line {
-  width: 48px;
-  height: 2px;
-  margin-top: 13px;
-  background: repeating-linear-gradient(
-    90deg,
-    #d6e4ff 0 8px,
-    transparent 8px 14px
-  );
 }
 
 .upload-zone {
-  padding: 36px 24px 28px;
-  background: #f8fbff;
+  padding: 48px 24px 40px;
+  background: #f7fbff;
   border: 1px dashed #91caff !important;
-  border-radius: 12px;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.04);
 
-  :deep(.ant-upload-drag-icon) {
-    margin-bottom: 8px;
+  :deep(.ant-upload-drag) {
+    background: transparent;
+    border: none;
+  }
 
-    .anticon {
-      font-size: 48px;
-      color: var(--pb-primary);
-    }
+  :deep(.ant-upload-btn) {
+    padding: 0;
   }
 }
 
+.upload-visual {
+  display: block;
+  width: 222px;
+  height: auto;
+  margin: 0 auto 16px;
+  object-fit: contain;
+}
+
 .upload-title {
-  margin: 0 0 6px;
-  font-size: 16px;
+  margin: 0 0 15px;
+  font-size: 24px;
   color: #262626;
 
   em {
@@ -1002,19 +1008,21 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 .upload-sub,
 .upload-hint {
   margin: 0;
-  font-size: 13px;
+  font-size: 24px;
+  line-height: 20px;
   color: #8c8c8c;
 }
 
 .upload-hint {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 15px;
+  font-size: 24px;
 }
 
 .pick-btn {
-  margin-top: 18px;
+  margin-top: 31px;
   height: 36px;
   padding-inline: 28px;
+  border-radius: 6px;
 }
 
 .batch-toolbar {
@@ -1023,7 +1031,10 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 
 @media (max-width: 992px) {
   .mode-row,
-  .workspace,
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
   .batch-steps {
     grid-template-columns: 1fr;
   }
@@ -1037,7 +1048,8 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     max-height: none;
   }
 
-  .step-line {
+  .step-arrow,
+  .step:not(:last-child)::after {
     display: none;
   }
 }

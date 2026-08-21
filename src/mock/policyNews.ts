@@ -96,6 +96,12 @@ const heroByPage: Record<
       '支持省、市、区县三级筛选，支持20000页内跳转，分页最多追赶100页',
     searchPlaceholder: '搜索政策标题',
   },
+  'enterprise-db': {
+    slogan: '洞察商机，锁定客户',
+    description:
+      '支持省、市、区县三级筛选，支持20000页内跳转，深分页最多追赶100页',
+    searchPlaceholder: '请输入政策、企业名称',
+  },
   'invest-db': {
     slogan: '汇集数据，实时动态',
     description:

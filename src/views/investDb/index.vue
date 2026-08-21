@@ -126,101 +126,107 @@ const columns: TableColumnType<InvestProject>[] = [
 </script>
 
 <template>
-  <a-layout class="invest-db" has-sider>
-    <a-layout-sider class="region-sider" theme="light" :width="220">
-      <div class="region-title">
-        <EnvironmentOutlined />
-        <span>选择地区</span>
-      </div>
-      <a-menu
-        v-model:selectedKeys="selectedRegionKeys"
-        mode="inline"
-        class="region-menu"
-        @select="onRegionSelect"
-      >
-        <a-menu-item v-for="item in investRegions" :key="item.key">
-          <div class="region-item">
-            <span>{{ item.label }}</span>
-            <span class="region-count">{{ item.count }}</span>
-          </div>
-        </a-menu-item>
-      </a-menu>
-    </a-layout-sider>
-
-    <a-layout-content class="invest-content">
-      <a-flex
-        class="toolbar"
-        justify="space-between"
-        align="center"
-        wrap="wrap"
-        :gap="12"
-      >
-        <span class="result-count">
-          共收录
-          <em>{{ investEnterpriseTotal.toLocaleString('zh-CN') }}</em>
-          家企业
-        </span>
-        <a-input-search
-          v-model:value="keyword"
-          class="project-search"
-          :placeholder="`搜索${regionLabel}项目名称、代码或单位`"
-          enter-button="搜索"
-          allow-clear
-        />
-      </a-flex>
-
-      <a-radio-group v-model:value="activeType" class="type-tabs">
-        <a-radio-button
-          v-for="tab in investTypeTabs"
-          :key="tab.key"
-          :value="tab.key"
+  <a-card class="invest-db-card" :bordered="false">
+    <a-layout class="invest-db" has-sider>
+      <a-layout-sider class="region-sider" theme="light" :width="220">
+        <div class="region-title">
+          <EnvironmentOutlined />
+          <span>选择地区</span>
+        </div>
+        <a-menu
+          v-model:selectedKeys="selectedRegionKeys"
+          mode="inline"
+          class="region-menu"
+          @select="onRegionSelect"
         >
-          {{ tab.label }} {{ typeCounts[tab.key] }}
-        </a-radio-button>
-      </a-radio-group>
+          <a-menu-item v-for="item in investRegions" :key="item.key">
+            <div class="region-item">
+              <span>{{ item.label }}</span>
+              <span class="region-count">{{ item.count }}</span>
+            </div>
+          </a-menu-item>
+        </a-menu>
+      </a-layout-sider>
 
-      <a-table
-        class="invest-table"
-        :columns="columns"
-        :data-source="pagedList"
-        :pagination="false"
-        :row-key="(row: InvestProject) => row.id"
-        size="middle"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'name'">
-            <a class="project-name">{{ record.name }}</a>
-          </template>
-          <template v-else-if="column.key === 'result'">
-            <span class="result" :class="record.result">
-              <CheckCircleFilled v-if="record.result === 'passed'" />
-              <CloseCircleFilled v-else />
-              {{
-                record.result === 'passed' ? '办结（通过）' : '未办结（驳回）'
-              }}
-            </span>
-          </template>
-        </template>
-      </a-table>
+      <a-layout-content class="invest-content">
+        <a-flex
+          class="toolbar"
+          justify="space-between"
+          align="center"
+          wrap="wrap"
+          :gap="12"
+        >
+          <span class="result-count">
+            共收录
+            <em>{{ investEnterpriseTotal.toLocaleString('zh-CN') }}</em>
+            家企业
+          </span>
+          <a-input-search
+            v-model:value="keyword"
+            class="project-search"
+            :placeholder="`搜索${regionLabel}项目名称、代码或单位`"
+            enter-button="搜索"
+            allow-clear
+          />
+        </a-flex>
 
-      <div class="pagination-wrap">
-        <a-pagination
-          v-model:current="currentPage"
-          :total="total"
-          :page-size="pageSize"
-          show-quick-jumper
-          :show-size-changer="false"
-          :show-total="(t: number) => `共 ${t} 条`"
-        />
-      </div>
-    </a-layout-content>
-  </a-layout>
+        <a-radio-group v-model:value="activeType" class="type-tabs">
+          <a-radio-button
+            v-for="tab in investTypeTabs"
+            :key="tab.key"
+            :value="tab.key"
+          >
+            {{ tab.label }} {{ typeCounts[tab.key] }}
+          </a-radio-button>
+        </a-radio-group>
+
+        <a-table
+          class="invest-table"
+          :columns="columns"
+          :data-source="pagedList"
+          :pagination="false"
+          :row-key="(row: InvestProject) => row.id"
+          size="middle"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <a class="project-name">{{ record.name }}</a>
+            </template>
+            <template v-else-if="column.key === 'result'">
+              <span class="result" :class="record.result">
+                <CheckCircleFilled v-if="record.result === 'passed'" />
+                <CloseCircleFilled v-else />
+                {{
+                  record.result === 'passed' ? '办结（通过）' : '未办结（驳回）'
+                }}
+              </span>
+            </template>
+          </template>
+        </a-table>
+
+        <div class="pagination-wrap">
+          <a-pagination
+            v-model:current="currentPage"
+            :total="total"
+            :page-size="pageSize"
+            show-quick-jumper
+            :show-size-changer="false"
+            :show-total="(t: number) => `共 ${t} 条`"
+          />
+        </div>
+      </a-layout-content>
+    </a-layout>
+  </a-card>
 </template>
 
 <style scoped lang="scss">
 .invest-db {
   background: transparent;
   gap: 28px;
+}
+
+.invest-db-card {
+  border-radius: 20px;
 }
 
 .region-sider {

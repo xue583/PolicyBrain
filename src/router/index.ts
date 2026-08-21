@@ -38,6 +38,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/policyDb/index.vue'),
         meta: { navKey: 'policy-db' },
       },
+      {
+        path: ':id(\\d+)',
+        name: 'policy-db-detail',
+        component: () => import('@/views/policyDb/detail.vue'),
+        meta: { navKey: 'policy-db', hideHero: true },
+      },
     ],
   },
   {
@@ -48,8 +54,14 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'enterprise-db',
-        component: () => import('@/views/comingSoon/index.vue'),
+        component: () => import('@/views/enterpriseDb/index.vue'),
         meta: { navKey: 'enterprise-db' },
+      },
+      {
+        path: ':id(\\d+)',
+        name: 'enterprise-db-detail',
+        component: () => import('@/views/enterpriseDb/detail.vue'),
+        meta: { navKey: 'enterprise-db', hideHero: true },
       },
     ],
   },
