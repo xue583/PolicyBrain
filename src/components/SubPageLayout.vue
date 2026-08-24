@@ -10,6 +10,8 @@ import heroBg from '@/assets/hero-bg.png'
 import policyDbBg from '@/assets/policy-db-bg.png'
 import enterpriseDbBg from '@/assets/enterprise-db-bg.png'
 import exportBanner from '@/assets/export/banner@2x.png'
+import investDb from '@/assets/investDb/banner@2x.png'
+import apiBg from '@/assets/api/banner.png'
 
 defineOptions({ name: 'SubPageLayout' })
 
@@ -22,10 +24,14 @@ const hero = computed(() => getSubPageHero(pageKey.value))
 const heroBgByPage: Record<string, string> = {
   'policy-db': policyDbBg,
   'enterprise-db': enterpriseDbBg,
+  'invest-db': investDb,
+  api: apiBg,
   export: exportBanner,
 }
 const currentHeroBg = computed(() => heroBgByPage[pageKey.value] ?? heroBg)
 const isFullBanner = computed(() => pageKey.value === 'export')
+const isInvestDb = computed(() => pageKey.value === 'invest-db')
+const isApiBg = computed(() => pageKey.value === 'api')
 const keyword = ref(String(route.query.q ?? ''))
 
 watch(
@@ -66,8 +72,9 @@ const openBeian = () => {
 <template>
   <div class="sub-page">
     <div
-      v-if="!hideHero && !isFullBanner"
+      v-if="!hideHero && !isFullBanner && !isInvestDb"
       class="page-bg"
+      :class="{ 'api-bg': isApiBg }"
       :style="{ backgroundImage: `url(${currentHeroBg})` }"
     />
 
@@ -81,6 +88,12 @@ const openBeian = () => {
         class="hero-banner"
         :src="currentHeroBg"
         alt="数据导出"
+      />
+      <img
+        v-else-if="isInvestDb"
+        class="hero-banner"
+        :src="currentHeroBg"
+        alt="投资项目库"
       />
       <div v-else class="hero-inner" :class="{ 'no-search': hero.hideSearch }">
         <div class="hero-copy">
@@ -170,6 +183,10 @@ const openBeian = () => {
   min-height: calc(100vh - 64px);
   overflow-x: hidden;
   background: var(--pb-bg);
+}
+
+.api-bg {
+  height: 474px !important;
 }
 
 .page-bg {

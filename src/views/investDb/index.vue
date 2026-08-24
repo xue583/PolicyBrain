@@ -227,6 +227,7 @@ const columns: TableColumnType<InvestProject>[] = [
 
 .invest-db-card {
   border-radius: 20px;
+  margin-top: -130px;
 }
 
 .region-sider {

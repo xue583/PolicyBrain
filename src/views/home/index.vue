@@ -488,7 +488,7 @@ onUnmounted(() => {
   border: none;
   outline: none;
   padding: 0 20px;
-  font-size: 14px;
+  font-size: 18px;
   color: var(--pb-text);
   background: transparent;
   font-family: inherit;
