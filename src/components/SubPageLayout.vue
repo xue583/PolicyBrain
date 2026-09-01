@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { getSubPageHero, navItems } from '@/mock/policyNews'
 import { SITE } from '@/constants/site'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
+import { useSyncedSearchQuery } from '@/composables/useRouteKeyword'
 import logoLightImg from '@/assets/logo-light.png'
 import heroBg from '@/assets/hero-bg.png'
 import policyDbBg from '@/assets/policy-db-bg.png'
@@ -32,33 +33,10 @@ const currentHeroBg = computed(() => heroBgByPage[pageKey.value] ?? heroBg)
 const isFullBanner = computed(() => pageKey.value === 'export')
 const isInvestDb = computed(() => pageKey.value === 'invest-db')
 const isApiBg = computed(() => pageKey.value === 'api')
-const keyword = ref(String(route.query.q ?? ''))
-
-watch(
-  () => route.query.q,
-  (q) => {
-    const next = String(q ?? '')
-    if (keyword.value !== next) keyword.value = next
-  },
-)
-
-watch(pageKey, () => {
-  if (!route.query.q) keyword.value = ''
+const isPersonalCenter = computed(() => pageKey.value === 'personal-center')
+const { keyword, applyKeyword } = useSyncedSearchQuery({
+  clearWhen: pageKey,
 })
-
-watch(keyword, (val) => {
-  const q = val.trim()
-  const current = String(route.query.q ?? '')
-  if (q === current) return
-  void router.replace({ query: q ? { q } : {} })
-})
-
-const applyKeyword = () => {
-  const q = keyword.value.trim()
-  const current = String(route.query.q ?? '')
-  if (q === current) return
-  void router.replace({ query: q ? { q } : {} })
-}
 
 const onFooterNav = (key: string) => {
   void router.push({ name: key })
@@ -70,7 +48,7 @@ const openBeian = () => {
 </script>
 
 <template>
-  <div class="sub-page">
+  <div class="sub-page" :class="{ 'personal-center-bg': isPersonalCenter }">
     <div
       v-if="!hideHero && !isFullBanner && !isInvestDb"
       class="page-bg"
@@ -186,7 +164,11 @@ const openBeian = () => {
 }
 
 .api-bg {
-  height: 474px !important;
+  height: 474px;
+}
+
+.personal-center-bg {
+  background: linear-gradient(180deg, rgba(215, 231, 250) 0%, #fff 100%);
 }
 
 .page-bg {
@@ -321,8 +303,8 @@ const openBeian = () => {
 }
 
 .content-card {
-  border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: var(--pb-radius-lg);
+  box-shadow: var(--pb-shadow-card);
 
   :deep(.ant-card-body) {
     padding: 30px;
@@ -335,14 +317,14 @@ const openBeian = () => {
 
   :deep(.ant-card-body) {
     padding: 0;
-    font-size: 16px !important;
+    font-size: 16px;
   }
 }
 
 .page-footer {
   position: relative;
   z-index: 1;
-  background: #1f2a37 !important;
+  background: #1f2a37;
   color: rgba(255, 255, 255, 0.75);
   padding: 40px 0 0;
 }
@@ -357,7 +339,7 @@ const openBeian = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: var(--pb-gap);
   padding-bottom: 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -412,7 +394,7 @@ const openBeian = () => {
   cursor: pointer;
 }
 
-@media (max-width: 992px) {
+@include below-lg {
   .hero-inner {
     padding: 32px 0 28px;
   }

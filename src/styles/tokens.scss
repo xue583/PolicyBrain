@@ -1,0 +1,17 @@
+$bp-sm: 576px;
+$bp-md: 768px;
+$bp-lg: 992px;
+$bp-xl: 1440px;
+
+@mixin below-lg {
+  @media (max-width: $bp-lg) {
+    @content;
+  }
+}
+
+// Ant Design Sider 宽度写在 inline style 上，移动端只能靠 !important 盖掉。
+@mixin sider-stack {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: none !important;
+}

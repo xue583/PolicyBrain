@@ -111,13 +111,19 @@ let refreshPromise: Promise<string> | null = null
 const AUTH_SKIP_RE =
   /\/(tokenRefreshes|sessions|smsCodes|smsCodeVerifications)(\/|$|\?)/i
 
-const shouldSkipRefresh = (config?: RetriableConfig) => {
+export const shouldSkipRefresh = (config?: {
+  skipAuthRefresh?: boolean
+  url?: string
+}) => {
   if (config?.skipAuthRefresh) return true
   const url = config?.url || ''
   return AUTH_SKIP_RE.test(url)
 }
 
-const unwrapEnvelope = (payload: unknown, httpStatus: number): unknown => {
+export const unwrapEnvelope = (
+  payload: unknown,
+  httpStatus: number,
+): unknown => {
   if (
     payload &&
     typeof payload === 'object' &&

@@ -25,11 +25,22 @@ const scrolled = ref(false)
 
 const activeNav = computed(() => (route.meta.navKey as string) || 'home')
 const isHome = computed(() => activeNav.value === 'home')
+const displayName = computed(
+  () =>
+    (user.value?.nickname as string) ||
+    (user.value?.phone as string) ||
+    '已登录',
+)
 
 let offNeedLogin: (() => void) | undefined
+let scrollRaf = 0
 
 const onScroll = () => {
-  scrolled.value = window.scrollY > 8
+  if (scrollRaf) return
+  scrollRaf = requestAnimationFrame(() => {
+    scrolled.value = window.scrollY > 8
+    scrollRaf = 0
+  })
 }
 
 const onCitySelect = ({ key }: { key: string | number }) => {
@@ -51,17 +62,13 @@ const openLogin = () => {
   loginOpen.value = true
 }
 
-const displayName = () => {
-  return (
-    (user.value?.nickname as string) ||
-    (user.value?.phone as string) ||
-    '已登录'
-  )
-}
-
 const onLogout = async () => {
   await auth.logout()
   message.success('已退出登录')
+}
+
+const goPersonalCenter = () => {
+  void router.push({ name: 'personal-center' })
 }
 
 onMounted(() => {
@@ -75,6 +82,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
+  if (scrollRaf) cancelAnimationFrame(scrollRaf)
   offNeedLogin?.()
 })
 </script>
@@ -131,11 +139,15 @@ onUnmounted(() => {
         <template v-if="isLoggedIn">
           <a-dropdown>
             <a class="user-entry" @click.prevent>
-              <span>{{ displayName() }}</span>
+              <span>{{ displayName }}</span>
               <DownOutlined class="user-arrow" />
             </a>
             <template #overlay>
               <a-menu>
+                <a-menu-item key="personal-center" @click="goPersonalCenter"
+                  >会员中心</a-menu-item
+                >
+                <a-menu-divider />
                 <a-menu-item key="logout" @click="onLogout"
                   >退出登录</a-menu-item
                 >
@@ -161,7 +173,7 @@ onUnmounted(() => {
   height: 64px;
   padding: 17px 0 17px;
   line-height: 64px;
-  background: transparent !important;
+  background: transparent;
   border-bottom: none;
   box-shadow: none;
   transition:
@@ -175,7 +187,6 @@ onUnmounted(() => {
 
   &.is-scrolled {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    padding-bottom: 17px !important;
   }
 }
 
@@ -238,32 +249,32 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   margin-left: 8%;
-  border-bottom: none !important;
+  border-bottom: none;
   line-height: 62px;
-  background: transparent !important;
+  background: transparent;
   font-size: 16px;
 
   :deep(.ant-menu-item) {
-    padding-inline: 14px !important;
+    padding-inline: 14px;
     color: #333;
     font-weight: 400;
 
     &::after {
-      inset-inline: 14px !important;
-      border-bottom-width: 2px !important;
+      inset-inline: 14px;
+      border-bottom-width: 2px;
     }
 
     &:hover {
-      color: var(--pb-primary) !important;
+      color: var(--pb-primary);
     }
   }
 
   :deep(.ant-menu-item-selected) {
-    color: var(--pb-primary) !important;
+    color: var(--pb-primary);
     font-weight: 500;
 
     &::after {
-      border-bottom-color: var(--pb-primary) !important;
+      border-bottom-color: var(--pb-primary);
     }
   }
 }
@@ -347,7 +358,7 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 992px) {
+@include below-lg {
   .header-menu {
     display: none;
   }

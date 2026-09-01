@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, reactive, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useFilteredList } from '@/composables/useFilteredList'
+import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { DownOutlined } from '@ant-design/icons-vue'
 import {
   enterpriseIndustries,
@@ -20,12 +22,9 @@ defineOptions({ name: 'EnterpriseDb' })
 const COLLAPSED_PROVINCE_COUNT = 12
 const COLLAPSED_INDUSTRY_COUNT = 20
 
-const route = useRoute()
 const router = useRouter()
-const keyword = computed(() => String(route.query.q ?? ''))
+const keyword = useRouteKeyword()
 
-const currentPage = ref(1)
-const pageSize = 10
 const showMoreProvinces = ref(true)
 const showMoreIndustries = ref(false)
 
@@ -54,24 +53,20 @@ const filteredList = computed(() =>
   }),
 )
 
-const pagedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredList.value.slice(start, start + pageSize)
-})
-
-const total = computed(() => filteredList.value.length)
+const { currentPage, pageSize, pagedList, total, resetPage } =
+  useFilteredList(filteredList)
 
 const selectProvince = (province: string) => {
   filters.province = filters.province === province ? '' : province
-  currentPage.value = 1
+  resetPage()
 }
 
 watch([keyword, () => filters.industries], () => {
-  currentPage.value = 1
+  resetPage()
 })
 
 const onIndustryChange = () => {
-  currentPage.value = 1
+  resetPage()
 }
 
 const locationText = (item: EnterpriseItem) => `${item.province}/${item.city}`
@@ -82,131 +77,133 @@ const goDetail = (id: number) => {
 </script>
 
 <template>
-  <a-card class="enterprise-card" :bordered="false">
-    <div class="toolbar">
-      <span
-        class="result-count"
-        :style="{ '--result-count-bg': `url(${titleStyleBg})` }"
-      >
-        共收录
-        <em>{{ enterpriseTotal }}</em>
-        家企业
-      </span>
-      <a-button type="primary" class="map-btn">产业图谱</a-button>
-    </div>
-
-    <div class="filter-row">
-      <span class="filter-label">注册地址：</span>
-      <div class="filter-options">
-        <a
-          v-for="province in visibleProvinces"
-          :key="province"
-          class="option-link"
-          :class="{ active: filters.province === province }"
-          @click="selectProvince(province)"
+  <PageState>
+    <a-card class="enterprise-card" :bordered="false">
+      <div class="toolbar">
+        <span
+          class="result-count"
+          :style="{ '--result-count-bg': `url(${titleStyleBg})` }"
         >
-          {{ province }}
+          共收录
+          <em>{{ enterpriseTotal }}</em>
+          家企业
+        </span>
+        <a-button type="primary" class="map-btn">产业图谱</a-button>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-label">注册地址：</span>
+        <div class="filter-options">
+          <a
+            v-for="province in visibleProvinces"
+            :key="province"
+            class="option-link"
+            :class="{ active: filters.province === province }"
+            @click="selectProvince(province)"
+          >
+            {{ province }}
+          </a>
+        </div>
+        <a class="more-link" @click="showMoreProvinces = !showMoreProvinces">
+          {{ showMoreProvinces ? '收起' : '更多' }}
+          <DownOutlined :class="{ rotated: showMoreProvinces }" />
         </a>
       </div>
-      <a class="more-link" @click="showMoreProvinces = !showMoreProvinces">
-        {{ showMoreProvinces ? '收起' : '更多' }}
-        <DownOutlined :class="{ rotated: showMoreProvinces }" />
-      </a>
-    </div>
 
-    <div class="filter-row industry-row">
-      <span class="filter-label">所属产业：</span>
-      <div class="filter-options">
-        <a-checkbox-group
-          v-model:value="filters.industries"
-          :options="visibleIndustries"
-          @change="onIndustryChange"
+      <div class="filter-row industry-row">
+        <span class="filter-label">所属产业：</span>
+        <div class="filter-options">
+          <a-checkbox-group
+            v-model:value="filters.industries"
+            :options="visibleIndustries"
+            @change="onIndustryChange"
+          />
+        </div>
+        <a class="more-link" @click="showMoreIndustries = !showMoreIndustries">
+          {{ showMoreIndustries ? '收起' : '更多' }}
+          <DownOutlined :class="{ rotated: showMoreIndustries }" />
+        </a>
+      </div>
+
+      <div v-if="!pagedList.length" class="empty-state">
+        <img :src="emptyIllustration" alt="" class="empty-illustration" />
+        <p>未找到符合条件的企业，请调整筛选后再试</p>
+      </div>
+
+      <div v-else class="enterprise-grid">
+        <article
+          v-for="item in pagedList"
+          :key="item.id"
+          class="ent-item"
+          @click="goDetail(item.id)"
+        >
+          <div class="ent-head">
+            <div class="ent-title-wrap">
+              <img :src="industryTagIcon" alt="" class="ent-icon" />
+              <router-link
+                class="ent-name"
+                :to="{
+                  name: 'enterprise-db-detail',
+                  params: { id: String(item.id) },
+                }"
+                @click.stop
+              >
+                {{ item.name }}
+              </router-link>
+              <span class="status-tag" :class="item.status">
+                {{ enterpriseStatusText[item.status] }}
+              </span>
+            </div>
+            <span class="ent-location">{{ locationText(item) }}</span>
+          </div>
+
+          <div class="ent-policy-row">
+            <p class="ent-policy">已获政策: {{ item.policyCount }}项</p>
+            <div class="ent-tags">
+              <span
+                v-for="(tag, index) in item.tags"
+                :key="tag"
+                class="ent-tag"
+                :class="index % 2 ? 'blue' : 'orange'"
+              >
+                {{ tag }}
+              </span>
+            </div>
+          </div>
+
+          <div class="ent-meta-row">
+            <p class="ent-meta">
+              <span class="meta-label">注册地址:</span>
+              <span class="meta-value-wrap">
+                <a-tooltip :title="item.address">
+                  <span class="meta-value">{{ item.address }}</span>
+                </a-tooltip>
+              </span>
+            </p>
+            <p class="ent-meta">
+              <span class="meta-label">工商行业:</span>
+              <span class="meta-value-wrap">
+                <a-tooltip :title="item.businessIndustry">
+                  <span class="meta-value">{{ item.businessIndustry }}</span>
+                </a-tooltip>
+              </span>
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <div class="pagination-wrap">
+        <a-pagination
+          v-model:current="currentPage"
+          :total="total"
+          :page-size="pageSize"
+          show-quick-jumper
+          :show-size-changer="false"
+          :show-total="(t: number) => `共 ${t} 条`"
         />
       </div>
-      <a class="more-link" @click="showMoreIndustries = !showMoreIndustries">
-        {{ showMoreIndustries ? '收起' : '更多' }}
-        <DownOutlined :class="{ rotated: showMoreIndustries }" />
-      </a>
-    </div>
-
-    <div v-if="!pagedList.length" class="empty-state">
-      <img :src="emptyIllustration" alt="" class="empty-illustration" />
-      <p>未找到符合条件的企业，请调整筛选后再试</p>
-    </div>
-
-    <div v-else class="enterprise-grid">
-      <article
-        v-for="item in pagedList"
-        :key="item.id"
-        class="ent-item"
-        @click="goDetail(item.id)"
-      >
-        <div class="ent-head">
-          <div class="ent-title-wrap">
-            <img :src="industryTagIcon" alt="" class="ent-icon" />
-            <router-link
-              class="ent-name"
-              :to="{
-                name: 'enterprise-db-detail',
-                params: { id: String(item.id) },
-              }"
-              @click.stop
-            >
-              {{ item.name }}
-            </router-link>
-            <span class="status-tag" :class="item.status">
-              {{ enterpriseStatusText[item.status] }}
-            </span>
-          </div>
-          <span class="ent-location">{{ locationText(item) }}</span>
-        </div>
-
-        <div class="ent-policy-row">
-          <p class="ent-policy">已获政策: {{ item.policyCount }}项</p>
-          <div class="ent-tags">
-            <span
-              v-for="(tag, index) in item.tags"
-              :key="tag"
-              class="ent-tag"
-              :class="index % 2 ? 'blue' : 'orange'"
-            >
-              {{ tag }}
-            </span>
-          </div>
-        </div>
-
-        <div class="ent-meta-row">
-          <p class="ent-meta">
-            <span class="meta-label">注册地址:</span>
-            <span class="meta-value-wrap">
-              <a-tooltip :title="item.address">
-                <span class="meta-value">{{ item.address }}</span>
-              </a-tooltip>
-            </span>
-          </p>
-          <p class="ent-meta">
-            <span class="meta-label">工商行业:</span>
-            <span class="meta-value-wrap">
-              <a-tooltip :title="item.businessIndustry">
-                <span class="meta-value">{{ item.businessIndustry }}</span>
-              </a-tooltip>
-            </span>
-          </p>
-        </div>
-      </article>
-    </div>
-
-    <div class="pagination-wrap">
-      <a-pagination
-        v-model:current="currentPage"
-        :total="total"
-        :page-size="pageSize"
-        show-quick-jumper
-        :show-size-changer="false"
-        :show-total="(t: number) => `共 ${t} 条`"
-      />
-    </div>
-  </a-card>
+    </a-card>
+  </PageState>
 </template>
 
 <style scoped lang="scss">
@@ -214,8 +211,8 @@ const goDetail = (id: number) => {
   padding-bottom: 34px;
 }
 .enterprise-card {
-  border-radius: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: var(--pb-radius-lg);
+  box-shadow: var(--pb-shadow-card);
 
   :deep(.ant-card-body) {
     padding: 24px 28px 16px;
@@ -254,28 +251,14 @@ const goDetail = (id: number) => {
   font-weight: 500;
 }
 
-.filter-row {
-  display: flex;
-  gap: 12px;
-  padding: 10px 0;
-}
-
-.filter-label {
-  flex-shrink: 0;
-  width: 80px;
-  color: #8c8c8c;
-  line-height: 32px;
-  font-size: 16px;
+.enterprise-card {
+  --filter-row-border: none;
+  --filter-label-width: 80px;
+  --filter-options-gap: 4px 18px;
+  --pagination-padding: 20px 0 8px;
 }
 
 .filter-options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 18px;
-  flex: 1;
-  min-width: 0;
-
   :deep(.ant-checkbox-group) {
     display: flex;
     flex-wrap: wrap;
@@ -290,36 +273,11 @@ const goDetail = (id: number) => {
 }
 
 .option-link {
-  color: #262626;
-  line-height: 32px;
   font-size: 16px;
-  cursor: pointer;
-
-  &.active,
-  &:hover {
-    color: var(--pb-primary);
-  }
 }
 
-.more-link {
-  flex-shrink: 0;
-  align-self: flex-start;
-  display: flex;
-  align-items: center;
-  color: var(--pb-primary);
-  line-height: 32px;
-  white-space: nowrap;
-  cursor: pointer;
-
-  .anticon {
-    margin-left: 2px;
-    font-size: 12px;
-    transition: transform 0.2s;
-
-    &.rotated {
-      transform: rotate(180deg);
-    }
-  }
+.more-link .anticon {
+  font-size: 12px;
 }
 
 .industry-row {
@@ -518,13 +476,7 @@ const goDetail = (id: number) => {
   white-space: nowrap;
 }
 
-.pagination-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0 8px;
-}
-
-@media (max-width: 992px) {
+@include below-lg {
   .enterprise-grid {
     grid-template-columns: 1fr;
   }

@@ -36,6 +36,18 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData(content: string, filepath: string) {
+            const normalized = filepath.replaceAll('\\', '/')
+            if (normalized.endsWith('/styles/tokens.scss')) return content
+            return `@use "styles/tokens" as *;\n${content}`
+          },
+          loadPaths: [fileURLToPath(new URL('./src', import.meta.url))],
+        },
+      },
+    },
     server: {
       host: exposeLan ? true : 'localhost',
       port: cliPort,
@@ -43,6 +55,11 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: proxyTarget,
           changeOrigin: true,
+          bypass(req) {
+            if (req.headers.accept?.includes('text/html')) {
+              return req.url
+            }
+          },
         },
       },
     },

@@ -7,6 +7,7 @@ import {
   filterPolicyDbSupport,
   type PolicyDbSupportRow,
 } from '@/utils/filterPolicies'
+import { useFilteredList } from '@/composables/useFilteredList'
 
 defineOptions({ name: 'PolicyDbSupportPanel' })
 
@@ -17,18 +18,7 @@ const props = defineProps<{
 }>()
 
 const grade = ref('')
-const currentPage = ref(1)
-const pageSize = 10
 const showMoreGrades = ref(false)
-
-watch(
-  () => props.list,
-  () => {
-    grade.value = ''
-    currentPage.value = 1
-    showMoreGrades.value = false
-  },
-)
 
 const visibleGrades = computed(() =>
   showMoreGrades.value ? policyGrades : policyGrades.slice(0, COLLAPSED_COUNT),
@@ -38,16 +28,28 @@ const filteredList = computed(() =>
   filterPolicyDbSupport(props.list, grade.value),
 )
 
-const pagedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return attachGradeRowSpan(filteredList.value.slice(start, start + pageSize))
-})
+const {
+  currentPage,
+  pageSize,
+  pagedList: pagedRaw,
+  total,
+  resetPage,
+} = useFilteredList(filteredList)
 
-const total = computed(() => filteredList.value.length)
+const pagedList = computed(() => attachGradeRowSpan(pagedRaw.value))
+
+watch(
+  () => props.list,
+  () => {
+    grade.value = ''
+    showMoreGrades.value = false
+    resetPage()
+  },
+)
 
 const selectGrade = (value: string) => {
   grade.value = grade.value === value ? '' : value
-  currentPage.value = 1
+  resetPage()
 }
 
 const columns = [
@@ -130,95 +132,14 @@ const columns = [
 </template>
 
 <style scoped lang="scss">
+.support-panel {
+  --pagination-padding: 20px 0 4px;
+}
+
 .filter-row {
-  display: flex;
-  gap: 12px;
-  font-size: 15px;
-  padding: 4px 0 16px;
-}
-
-.filter-label {
-  flex-shrink: 0;
-  width: 88px;
-  color: #8c8c8c;
-  line-height: 32px;
-}
-
-.filter-options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  flex: 1;
-  min-width: 0;
-}
-
-.option-link {
-  color: #262626;
-  line-height: 32px;
-  cursor: pointer;
-
-  &.active,
-  &:hover {
-    color: var(--pb-primary);
-  }
-}
-
-.more-link {
-  flex-shrink: 0;
-  align-self: flex-start;
-  color: var(--pb-primary);
-  line-height: 32px;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-
-  .anticon {
-    margin-left: 2px;
-    font-size: 16px;
-    transition: transform 0.2s;
-
-    &.rotated {
-      transform: rotate(180deg);
-    }
-  }
-}
-
-.db-table {
-  overflow: hidden;
-  border: 1px solid #d9d9d9;
-  border-radius: 12px;
-  background: #fff;
-
-  :deep(.ant-table) {
-    font-size: 15px;
-    background: #fff;
-    overflow: hidden;
-    border-radius: 12px;
-  }
-
-  :deep(.ant-table-container) {
-    overflow: hidden;
-    border: none !important;
-  }
-
-  :deep(.ant-table-thead > tr > th) {
-    background: #eaf4ff;
-    color: #262626;
-    font-size: 15px;
-    font-weight: 600;
-    border-color: #e8e8e8 !important;
-    padding: 16px 18px !important;
-  }
-
-  :deep(.ant-table-tbody > tr > td) {
-    font-size: 15px;
-    background: #fff !important;
-    border-color: #e8e8e8 !important;
-    vertical-align: middle;
-    padding: 16px 18px !important;
-  }
+  --filter-font-size: 15px;
+  --filter-row-padding: 4px 0 16px;
+  --filter-row-border: none;
 }
 
 .grade-cell {
@@ -232,12 +153,6 @@ const columns = [
   &:hover {
     color: #4096ff;
   }
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0 4px;
 }
 
 @media (max-width: 768px) {

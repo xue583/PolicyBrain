@@ -14,7 +14,20 @@ dayjs.locale('zh-cn')
     :theme="{
       token: {
         colorPrimary: PRIMARY_COLOR,
-        borderRadius: 4,
+        borderRadius: 8,
+        borderRadiusLG: 20,
+        colorBgLayout: 'transparent',
+      },
+      components: {
+        Layout: {
+          colorBgHeader: 'transparent',
+          colorBgBody: 'transparent',
+        },
+        Menu: {
+          colorItemBg: 'transparent',
+          colorItemTextHover: PRIMARY_COLOR,
+          colorItemTextSelected: PRIMARY_COLOR,
+        },
       },
     }"
   >

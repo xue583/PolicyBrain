@@ -113,7 +113,7 @@ const defaultMeta = {
   capitalRange: '1000万-5000万',
   ageRange: '5-10年',
   economyType: '有限责任公司',
-} as const
+}
 
 /** 截图第一页企业，顺序与设计稿一致 */
 const featured: Array<Omit<ExportEnterprise, 'id'>> = [

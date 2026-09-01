@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useFilteredList } from '@/composables/useFilteredList'
+import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import {
   DownOutlined,
   ClockCircleOutlined,
@@ -19,15 +21,12 @@ import infoTitleBg from '../../assets/home/info-title-bg.png'
 
 defineOptions({ name: 'PolicyNews' })
 
-const route = useRoute()
 const router = useRouter()
 
-const currentPage = ref(1)
-const pageSize = 10
 const showMoreRegions = ref(false)
 const showMoreIndustries = ref(false)
 
-const keyword = computed(() => String(route.query.q ?? ''))
+const keyword = useRouteKeyword()
 
 const filters = reactive({
   region: '' as string,
@@ -75,16 +74,12 @@ const filteredList = computed(() =>
   }),
 )
 
-const pagedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredList.value.slice(start, start + pageSize)
-})
-
-const total = computed(() => filteredList.value.length)
+const { currentPage, pageSize, pagedList, total, resetPage } =
+  useFilteredList(filteredList)
 
 const selectRegion = (region: string) => {
   filters.region = filters.region === region ? '' : region
-  currentPage.value = 1
+  resetPage()
 }
 
 const removeCondition = (key: string) => {
@@ -100,7 +95,7 @@ const removeCondition = (key: string) => {
     const value = key.slice('type:'.length)
     filters.infoTypes = filters.infoTypes.filter((i) => i !== value)
   }
-  currentPage.value = 1
+  resetPage()
 }
 
 const clearConditions = () => {
@@ -108,7 +103,7 @@ const clearConditions = () => {
   filters.industries = []
   filters.levels = []
   filters.infoTypes = []
-  currentPage.value = 1
+  resetPage()
 }
 
 watch(
@@ -119,12 +114,12 @@ watch(
     () => filters.infoTypes,
   ],
   () => {
-    currentPage.value = 1
+    resetPage()
   },
 )
 
 const onFilterChange = () => {
-  currentPage.value = 1
+  resetPage()
 }
 
 const openDetail = (item: PolicyItem) => {
@@ -133,172 +128,174 @@ const openDetail = (item: PolicyItem) => {
 </script>
 
 <template>
-  <div class="policy-news">
-    <!-- Filters -->
-    <div class="filter-panel">
-      <a-card style="border-radius: 20px">
-        <div class="filter-row">
-          <span class="filter-label">省市地区：</span>
-          <div class="filter-options">
-            <a
-              v-for="region in visibleRegions"
-              :key="region"
-              class="region-link"
-              :class="{ active: filters.region === region }"
-              @click="selectRegion(region)"
-            >
-              {{ region }}
-            </a>
-            <a class="more-link" @click="showMoreRegions = !showMoreRegions">
-              {{ showMoreRegions ? '收起' : '更多' }}
-              <DownOutlined :class="{ rotated: showMoreRegions }" />
-            </a>
-          </div>
-        </div>
-
-        <div class="filter-row">
-          <span class="filter-label">行业分类：</span>
-          <div class="filter-options">
-            <a-checkbox-group
-              v-model:value="filters.industries"
-              :options="visibleIndustries"
-              @change="onFilterChange"
-            />
-            <a
-              class="more-link"
-              @click="showMoreIndustries = !showMoreIndustries"
-            >
-              {{ showMoreIndustries ? '收起' : '更多' }}
-              <DownOutlined :class="{ rotated: showMoreIndustries }" />
-            </a>
-          </div>
-        </div>
-
-        <div class="filter-row">
-          <span class="filter-label">政策级别：</span>
-          <div class="filter-options">
-            <a-checkbox-group
-              v-model:value="filters.levels"
-              :options="policyLevels"
-              @change="onFilterChange"
-            />
-          </div>
-        </div>
-
-        <div class="filter-row">
-          <span class="filter-label">资讯类型：</span>
-          <div class="filter-options">
-            <a-checkbox-group
-              v-model:value="filters.infoTypes"
-              :options="infoTypes"
-              @change="onFilterChange"
-            />
-          </div>
-        </div>
-
-        <div class="selected-section">
-          <div class="filter-row selected-row">
-            <span class="filter-label">已选条件：</span>
-            <div class="selected-tags">
-              <template v-if="selectedConditions.length">
-                <a-tag
-                  v-for="item in selectedConditions"
-                  :key="item.key"
-                  closable
-                  class="condition-tag"
-                  @close="removeCondition(item.key)"
-                >
-                  {{ item.label }}
-                </a-tag>
-              </template>
-              <span v-else class="empty-selected">暂无筛选条件</span>
+  <PageState>
+    <div class="policy-news">
+      <!-- Filters -->
+      <div class="filter-panel">
+        <a-card class="pb-card-lg">
+          <div class="filter-row">
+            <span class="filter-label">省市地区：</span>
+            <div class="filter-options">
+              <a
+                v-for="region in visibleRegions"
+                :key="region"
+                class="region-link"
+                :class="{ active: filters.region === region }"
+                @click="selectRegion(region)"
+              >
+                {{ region }}
+              </a>
+              <a class="more-link" @click="showMoreRegions = !showMoreRegions">
+                {{ showMoreRegions ? '收起' : '更多' }}
+                <DownOutlined :class="{ rotated: showMoreRegions }" />
+              </a>
             </div>
-            <a
-              v-if="selectedConditions.length"
-              class="clear-link"
-              @click="clearConditions"
-            >
-              <DeleteOutlined />
-              删除
-            </a>
           </div>
-        </div>
-      </a-card>
-    </div>
 
-    <!-- Tips -->
-    <div
-      class="result-bar"
-      :style="{ '--result-bar-bg': `url(${infoTitleBg})` }"
-    >
-      共找到 {{ total }} 条政策资讯
-    </div>
+          <div class="filter-row">
+            <span class="filter-label">行业分类：</span>
+            <div class="filter-options">
+              <a-checkbox-group
+                v-model:value="filters.industries"
+                :options="visibleIndustries"
+                @change="onFilterChange"
+              />
+              <a
+                class="more-link"
+                @click="showMoreIndustries = !showMoreIndustries"
+              >
+                {{ showMoreIndustries ? '收起' : '更多' }}
+                <DownOutlined :class="{ rotated: showMoreIndustries }" />
+              </a>
+            </div>
+          </div>
 
-    <!-- List -->
-    <div class="list-section">
-      <div class="policy-cards">
-        <div
-          v-for="item in pagedList"
-          :key="item.id"
-          class="policy-card"
-          @click="openDetail(item)"
-        >
-          <span
-            class="status-badge"
-            :class="item.status === 'expired' ? 'expired' : 'applying'"
+          <div class="filter-row">
+            <span class="filter-label">政策级别：</span>
+            <div class="filter-options">
+              <a-checkbox-group
+                v-model:value="filters.levels"
+                :options="policyLevels"
+                @change="onFilterChange"
+              />
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <span class="filter-label">资讯类型：</span>
+            <div class="filter-options">
+              <a-checkbox-group
+                v-model:value="filters.infoTypes"
+                :options="infoTypes"
+                @change="onFilterChange"
+              />
+            </div>
+          </div>
+
+          <div class="selected-section">
+            <div class="filter-row selected-row">
+              <span class="filter-label">已选条件：</span>
+              <div class="selected-tags">
+                <template v-if="selectedConditions.length">
+                  <a-tag
+                    v-for="item in selectedConditions"
+                    :key="item.key"
+                    closable
+                    class="condition-tag"
+                    @close="removeCondition(item.key)"
+                  >
+                    {{ item.label }}
+                  </a-tag>
+                </template>
+                <span v-else class="empty-selected">暂无筛选条件</span>
+              </div>
+              <a
+                v-if="selectedConditions.length"
+                class="clear-link"
+                @click="clearConditions"
+              >
+                <DeleteOutlined />
+                删除
+              </a>
+            </div>
+          </div>
+        </a-card>
+      </div>
+
+      <!-- Tips -->
+      <div
+        class="result-bar"
+        :style="{ '--result-bar-bg': `url(${infoTitleBg})` }"
+      >
+        共找到 {{ total }} 条政策资讯
+      </div>
+
+      <!-- List -->
+      <div class="list-section">
+        <div class="policy-cards">
+          <div
+            v-for="item in pagedList"
+            :key="item.id"
+            class="policy-card"
+            @click="openDetail(item)"
           >
-            {{ item.status === 'expired' ? '已过期' : '申报中' }}
-          </span>
-
-          <div class="item-head">
-            <a class="item-title">{{ item.title }}</a>
-          </div>
-
-          <div class="item-tags">
-            <template v-for="(tag, index) in item.tags" :key="tag.text">
-              <a-tag :color="tag.color">{{ tag.text }}</a-tag>
-              <a-tag v-if="index === 0" color="processing">{{
-                item.department
-              }}</a-tag>
-            </template>
-          </div>
-
-          <p class="item-desc">{{ item.description }}</p>
-
-          <div class="item-meta">
-            <span>发布日期：{{ item.date }}</span>
-            <span>发文机构：{{ item.department }}</span>
-          </div>
-
-          <a-divider class="tabs-divider" />
-
-          <div class="item-remain">
-            <ClockCircleOutlined />
             <span
-              class="remain-text"
-              :class="{ danger: item.daysRemaining <= 0 }"
+              class="status-badge"
+              :class="item.status === 'expired' ? 'expired' : 'applying'"
             >
-              剩余天数：{{ item.daysRemaining }}天
+              {{ item.status === 'expired' ? '已过期' : '申报中' }}
             </span>
-            <span>｜</span>
-            <span class="date-range"
-              >{{ item.date }} 至 {{ item.endDate }}</span
-            >
+
+            <div class="item-head">
+              <a class="item-title">{{ item.title }}</a>
+            </div>
+
+            <div class="item-tags">
+              <template v-for="(tag, index) in item.tags" :key="tag.text">
+                <a-tag :color="tag.color">{{ tag.text }}</a-tag>
+                <a-tag v-if="index === 0" color="processing">{{
+                  item.department
+                }}</a-tag>
+              </template>
+            </div>
+
+            <p class="item-desc">{{ item.description }}</p>
+
+            <div class="item-meta">
+              <span>发布日期：{{ item.date }}</span>
+              <span>发文机构：{{ item.department }}</span>
+            </div>
+
+            <a-divider class="tabs-divider" />
+
+            <div class="item-remain">
+              <ClockCircleOutlined />
+              <span
+                class="remain-text"
+                :class="{ danger: item.daysRemaining <= 0 }"
+              >
+                剩余天数：{{ item.daysRemaining }}天
+              </span>
+              <span>｜</span>
+              <span class="date-range"
+                >{{ item.date }} 至 {{ item.endDate }}</span
+              >
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="pagination-wrap">
-        <a-pagination
-          v-model:current="currentPage"
-          :total="total"
-          :page-size="pageSize"
-          show-quick-jumper
-          :show-total="(t: number) => `共 ${t} 条`"
-        />
+        <div class="pagination-wrap">
+          <a-pagination
+            v-model:current="currentPage"
+            :total="total"
+            :page-size="pageSize"
+            show-quick-jumper
+            :show-total="(t: number) => `共 ${t} 条`"
+          />
+        </div>
       </div>
     </div>
-  </div>
+  </PageState>
 </template>
 
 <style scoped lang="scss">
@@ -308,34 +305,12 @@ const openDetail = (item: PolicyItem) => {
   font-size: 16px;
 }
 
-.filter-row {
-  display: flex;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px dashed #f0f0f0;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
 .filter-label {
-  flex-shrink: 0;
-  color: #8c8c8c;
-  line-height: 32px;
+  width: auto;
 }
 
-.filter-options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  flex: 1;
-  min-width: 0;
-
-  :global(.ant-checkbox-wrapper) {
-    font-size: 16px;
-  }
+.filter-options :global(.ant-checkbox-wrapper) {
+  font-size: 16px;
 }
 
 .region-link {
@@ -346,79 +321,6 @@ const openDetail = (item: PolicyItem) => {
   &:hover {
     color: var(--pb-primary);
   }
-}
-
-.more-link {
-  color: var(--pb-primary);
-  line-height: 32px;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-
-  .anticon {
-    margin-left: 2px;
-    font-size: 16px;
-    transition: transform 0.2s;
-
-    &.rotated {
-      transform: rotate(180deg);
-    }
-  }
-}
-
-.selected-section {
-  border-top: 1px dashed #f0f0f0;
-  padding-top: 4px;
-}
-
-.selected-row {
-  align-items: center;
-  border-bottom: none !important;
-}
-
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  min-height: 32px;
-}
-
-.condition-tag {
-  display: flex;
-  color: var(--pb-primary) !important;
-  background: #fff !important;
-  border-color: #91caff !important;
-  border-radius: 10px;
-  font-size: 18px;
-  padding: 8px 16px;
-
-  :global(.ant-tag-close-icon) {
-    color: var(--pb-primary) !important;
-    font-size: 16px !important;
-  }
-}
-
-.clear-link {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #8c8c8c;
-  font-size: 13px;
-  line-height: 32px;
-  white-space: nowrap;
-
-  &:hover {
-    color: var(--pb-primary);
-  }
-}
-
-.empty-selected {
-  color: #bfbfbf;
-  line-height: 32px;
 }
 
 .tabs-divider {
@@ -454,7 +356,7 @@ const openDetail = (item: PolicyItem) => {
   background: #fff;
   border: 1px solid #f0f0f0;
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--pb-shadow-card);
   cursor: pointer;
   transition:
     box-shadow 0.2s,
@@ -529,7 +431,7 @@ const openDetail = (item: PolicyItem) => {
 .item-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: var(--pb-gap);
   margin-bottom: 10px;
   color: #8c8c8c;
   font-size: 16px;
@@ -562,8 +464,6 @@ const openDetail = (item: PolicyItem) => {
 }
 
 .pagination-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 8px 0 4px;
+  --pagination-padding: 8px 0 4px;
 }
 </style>

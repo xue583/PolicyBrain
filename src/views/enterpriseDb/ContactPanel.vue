@@ -309,7 +309,7 @@ const onUnlock = () => {
   word-break: break-all;
 }
 
-@media (max-width: 992px) {
+@include below-lg {
   .contact-body,
   .person-grid {
     grid-template-columns: 1fr;

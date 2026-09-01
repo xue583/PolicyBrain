@@ -564,7 +564,7 @@ onUnmounted(() => {
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   background: #edf5fd;
-  border-radius: 20px;
+  border-radius: var(--pb-radius-lg);
   padding: 27px 23px;
 }
 
@@ -656,7 +656,7 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100%;
   background: var(--pb-card);
-  border-radius: 20px;
+  border-radius: var(--pb-radius-lg);
   padding: 4px 24px 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
@@ -950,7 +950,7 @@ onUnmounted(() => {
 .info-card {
   flex: 1;
   background: var(--pb-card);
-  border-radius: 20px;
+  border-radius: var(--pb-radius-lg);
   padding: 18px 16px 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
@@ -1052,7 +1052,7 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-@media (max-width: 992px) {
+@include below-lg {
   .feature-row {
     grid-template-columns: 1fr 1fr;
   }

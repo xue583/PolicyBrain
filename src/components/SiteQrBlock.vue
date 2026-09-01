@@ -88,7 +88,7 @@ withDefaults(
   }
 }
 
-@media (max-width: 992px) {
+@include below-lg {
   .is-footer {
     justify-content: flex-start;
   }

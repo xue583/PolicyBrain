@@ -15,6 +15,8 @@ import {
   type PolicyDbPublicityCategory,
 } from '../../mock/policyDb'
 import { filterPolicyDbPublicity } from '@/utils/filterPolicies'
+import { useFilteredList } from '@/composables/useFilteredList'
+import { downloadCsv } from '@/utils/downloadCsv'
 import titleStyleBg from '../../assets/home/title-style.png'
 
 defineOptions({ name: 'PolicyDbPublicityPanel' })
@@ -27,8 +29,6 @@ const props = defineProps<{
 }>()
 
 const category = ref<PolicyDbPublicityCategory>('approved')
-const currentPage = ref(1)
-const pageSize = 10
 const showMoreAddresses = ref(false)
 const showMorePolicies = ref(false)
 const keywordInput = ref('')
@@ -46,9 +46,9 @@ const resetFilters = () => {
   filters.obtainedPolicy = ''
   keywordInput.value = ''
   appliedKeyword.value = ''
-  currentPage.value = 1
   showMoreAddresses.value = false
   showMorePolicies.value = false
+  resetPage()
 }
 
 watch(
@@ -98,58 +98,38 @@ const filteredList = computed(() =>
   }),
 )
 
-const pagedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return filteredList.value.slice(start, start + pageSize)
-})
-
-const total = computed(() => filteredList.value.length)
+const { currentPage, pageSize, pagedList, total, resetPage } =
+  useFilteredList(filteredList)
 
 const selectCategory = (value: PolicyDbPublicityCategory) => {
   category.value = value
-  currentPage.value = 1
+  resetPage()
 }
 
 const selectDistrict = (district: string) => {
   filters.district = filters.district === district ? '' : district
-  currentPage.value = 1
+  resetPage()
 }
 
 const toggleYear = (year: number) => {
   const index = filters.years.indexOf(year)
   if (index >= 0) filters.years.splice(index, 1)
   else filters.years.push(year)
-  currentPage.value = 1
+  resetPage()
 }
 
 const selectPolicy = (value: string) => {
   filters.obtainedPolicy = filters.obtainedPolicy === value ? '' : value
-  currentPage.value = 1
+  resetPage()
 }
 
 const onSearch = () => {
   appliedKeyword.value = keywordInput.value
-  currentPage.value = 1
+  resetPage()
 }
 
 const formatAmount = (amount: number | null) =>
   amount == null ? '—' : amount.toFixed(3)
-
-const downloadCsv = (filename: string, rows: string[][]) => {
-  const bom = '\uFEFF'
-  const csv = rows
-    .map((row) =>
-      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
-    )
-    .join('\n')
-  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
 
 const exportList = () => {
   if (!filteredList.value.length) {
@@ -358,66 +338,13 @@ const columns = [
   margin-bottom: 16px;
   border-radius: 8px;
   background: #f7f8fa;
+  --filter-font-size: 15px;
+  --filter-row-padding: 8px 0;
+  --filter-row-border: 1px dashed #ebebeb;
 }
 
-.filter-row {
-  display: flex;
-  gap: 12px;
-  font-size: 15px;
-  padding: 8px 0;
-  border-bottom: 1px dashed #ebebeb;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.filter-label {
-  flex-shrink: 0;
-  width: 88px;
-  color: #8c8c8c;
-  line-height: 32px;
-}
-
-.filter-options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  flex: 1;
-  min-width: 0;
-}
-
-.option-link {
-  color: #262626;
-  line-height: 32px;
-  cursor: pointer;
-
-  &.active,
-  &:hover {
-    color: var(--pb-primary);
-  }
-}
-
-.more-link {
-  flex-shrink: 0;
-  align-self: flex-start;
-  color: var(--pb-primary);
-  line-height: 32px;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-
-  .anticon {
-    margin-left: 2px;
-    font-size: 16px;
-    transition: transform 0.2s;
-
-    &.rotated {
-      transform: rotate(180deg);
-    }
-  }
+.pagination-wrap {
+  --pagination-padding: 20px 0 4px;
 }
 
 .search-row {
@@ -452,48 +379,6 @@ const columns = [
 .current-region {
   color: #8c8c8c;
   font-size: 14px;
-}
-
-.db-table {
-  overflow: hidden;
-  border: 1px solid #d9d9d9;
-  border-radius: 12px;
-  background: #fff;
-
-  :deep(.ant-table) {
-    font-size: 15px;
-    background: #fff;
-    overflow: hidden;
-    border-radius: 12px;
-  }
-
-  :deep(.ant-table-container) {
-    overflow: hidden;
-    border: none !important;
-  }
-
-  :deep(.ant-table-thead > tr > th) {
-    background: #eaf4ff;
-    color: #262626;
-    font-size: 15px;
-    font-weight: 600;
-    border-color: #e8e8e8 !important;
-    padding: 16px 18px !important;
-  }
-
-  :deep(.ant-table-tbody > tr > td) {
-    font-size: 15px;
-    background: #fff !important;
-    border-color: #e8e8e8 !important;
-    vertical-align: middle;
-    padding: 16px 18px !important;
-  }
-}
-
-.pagination-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0 4px;
 }
 
 @media (max-width: 768px) {

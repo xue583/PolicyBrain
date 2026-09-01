@@ -4,6 +4,7 @@ import 'ant-design-vue/dist/reset.css'
 import App from './App.vue'
 import { router } from './router'
 import './style.css'
+import './styles/db-list.scss'
 
 const app = createApp(App)
 app.use(createPinia())

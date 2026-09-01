@@ -13,6 +13,8 @@ import {
   filterEnterpriseQualPersonnel,
   filterEnterpriseQualReviews,
 } from '@/utils/filterPolicies'
+import { useFilteredList } from '@/composables/useFilteredList'
+import { downloadCsv } from '@/utils/downloadCsv'
 import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
 import exportIcon from '../../assets/enterpriseDb/export.png'
 import tipsIcon from '../../assets/enterpriseDb/tips.png'
@@ -30,34 +32,11 @@ const props = defineProps<{
 }>()
 
 const subTab = ref<QualSubTab>('certs')
-const currentPage = ref(1)
 const keywordInput = ref('')
 const appliedKeyword = ref('')
 const filters = reactive({
   year: null as number | null,
 })
-
-const resetFilters = () => {
-  filters.year = null
-  keywordInput.value = ''
-  appliedKeyword.value = ''
-  currentPage.value = 1
-}
-
-const selectSubTab = (tab: QualSubTab) => {
-  subTab.value = tab
-  currentPage.value = 1
-}
-
-const selectYear = (year: number) => {
-  filters.year = filters.year === year ? null : year
-  currentPage.value = 1
-}
-
-const onSearch = () => {
-  appliedKeyword.value = keywordInput.value
-  currentPage.value = 1
-}
 
 const tabFilters = computed(() => ({
   year: filters.year,
@@ -74,18 +53,38 @@ const filteredReviews = computed(() =>
   filterEnterpriseQualReviews(props.reviews, tabFilters.value),
 )
 
-const currentList = computed(() => {
+const currentList = computed<{ id: number }[]>(() => {
   if (subTab.value === 'personnel') return filteredPersonnel.value
   if (subTab.value === 'reviews') return filteredReviews.value
   return filteredCerts.value
 })
 
-const total = computed(() => currentList.value.length)
+const { currentPage, pagedList, total, resetPage, pageSize } = useFilteredList(
+  currentList,
+  { pageSize: PAGE_SIZE },
+)
 
-const pagedList = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return currentList.value.slice(start, start + PAGE_SIZE)
-})
+const resetFilters = () => {
+  filters.year = null
+  keywordInput.value = ''
+  appliedKeyword.value = ''
+  resetPage()
+}
+
+const selectSubTab = (tab: QualSubTab) => {
+  subTab.value = tab
+  resetPage()
+}
+
+const selectYear = (year: number) => {
+  filters.year = filters.year === year ? null : year
+  resetPage()
+}
+
+const onSearch = () => {
+  appliedKeyword.value = keywordInput.value
+  resetPage()
+}
 
 const certColumns = [
   { title: '序号', key: 'index', width: 72, align: 'center' as const },
@@ -149,22 +148,6 @@ const columns = computed(() => {
   if (subTab.value === 'reviews') return reviewColumns
   return certColumns
 })
-
-const downloadCsv = (filename: string, rows: string[][]) => {
-  const bom = '\uFEFF'
-  const csv = rows
-    .map((row) =>
-      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
-    )
-    .join('\n')
-  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
 
 const exportList = () => {
   if (!currentList.value.length) {
@@ -317,7 +300,7 @@ const exportList = () => {
       </template>
       <template #bodyCell="{ column, index }">
         <template v-if="column.key === 'index'">
-          {{ (currentPage - 1) * PAGE_SIZE + index + 1 }}
+          {{ (currentPage - 1) * pageSize + index + 1 }}
         </template>
       </template>
     </a-table>
@@ -326,7 +309,7 @@ const exportList = () => {
       <a-pagination
         v-model:current="currentPage"
         :total="total"
-        :page-size="PAGE_SIZE"
+        :page-size="pageSize"
         :show-total="(t: number) => `共 ${t} 条`"
       />
     </div>
@@ -429,44 +412,21 @@ const exportList = () => {
   }
 }
 
+.qual-panel {
+  --pagination-padding: 20px 0 0;
+}
+
 .filter-row {
-  display: flex;
-  gap: 12px;
-  font-size: 15px;
-  padding: 8px 0;
+  --filter-font-size: 15px;
+  --filter-row-padding: 8px 0;
+  --filter-row-border: none;
+  --filter-options-gap: 8px 20px;
 }
 
-.filter-label {
-  flex-shrink: 0;
-  width: 88px;
-  color: #8c8c8c;
-  line-height: 32px;
-}
-
-.filter-options {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 20px;
-  flex: 1;
-  min-width: 0;
-}
-
-.option-link {
-  color: #262626;
-  line-height: 32px;
-  cursor: pointer;
-
-  &.active,
-  &:hover {
-    color: var(--pb-primary);
-  }
-
-  &.active {
-    font-weight: 600;
-    text-decoration: underline;
-    text-underline-offset: 6px;
-  }
+.option-link.active {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 6px;
 }
 
 .search-row {
@@ -492,40 +452,6 @@ const exportList = () => {
 }
 
 .db-table {
-  overflow: hidden;
-  border: 1px solid #d9d9d9;
-  border-radius: 12px;
-  background: #fff;
-
-  :deep(.ant-table) {
-    font-size: 15px;
-    background: #fff;
-    overflow: hidden;
-    border-radius: 12px;
-  }
-
-  :deep(.ant-table-container) {
-    overflow: hidden;
-    border: none !important;
-  }
-
-  :deep(.ant-table-thead > tr > th) {
-    background: #eaf4ff;
-    color: #262626;
-    font-size: 15px;
-    font-weight: 600;
-    border-color: #e8e8e8 !important;
-    padding: 16px 18px !important;
-  }
-
-  :deep(.ant-table-tbody > tr > td) {
-    font-size: 15px;
-    background: #fff !important;
-    border-color: #e8e8e8 !important;
-    vertical-align: middle;
-    padding: 16px 18px !important;
-  }
-
   :deep(.ant-table-placeholder) {
     padding: 48px 16px !important;
   }
@@ -555,8 +481,7 @@ const exportList = () => {
 }
 
 .pagination-wrap {
-  display: flex;
-  padding: 20px 0 0;
+  --pagination-padding: 20px 0 0;
 
   :deep(.ant-pagination) {
     width: 100%;

@@ -16,7 +16,10 @@
   --pb-card: #fff;
   --pb-line: #f0f0f0;
   --pb-radius: 8px;
+  --pb-radius-lg: 20px;
   --pb-shadow: 0 4px 16px rgba(22, 119, 255, 0.08);
+  --pb-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --pb-gap: 24px;
   --pb-bp-sm: 576px;
   --pb-bp-md: 768px;
   --pb-bp-lg: 992px;
@@ -40,8 +43,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
+.pb-card-lg {
+  border-radius: var(--pb-radius-lg);
 }
