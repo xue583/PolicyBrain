@@ -127,10 +127,11 @@ export const unwrapEnvelope = (
   if (
     payload &&
     typeof payload === 'object' &&
-    'status' in (payload as object)
+    'status' in (payload as object) &&
+    typeof (payload as Record<string, unknown>).status === 'number'
   ) {
     const body = payload as ApiEnvelope
-    const status = Number(body.status ?? httpStatus)
+    const status = body.status ?? httpStatus
     if (status >= 400) {
       throw new ApiError(
         body.message || body.msg || '请求失败',
@@ -200,8 +201,9 @@ const handleUnauthorized = async (
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${accessToken}`
     return service.request(config)
-  } catch {
+  } catch (err) {
     forceLogout()
+    if (err instanceof ApiError) throw err
     throw new ApiError('登录已失效，请重新登录', 401)
   }
 }
@@ -234,7 +236,6 @@ service.interceptors.response.use(
       if (apiErr.status === 401 && !shouldSkipRefresh(cfg) && !cfg._retry) {
         return handleUnauthorized(cfg, apiErr)
       }
-      if (apiErr.status === 401 && !shouldSkipRefresh(cfg)) forceLogout()
       if (!cfg.hideError) {
         message.error(apiErr.message || '请求失败')
       }
@@ -257,8 +258,6 @@ service.interceptors.response.use(
       return handleUnauthorized(cfg, apiErr)
     }
 
-    if (status === 401 && !shouldSkipRefresh(cfg)) forceLogout()
-
     if (!cfg.hideError && !axios.isCancel(error)) {
       message.error(apiErr.message)
     }
@@ -280,6 +279,14 @@ export const post = <T = unknown>(
   config?: RequestConfig,
 ) => {
   return request<T>({ ...config, url, method: 'POST', data })
+}
+
+export const put = <T = unknown>(
+  url: string,
+  data?: unknown,
+  config?: RequestConfig,
+) => {
+  return request<T>({ ...config, url, method: 'PUT', data })
 }
 
 export const patch = <T = unknown>(

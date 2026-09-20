@@ -1,11 +1,27 @@
 <script setup lang="ts">
+import { onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import AppHeader from './components/AppHeader.vue'
+import VipPromoModal from './components/VipPromoModal.vue'
 import { PRIMARY_COLOR } from '@/constants/site'
+import { useAuthStore } from '@/stores/auth'
 
 dayjs.locale('zh-cn')
+
+const auth = useAuthStore()
+const { isLoggedIn } = storeToRefs(auth)
+const promoOpen = ref(false)
+
+onMounted(() => {
+  if (!isLoggedIn.value) promoOpen.value = true
+})
+
+watch(isLoggedIn, (loggedIn) => {
+  if (loggedIn) promoOpen.value = false
+})
 </script>
 
 <template>
@@ -34,6 +50,7 @@ dayjs.locale('zh-cn')
     <a-layout class="app-shell">
       <AppHeader />
       <router-view />
+      <VipPromoModal v-model:open="promoOpen" />
     </a-layout>
   </a-config-provider>
 </template>

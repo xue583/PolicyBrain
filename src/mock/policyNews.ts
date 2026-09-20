@@ -1,7 +1,9 @@
 import type { PolicyInfoType, PolicyLevel } from './filters'
+import { navItems } from './nav'
 
 export type { PolicyInfoType, PolicyLevel }
 export { regions, industries, policyLevels, infoTypes } from './filters'
+export { navItems, cities } from './nav'
 
 export interface PolicyTag {
   text: string
@@ -65,16 +67,6 @@ const buildContent = (title: string, department: string): string => {
   ].join('')
 }
 
-export const navItems = [
-  { key: 'home', label: '首页' },
-  { key: 'news', label: '政策资讯' },
-  { key: 'policy-db', label: '政策数据库' },
-  { key: 'enterprise-db', label: '企业数据库' },
-  { key: 'invest-db', label: '投资项目库' },
-  { key: 'export', label: '数据导出' },
-  { key: 'api', label: 'API接口' },
-]
-
 const heroByPage: Record<
   string,
   {
@@ -133,8 +125,6 @@ export const getSubPageHero = (pageKey: string) => {
     ...(heroByPage[pageKey] ?? defaultHero),
   }
 }
-
-export const cities = ['郑州市', '洛阳市', '开封市', '新乡市', '许昌市']
 
 const policySeeds: Omit<
   PolicyItem,
@@ -322,12 +312,21 @@ const policySeeds: Omit<
   },
 ]
 
-export const mockPolicies: PolicyItem[] = policySeeds.map((item) => ({
-  ...item,
-  content: buildContent(item.title, item.department),
-  attachments: defaultAttachments,
-  originalUrl: 'https://www.zhengzhou.gov.cn/',
-}))
+export const mockPolicies: PolicyItem[] = policySeeds.map((item) => {
+  // 根据 endDate 动态计算剩余天数
+  const now = new Date()
+  const end = new Date(item.endDate)
+  const diffMs = end.getTime() - now.getTime()
+  const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+
+  return {
+    ...item,
+    daysRemaining,
+    content: buildContent(item.title, item.department),
+    attachments: defaultAttachments,
+    originalUrl: 'https://www.zhengzhou.gov.cn/',
+  }
+})
 
 export const getPolicyById = (id: number): PolicyItem | undefined => {
   return mockPolicies.find((item) => item.id === id)

@@ -63,6 +63,16 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'ant-design-vue': ['ant-design-vue', '@ant-design/icons-vue'],
+            vendor: ['vue', 'vue-router', 'pinia', 'axios'],
+          },
+        },
+      },
+    },
     test: {
       environment: 'jsdom',
       globals: false,

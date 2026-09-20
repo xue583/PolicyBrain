@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { QrcodeOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import frameBg from '../assets/login/header-bg.png'
@@ -130,6 +130,10 @@ watch(open, (v) => {
   else stopCountdown()
 })
 
+onUnmounted(() => {
+  stopCountdown()
+})
+
 const close = () => {
   open.value = false
 }
@@ -216,7 +220,6 @@ const goRegisterStep2 = async () => {
   }
   submitting.value = true
   try {
-    // 预校验可选；失败时仍允许用户改码重试
     await auth.verifyRegisterCode(phone.value, code.value.trim())
     registerStep.value = 2
   } catch (err) {

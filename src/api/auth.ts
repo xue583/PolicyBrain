@@ -1,4 +1,5 @@
 import { request, type RequestConfig } from '@/utils/request'
+import type { AuthUser, SessionTokens } from '@/utils/auth'
 
 export type SendSmsPayload = {
   phone: string
@@ -34,7 +35,10 @@ export type UpdateProfilePayload = {
 }
 
 /** POST /api/smsCodes */
-export const sendSmsCode = (data: SendSmsPayload, config?: RequestConfig) => {
+export const sendSmsCode = (
+  data: SendSmsPayload,
+  config?: RequestConfig,
+): Promise<unknown> => {
   return request({
     url: '/smsCodes',
     method: 'post',
@@ -47,7 +51,7 @@ export const sendSmsCode = (data: SendSmsPayload, config?: RequestConfig) => {
 export const verifySmsCode = (
   data: VerifyCodePayload,
   config?: RequestConfig,
-) => {
+): Promise<unknown> => {
   return request({
     url: '/smsCodeVerifications',
     method: 'post',
@@ -56,11 +60,11 @@ export const verifySmsCode = (
   })
 }
 
-/** POST /api/sessions */
+/** POST /api/sessions — 创建会话（登录） */
 export const createSession = (
   data: VerifyCodePayload,
   config?: RequestConfig,
-) => {
+): Promise<SessionTokens> => {
   return request({
     url: '/sessions',
     method: 'post',
@@ -70,7 +74,7 @@ export const createSession = (
 }
 
 /** DELETE /api/sessions/current */
-export const logoutSession = (config?: RequestConfig) => {
+export const logoutSession = (config?: RequestConfig): Promise<unknown> => {
   return request({
     url: '/sessions/current',
     method: 'delete',
@@ -82,7 +86,7 @@ export const logoutSession = (config?: RequestConfig) => {
 export const refreshToken = (
   data: RefreshTokenPayload,
   config?: RequestConfig,
-) => {
+): Promise<SessionTokens> => {
   return request({
     url: '/tokenRefreshes',
     method: 'post',
@@ -92,7 +96,7 @@ export const refreshToken = (
 }
 
 /** GET /api/users/me */
-export const fetchCurrentUser = (config?: RequestConfig) => {
+export const fetchCurrentUser = (config?: RequestConfig): Promise<AuthUser> => {
   return request({
     url: '/users/me',
     method: 'get',
@@ -104,7 +108,7 @@ export const fetchCurrentUser = (config?: RequestConfig) => {
 export const updateCurrentUser = (
   data: UpdateProfilePayload,
   config?: RequestConfig,
-) => {
+): Promise<AuthUser> => {
   return request({
     url: '/users/me',
     method: 'patch',

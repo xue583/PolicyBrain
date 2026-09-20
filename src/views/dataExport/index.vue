@@ -298,7 +298,6 @@ const onBatchUploaded = (name: string) => {
   display: flex;
   flex-direction: column;
   gap: var(--pb-gap);
-  margin-top: -130px;
 }
 
 .filter-card,
@@ -419,7 +418,10 @@ const onBatchUploaded = (name: string) => {
 }
 
 @include below-lg {
-  .mode-row,
+  .mode-row {
+    flex-wrap: wrap;
+  }
+
   .workspace {
     grid-template-columns: 1fr;
   }

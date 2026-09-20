@@ -1,3 +1,5 @@
+import { ENTERPRISE_TOTAL } from './constants'
+
 export interface ExportEnterprise {
   id: number
   name: string
@@ -13,7 +15,8 @@ export interface ExportEnterprise {
   economyType: string
 }
 
-export const exportEnterpriseTotal = 5_130_511
+/** @deprecated 使用 ENTERPRISE_TOTAL 代替 */
+export const exportEnterpriseTotal = ENTERPRISE_TOTAL
 
 export const hotPolicies = [
   '高新技术企业',

@@ -50,6 +50,15 @@ const PRODUCT_CATALOG: Record<
   },
 }
 
+const CREDIBILITY_LEVELS: ProductCredibility[] = ['高', '中', '低']
+const PRODUCT_BASIS_OPTIONS = [
+  '专利 · 软著',
+  '专利 · 标准',
+  '软著 · 认证',
+  '专利 · 软著 · 认证',
+  '专利 · 标准 · 软著',
+]
+
 const buildProductIndustry = (item: EnterpriseItem) => {
   const products: EnterpriseProduct[] = item.tags.map((name, index) => ({
     id: index + 1,
@@ -66,11 +75,14 @@ const buildProductIndustry = (item: EnterpriseItem) => {
       ],
     }),
   )
+  // 根据企业 ID 确定性地选择可信度和产品依据
+  const credibility = CREDIBILITY_LEVELS[item.id % CREDIBILITY_LEVELS.length]
+  const basis = PRODUCT_BASIS_OPTIONS[item.id % PRODUCT_BASIS_OPTIONS.length]
   return {
     products,
     industryChains,
-    productBasis: '专利 · 软著',
-    productCredibility: '高' as ProductCredibility,
+    productBasis: basis,
+    productCredibility: credibility,
   }
 }
 

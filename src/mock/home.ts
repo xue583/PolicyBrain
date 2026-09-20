@@ -16,26 +16,30 @@ export interface HomeNewsItem {
 export const featureCards = [
   {
     key: 'match-policy',
+    routeName: 'policy-db',
     title: '企业匹配政策',
-    desc: '为企业进行政策分析。输入企业名称，快速获得可申报政策清单、条件差距与行动建议。',
+    desc: '输入企业名称，快速获得可申报政策清单、条件差距与行动建议。',
     icon: 'policy',
   },
   {
     key: 'match-enterprise',
+    routeName: 'enterprise-db',
     title: '政策匹配企业',
-    desc: '为企业进行政策分析。输入企业名称，快速获得可申报政策清单、条件差距与行动建议。',
+    desc: '输入政策关键词，智能匹配符合条件的企业，精准推送政策信息。',
     icon: 'enterprise',
   },
   {
     key: 'ai-ask',
+    routeName: 'api',
     title: 'AI问政',
-    desc: '为企业进行政策分析。输入企业名称，快速获得可申报政策清单、条件差距与行动建议。',
+    desc: '基于大模型的政策问答助手，为您解读政策要点、申报流程和注意事项。',
     icon: 'robot',
   },
   {
     key: 'workbench',
+    routeName: 'personal-center',
     title: '工作台',
-    desc: '为企业进行政策分析。输入企业名称，快速获得可申报政策清单、条件差距与行动建议。',
+    desc: '管理关注政策、申报进度、企业资质，一站式处理日常政策工作。',
     icon: 'workbench',
   },
 ]

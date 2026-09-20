@@ -102,7 +102,6 @@ const selectFilter = (
   value: string,
 ) => {
   filters[key] = filters[key] === value ? '' : value
-  resetPage()
 }
 
 const removeCondition = (key: string) => {
@@ -123,12 +122,22 @@ const clearConditions = () => {
   resetPage()
 }
 
-watch([levels, keyword, () => filters.infoTypes], () => {
-  resetPage()
-})
+watch(
+  [
+    levels,
+    keyword,
+    () => filters.grade,
+    () => filters.department,
+    () => filters.industryTag,
+    () => filters.infoTypes,
+  ],
+  () => {
+    resetPage()
+  },
+)
 
 const onFilterChange = () => {
-  resetPage()
+  // resetPage 由 watch 自动触发
 }
 
 const columns = [

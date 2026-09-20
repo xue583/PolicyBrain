@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFilteredList } from '@/composables/useFilteredList'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
@@ -58,15 +58,14 @@ const { currentPage, pageSize, pagedList, total, resetPage } =
 
 const selectProvince = (province: string) => {
   filters.province = filters.province === province ? '' : province
-  resetPage()
 }
 
-watch([keyword, () => filters.industries], () => {
+watch([keyword, () => filters.province, () => filters.industries], () => {
   resetPage()
 })
 
 const onIndustryChange = () => {
-  resetPage()
+  // resetPage 由 watch 自动触发
 }
 
 const locationText = (item: EnterpriseItem) => `${item.province}/${item.city}`
@@ -213,6 +212,10 @@ const goDetail = (id: number) => {
 .enterprise-card {
   border-radius: var(--pb-radius-lg);
   box-shadow: var(--pb-shadow-card);
+  --filter-row-border: none;
+  --filter-label-width: 80px;
+  --filter-options-gap: 4px 18px;
+  --pagination-padding: 20px 0 8px;
 
   :deep(.ant-card-body) {
     padding: 24px 28px 16px;
@@ -249,13 +252,6 @@ const goDetail = (id: number) => {
   padding-inline: 18px;
   border-radius: 6px;
   font-weight: 500;
-}
-
-.enterprise-card {
-  --filter-row-border: none;
-  --filter-label-width: 80px;
-  --filter-options-gap: 4px 18px;
-  --pagination-padding: 20px 0 8px;
 }
 
 .filter-options {

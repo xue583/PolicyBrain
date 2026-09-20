@@ -7,6 +7,11 @@ import './style.css'
 import './styles/db-list.scss'
 
 const app = createApp(App)
+
+app.config.errorHandler = (err, instance, info) => {
+  console.error('[Global Error]', err, info)
+}
+
 app.use(createPinia())
 app.use(router)
 app.mount('#app')

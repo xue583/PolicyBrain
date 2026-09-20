@@ -79,7 +79,6 @@ const { currentPage, pageSize, pagedList, total, resetPage } =
 
 const selectRegion = (region: string) => {
   filters.region = filters.region === region ? '' : region
-  resetPage()
 }
 
 const removeCondition = (key: string) => {
@@ -109,6 +108,7 @@ const clearConditions = () => {
 watch(
   [
     keyword,
+    () => filters.region,
     () => filters.industries,
     () => filters.levels,
     () => filters.infoTypes,
@@ -119,7 +119,7 @@ watch(
 )
 
 const onFilterChange = () => {
-  resetPage()
+  // resetPage 由 watch 自动触发
 }
 
 const openDetail = (item: PolicyItem) => {

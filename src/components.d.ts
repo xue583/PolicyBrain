@@ -35,6 +35,8 @@ declare module 'vue' {
     AppHeader: typeof import('./components/AppHeader.vue')['default']
     ARadioButton: typeof import('ant-design-vue/es')['RadioButton']
     ARadioGroup: typeof import('ant-design-vue/es')['RadioGroup']
+    AResult: typeof import('ant-design-vue/es')['Result']
+    ASpin: typeof import('ant-design-vue/es')['Spin']
     AStep: typeof import('ant-design-vue/es')['Step']
     ASteps: typeof import('ant-design-vue/es')['Steps']
     ATable: typeof import('ant-design-vue/es')['Table']
@@ -55,5 +57,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SiteQrBlock: typeof import('./components/SiteQrBlock.vue')['default']
     SubPageLayout: typeof import('./components/SubPageLayout.vue')['default']
+    VipPromoModal: typeof import('./components/VipPromoModal.vue')['default']
   }
 }

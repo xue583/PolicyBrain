@@ -1,0 +1,315 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "New.Zcdn PolicyApi 接口文档    .NET 10.0.7",
+    "description": "Build: 2026-08-17 16:42:40",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/sessions": {
+      "post": {
+        "tags": ["认证授权"],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/sessions/current": {
+      "delete": {
+        "tags": ["认证授权"],
+        "summary": " (Auth)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/api/smsCodes": {
+      "post": {
+        "tags": ["认证授权"],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.SendPolicyCodeDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.SendPolicyCodeDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.SendPolicyCodeDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.SendPolicyCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/smsCodeVerifications": {
+      "post": {
+        "tags": ["认证授权"],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/system": {
+      "get": {
+        "tags": ["系统管理"],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/tokenRefreshes": {
+      "post": {
+        "tags": ["认证授权"],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": ["PolicyAccount"],
+        "summary": " (Auth)",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "oauth2": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": ["PolicyAccount"],
+        "summary": " (Auth)",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "New.Zcdn.SharedModel.Dto.Core.Policy.SendPolicyCodeDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto": {
+        "type": "object",
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "oauth2": {
+        "type": "apiKey",
+        "description": "JWT授权(数据将在请求头中进行传输) 直接在下框中输入Bearer {token} \"",
+        "name": "Authorization",
+        "in": "header"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "PolicyAccount"
+    },
+    {
+      "name": "系统管理"
+    },
+    {
+      "name": "认证授权"
+    }
+  ]
+}

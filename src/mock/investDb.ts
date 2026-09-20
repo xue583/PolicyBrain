@@ -314,4 +314,7 @@ export const mockInvestProjects: InvestProject[] = seeds.map((item, index) => ({
   type: item.type,
 }))
 
-export const investEnterpriseTotal = 5130511
+import { ENTERPRISE_TOTAL } from './constants'
+
+/** @deprecated 使用 ENTERPRISE_TOTAL 代替 */
+export const investEnterpriseTotal = ENTERPRISE_TOTAL

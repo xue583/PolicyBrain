@@ -96,6 +96,28 @@ export const getRefreshTokenExpires = (): string => {
   return storage.getItem(REFRESH_EXPIRES_KEY) || ''
 }
 
+/** 检查 access token 是否已过期（基于本地存储的 expires 字段） */
+export const isTokenExpired = (): boolean => {
+  const expires = getTokenExpires()
+  if (!expires) return false // 无过期时间则认为未过期
+  try {
+    return Date.now() >= new Date(expires).getTime()
+  } catch {
+    return false
+  }
+}
+
+/** 检查 refresh token 是否已过期 */
+export const isRefreshTokenExpired = (): boolean => {
+  const expires = getRefreshTokenExpires()
+  if (!expires) return false
+  try {
+    return Date.now() >= new Date(expires).getTime()
+  } catch {
+    return false
+  }
+}
+
 export const clearToken = () => {
   storage.removeItem(TOKEN_KEY)
   storage.removeItem(REFRESH_KEY)
@@ -143,10 +165,14 @@ export const saveSessionTokens = (tokens: SessionTokens) => {
 export const pickTokens = (payload: unknown): SessionTokens => {
   if (!payload || typeof payload !== 'object') return {}
   const data = payload as Record<string, unknown>
-  const nested =
-    data.data && typeof data.data === 'object'
-      ? (data.data as Record<string, unknown>)
-      : data
+  // 支持单层或双层 data 嵌套
+  let nested: Record<string, unknown> = data
+  if (data.data && typeof data.data === 'object') {
+    nested = data.data as Record<string, unknown>
+  }
+  if (nested.data && typeof nested.data === 'object') {
+    nested = nested.data as Record<string, unknown>
+  }
 
   const accessToken =
     (nested.accessToken as string) ||

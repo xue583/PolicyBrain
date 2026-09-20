@@ -1,6 +1,8 @@
 import type { EnterpriseItem, EnterpriseStatus } from './types'
+import { ENTERPRISE_TOTAL } from '../constants'
 
-export const enterpriseTotal = 5_130_511
+/** @deprecated 使用 ENTERPRISE_TOTAL 代替 */
+export const enterpriseTotal = ENTERPRISE_TOTAL
 
 export const enterpriseStatusText: Record<EnterpriseStatus, string> = {
   active: '存续',

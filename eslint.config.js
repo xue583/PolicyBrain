@@ -37,7 +37,7 @@ export default tseslint.config(
       'vue/html-closing-bracket-newline': 'off',
       'vue/html-indent': 'off',
       'vue/attributes-order': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

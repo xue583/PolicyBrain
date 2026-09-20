@@ -17,7 +17,7 @@ import {
   homeFollowList,
 } from '../../mock/home'
 import { SITE } from '@/constants/site'
-import { navItems } from '@/mock/policyNews'
+import { navItems } from '@/mock/nav'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
 import heroDecorSm from '../../assets/home/hero-decor-sm.png'
 import promoBanner from '../../assets/home/promo-banner.png'
@@ -72,8 +72,12 @@ const applyHot = (word: string) => {
   onSearch()
 }
 
-const goNews = () => {
-  void router.push({ name: 'news' })
+const goNews = (id?: number) => {
+  if (id) {
+    void router.push({ name: 'news-detail', params: { id: String(id) } })
+  } else {
+    void router.push({ name: 'news' })
+  }
 }
 
 const goNav = (key: string) => {
@@ -180,6 +184,7 @@ onUnmounted(() => {
           :key="card.key"
           class="feature-card"
           :style="{ backgroundImage: `url(${featureCardBg})` }"
+          @click="goNav(card.routeName)"
         >
           <div class="feature-icon">
             <img :src="iconMap[card.icon]" :alt="card.title" />
@@ -224,7 +229,7 @@ onUnmounted(() => {
               v-for="item in visibleNews"
               :key="item.id"
               class="news-item"
-              @click="goNews"
+              @click="goNews(item.id)"
             >
               <div class="news-main">
                 <div class="news-head">
@@ -292,7 +297,11 @@ onUnmounted(() => {
                 {{ tag }}
               </span>
             </div>
-            <a-button type="primary" class="match-btn">
+            <a-button
+              type="primary"
+              class="match-btn"
+              @click="goNav('enterprise-db')"
+            >
               开始企业匹配
               <ArrowRightOutlined />
             </a-button>
@@ -345,16 +354,6 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .home-page {
-  --pb-primary: #1677ff;
-  --pb-title: #1a1a1a;
-  --pb-text: #333;
-  --pb-sub: #666;
-  --pb-muted: #999;
-  --pb-line: #f0f0f0;
-  --pb-card: #fff;
-  --pb-radius: 8px;
-  --pb-shadow: 0 4px 16px rgba(22, 119, 255, 0.08);
-
   position: relative;
   min-height: calc(100vh - 64px);
   margin-top: -64px;
