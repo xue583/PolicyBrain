@@ -20,6 +20,7 @@ export type AuthUser = {
   inviter?: string
   invitationCode?: string
   avatar?: string
+  lastLoginTime?: string
   [key: string]: unknown
 }
 

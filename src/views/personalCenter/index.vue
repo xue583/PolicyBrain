@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import {
   UserOutlined,
   EditOutlined,
   CrownOutlined,
 } from '@ant-design/icons-vue'
+import { useAuthStore } from '@/stores/auth'
+import { formatLastLogin, identityLabel, maskPhone } from '@/utils/userDisplay'
 import baseIcon from '@/assets/personalCenter/基础@2x.png'
 import msgIcon from '@/assets/personalCenter/容器 229@2x.png'
 import shareIcon from '@/assets/personalCenter/容器@2x(1).png'
@@ -17,7 +21,10 @@ import userLevel from '@/assets/personalCenter/用户等级@2x.png'
 
 defineOptions({ name: 'PersonalCenter' })
 
-const selectedMenu = ref('base')
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const { user } = storeToRefs(auth)
 
 type CenterMenuItem = {
   key: string
@@ -66,23 +73,56 @@ const menuItems: CenterMenuItem[] = [
   },
 ]
 
+const validTabs = new Set(menuItems.map((item) => item.key))
+
+const tabFromQuery = () => {
+  const tab = String(route.query.tab || 'base')
+  return validTabs.has(tab) ? tab : 'base'
+}
+
+const selectedMenu = ref(tabFromQuery())
+
+watch(
+  () => route.query.tab,
+  () => {
+    selectedMenu.value = tabFromQuery()
+  },
+)
+
 const currentMenu = computed(
   () =>
     menuItems.find((item) => item.key === selectedMenu.value) ?? menuItems[0]!,
 )
 
-const userInfo = {
-  phone: '195****0937',
-  username: '19545640586',
-  company: '某某公司',
-  lastLogin: '2026-08-16',
-  bindPhone: '19545640586',
-  identity: '企业专员',
-}
+const userInfo = computed(() => {
+  const profile = user.value
+  const phone = profile?.phone || ''
+  const identity = identityLabel(profile?.identity)
+  return {
+    phone: maskPhone(phone) || '未绑定手机',
+    username: profile?.nickname || phone || '未设置',
+    company: profile?.companyName || '未填写',
+    lastLogin: formatLastLogin(profile?.lastLoginTime) || '—',
+    bindPhone: phone || '未绑定',
+    identity: identity || '未认证',
+    avatar: profile?.avatar || '',
+  }
+})
 
 const onMenuClick = (key: string) => {
   selectedMenu.value = key
+  void router.replace({
+    query: key === 'base' ? {} : { tab: key },
+  })
 }
+
+const goMembership = () => {
+  void router.push({ name: 'membership' })
+}
+
+onMounted(() => {
+  void auth.loadCurrentUser().catch(() => undefined)
+})
 </script>
 
 <template>
@@ -92,14 +132,15 @@ const onMenuClick = (key: string) => {
       <!-- User Info Card -->
       <div class="user-card">
         <div class="avatar">
-          <img :src="userLevel" alt="用户头像" />
+          <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="用户头像" />
+          <img v-else :src="userLevel" alt="用户头像" />
         </div>
         <div class="user-phone">{{ userInfo.phone }}</div>
         <div class="user-badge">
           <img :src="userLevel" alt="" class="badge-icon" />
-          <span>企业专员</span>
+          <span>{{ userInfo.identity }}</span>
         </div>
-        <div class="vip-link">
+        <div class="vip-link" @click="goMembership">
           <CrownOutlined />
           <span>开通会员，享受专享</span>
         </div>
@@ -142,7 +183,8 @@ const onMenuClick = (key: string) => {
           <div class="profile-card">
             <div class="profile-left">
               <div class="profile-avatar">
-                <UserOutlined />
+                <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="" />
+                <UserOutlined v-else />
               </div>
               <a-button type="primary" class="upload-btn">上传头像</a-button>
             </div>
@@ -179,7 +221,7 @@ const onMenuClick = (key: string) => {
           </h3>
           <div class="member-row">
             <span class="member-label">个人会员：</span>
-            <a-button type="primary" class="vip-btn">
+            <a-button type="primary" class="vip-btn" @click="goMembership">
               <template #icon><CrownOutlined /></template>
               开通会员
             </a-button>
@@ -417,6 +459,13 @@ const onMenuClick = (key: string) => {
   justify-content: center;
   font-size: 36px;
   color: #bbb;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 .upload-btn {

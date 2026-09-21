@@ -57,6 +57,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SiteQrBlock: typeof import('./components/SiteQrBlock.vue')['default']
     SubPageLayout: typeof import('./components/SubPageLayout.vue')['default']
+    UserAccountMenu: typeof import('./components/UserAccountMenu.vue')['default']
     VipPromoModal: typeof import('./components/VipPromoModal.vue')['default']
   }
 }

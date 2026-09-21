@@ -61,6 +61,14 @@ export default defineConfig(({ mode }) => {
             }
           },
         },
+        '/auth': {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
+        '/account': {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
       },
     },
     build: {

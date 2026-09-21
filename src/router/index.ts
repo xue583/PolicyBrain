@@ -119,6 +119,12 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/membership',
+    name: 'membership',
+    component: () => import('@/views/membership/index.vue'),
+    meta: { title: '开通会员', immersiveHeader: true, navKey: 'membership' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/not-found/index.vue'),

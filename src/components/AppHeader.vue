@@ -3,33 +3,34 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { DownOutlined, EnvironmentOutlined } from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
 import { cities, navItems } from '@/mock/nav'
 import { useAuthStore } from '@/stores/auth'
 import { onNeedLogin } from '@/utils/auth'
 import logoImg from '@/assets/logo-full.png'
+import logoLightImg from '@/assets/logo-light.png'
 import robotImg from '@/assets/home/robot.png'
 import mobileImg from '@/assets/home/container-1.png'
+import vipEntryImg from '@/assets/home/vip-entry.png'
 import LoginModal from './LoginModal.vue'
+import UserAccountMenu from './UserAccountMenu.vue'
 
 defineOptions({ name: 'AppHeader' })
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const { isLoggedIn, user } = storeToRefs(auth)
+const { isLoggedIn } = storeToRefs(auth)
 
 const currentCity = ref('郑州市')
 const loginOpen = ref(false)
 const scrolled = ref(false)
 
 const activeNav = computed(() => (route.meta.navKey as string) || 'home')
-const isHome = computed(() => activeNav.value === 'home')
-const displayName = computed(
-  () =>
-    (user.value?.nickname as string) ||
-    (user.value?.phone as string) ||
-    '已登录',
+const isHome = computed(() => route.name === 'home')
+const isImmersive = computed(() => Boolean(route.meta.immersiveHeader))
+const overlayHeader = computed(() => isImmersive.value && !scrolled.value)
+const headerLogo = computed(() =>
+  overlayHeader.value ? logoLightImg : logoImg,
 )
 
 let offNeedLogin: (() => void) | undefined
@@ -58,17 +59,14 @@ const goHome = () => {
   void router.push({ name: 'home' })
 }
 
+const goMembership = () => {
+  if (route.name !== 'membership') {
+    void router.push({ name: 'membership' })
+  }
+}
+
 const openLogin = () => {
   loginOpen.value = true
-}
-
-const onLogout = async () => {
-  await auth.logout()
-  message.success('已退出登录')
-}
-
-const goPersonalCenter = () => {
-  void router.push({ name: 'personal-center' })
 }
 
 onMounted(() => {
@@ -90,13 +88,17 @@ onUnmounted(() => {
 <template>
   <a-layout-header
     class="app-header"
-    :class="{ 'is-scrolled': scrolled, 'is-solid': !isHome }"
+    :class="{
+      'is-scrolled': scrolled,
+      'is-solid': !isHome && !isImmersive,
+      'is-immersive': overlayHeader,
+    }"
   >
     <div class="header-inner">
       <div class="header-left">
         <div class="logo" @click="goHome">
           <img
-            :src="logoImg"
+            :src="headerLogo"
             alt="政策大脑 POLICY BRAIN"
             fetchpriority="high"
           />
@@ -131,30 +133,19 @@ onUnmounted(() => {
           <img :src="robotImg" alt="" class="ai-icon" />
           <span class="ai-link-text">AI政策大脑</span>
         </a>
+        <a
+          class="vip-link"
+          :style="{ backgroundImage: `url(${vipEntryImg})` }"
+          @click.prevent="goMembership"
+        >
+          开通会员
+        </a>
         <a class="mobile-link">
           <img :src="mobileImg" alt="" class="mobile-icon" />
           <span>移动端</span>
         </a>
 
-        <template v-if="isLoggedIn">
-          <a-dropdown>
-            <a class="user-entry" @click.prevent>
-              <span>{{ displayName }}</span>
-              <DownOutlined class="user-arrow" />
-            </a>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item key="personal-center" @click="goPersonalCenter"
-                  >会员中心</a-menu-item
-                >
-                <a-menu-divider />
-                <a-menu-item key="logout" @click="onLogout"
-                  >退出登录</a-menu-item
-                >
-              </a-menu>
-            </template>
-          </a-dropdown>
-        </template>
+        <UserAccountMenu v-if="isLoggedIn" />
         <a-button v-else type="primary" class="login-btn" @click="openLogin">
           登录/注册
         </a-button>
@@ -187,6 +178,49 @@ onUnmounted(() => {
 
   &.is-scrolled {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  &.is-immersive {
+    .city-select {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.16);
+
+      .city-pin,
+      .city-arrow {
+        color: #fff;
+      }
+    }
+
+    .header-menu :deep(.ant-menu-item) {
+      color: rgba(255, 255, 255, 0.88);
+
+      &:hover,
+      &.ant-menu-item-selected {
+        color: #fff;
+      }
+
+      &.ant-menu-item-selected::after {
+        border-bottom-color: #fff;
+      }
+    }
+
+    .header-right {
+      .ai-link,
+      .mobile-link {
+        color: rgba(255, 255, 255, 0.92);
+      }
+
+      .ai-link-text {
+        background: linear-gradient(0deg, #d7ecff 0%, #ffffff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+
+      .mobile-icon {
+        opacity: 1;
+        filter: brightness(2.2);
+      }
+    }
   }
 }
 
@@ -322,6 +356,35 @@ onUnmounted(() => {
     color: transparent;
   }
 
+  .vip-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    width: 103px;
+    height: 38px;
+    padding: 0 14px 0 38px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    color: #c9a24c;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    white-space: nowrap;
+    text-decoration: none;
+    text-shadow: 0 1px 0 rgba(255, 248, 230, 0.65);
+    filter: drop-shadow(0 1px 2px rgba(176, 130, 50, 0.22));
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      filter: drop-shadow(0 1px 2px rgba(176, 130, 50, 0.22)) brightness(1.06);
+      color: #d4b05c;
+    }
+  }
+
   .mobile-icon {
     width: 18px;
     height: 18px;
@@ -337,24 +400,6 @@ onUnmounted(() => {
     font-size: 13px;
     font-weight: 500;
     box-shadow: 0 4px 10px rgba(22, 119, 255, 0.28);
-  }
-
-  .user-entry {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #333;
-    font-size: 14px;
-    white-space: nowrap;
-
-    &:hover {
-      color: var(--pb-primary);
-    }
-  }
-
-  .user-arrow {
-    font-size: 10px;
-    color: #999;
   }
 }
 

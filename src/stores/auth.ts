@@ -17,6 +17,7 @@ import {
   sendSmsCode,
   updateCurrentUser,
   verifySmsCode,
+  type PolicySmsPurpose,
   type UpdateProfilePayload,
 } from '@/api/auth'
 
@@ -63,14 +64,18 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value
   }
 
-  const requestSmsCode = async (phone: string) => {
-    return sendSmsCode({ phone })
+  const requestSmsCode = async (phone: string, purpose: PolicySmsPurpose) => {
+    return sendSmsCode({ phone, purpose })
   }
 
-  const loginBySms = async (phone: string, code: string) => {
+  const loginBySms = async (
+    phone: string,
+    code: string,
+    purpose: PolicySmsPurpose,
+  ) => {
     loading.value = true
     try {
-      const result = await createSession({ phone, code })
+      const result = await createSession({ phone, code, purpose })
       applySession(result)
       try {
         await loadCurrentUser()
@@ -115,10 +120,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       return await loadCurrentUser()
     } catch {
-      clearToken()
-      token.value = ''
-      user.value = null
-      return null
+      // 401 已由请求层清理会话；网络等其它失败时保留本地缓存资料
+      return user.value
     }
   }
 
@@ -131,6 +134,7 @@ export const useAuthStore = defineStore('auth', () => {
     loginBySms,
     verifyRegisterCode,
     updateProfile,
+    loadCurrentUser,
     logout,
     hydrateUser,
   }

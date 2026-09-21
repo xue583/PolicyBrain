@@ -1,14 +1,117 @@
 {
   "openapi": "3.0.4",
   "info": {
-    "title": "New.Zcdn PolicyApi 接口文档    .NET 10.0.7",
-    "description": "Build: 2026-08-17 16:42:40",
+    "title": "New.Zcdn WebApi 接口文档    .NET 10.0.7",
+    "description": "Build: 2026-09-20 15:53:25",
     "version": "1.0.0"
   },
   "paths": {
-    "/api/sessions": {
+    "/account/users/me": {
+      "get": {
+        "tags": ["个人中心"],
+        "summary": " (Auth)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/New.Zcdn.ViewModel.Core.Policy.PolicyUserProfileVo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/New.Zcdn.ViewModel.Core.Policy.PolicyUserProfileVo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/New.Zcdn.ViewModel.Core.Policy.PolicyUserProfileVo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/account/users/me/profile": {
+      "patch": {
+        "tags": ["个人中心"],
+        "summary": "更新当前用户个人资料。 (Auth)",
+        "requestBody": {
+          "description": "个人资料参数。",
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/New.Zcdn.ViewModel.Core.Policy.PolicyUserProfileVo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/New.Zcdn.ViewModel.Core.Policy.PolicyUserProfileVo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/New.Zcdn.ViewModel.Core.Policy.PolicyUserProfileVo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "oauth2": []
+          }
+        ]
+      }
+    },
+    "/auth/sessions": {
       "post": {
-        "tags": ["认证授权"],
+        "tags": ["授权管理"],
         "requestBody": {
           "content": {
             "application/json-patch+json": {
@@ -40,9 +143,9 @@
         }
       }
     },
-    "/api/sessions/current": {
+    "/auth/sessions/current": {
       "delete": {
-        "tags": ["认证授权"],
+        "tags": ["授权管理"],
         "summary": " (Auth)",
         "responses": {
           "200": {
@@ -62,9 +165,9 @@
         ]
       }
     },
-    "/api/smsCodes": {
+    "/auth/smsCodes": {
       "post": {
-        "tags": ["认证授权"],
+        "tags": ["授权管理"],
         "requestBody": {
           "content": {
             "application/json-patch+json": {
@@ -96,9 +199,9 @@
         }
       }
     },
-    "/api/smsCodeVerifications": {
+    "/auth/smsCodeVerifications": {
       "post": {
-        "tags": ["认证授权"],
+        "tags": ["授权管理"],
         "requestBody": {
           "content": {
             "application/json-patch+json": {
@@ -130,7 +233,41 @@
         }
       }
     },
-    "/api/system": {
+    "/auth/tokenRefreshes": {
+      "post": {
+        "tags": ["授权管理"],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/system": {
       "get": {
         "tags": ["系统管理"],
         "responses": {
@@ -139,157 +276,174 @@
           }
         }
       }
-    },
-    "/api/tokenRefreshes": {
-      "post": {
-        "tags": ["认证授权"],
-        "requestBody": {
-          "content": {
-            "application/json-patch+json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
-              }
-            },
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/users/me": {
-      "get": {
-        "tags": ["PolicyAccount"],
-        "summary": " (Auth)",
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          }
-        },
-        "security": [
-          {
-            "oauth2": []
-          }
-        ]
-      },
-      "patch": {
-        "tags": ["PolicyAccount"],
-        "summary": " (Auth)",
-        "requestBody": {
-          "content": {
-            "application/json-patch+json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
-              }
-            },
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          }
-        },
-        "security": [
-          {
-            "oauth2": []
-          }
-        ]
-      }
     }
   },
   "components": {
     "schemas": {
+      "New.Zcdn.Common.Enums.PolicySmsPurpose": {
+        "enum": [1, 2],
+        "type": "integer",
+        "description": "政策大脑短信验证码用途。",
+        "format": "int32"
+      },
+      "New.Zcdn.Common.Enums.PolicyUserType": {
+        "enum": [1, 2],
+        "type": "integer",
+        "description": "政策大脑用户类型。",
+        "format": "int32"
+      },
       "New.Zcdn.SharedModel.Dto.Core.Policy.PolicyRefreshTokenDto": {
         "type": "object",
         "properties": {
           "token": {
             "type": "string",
+            "description": "刷新令牌。",
             "nullable": true
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "刷新政策大脑访问令牌。"
       },
       "New.Zcdn.SharedModel.Dto.Core.Policy.SendPolicyCodeDto": {
         "type": "object",
         "properties": {
           "phone": {
             "type": "string",
+            "description": "手机号。",
             "nullable": true
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/New.Zcdn.Common.Enums.PolicySmsPurpose"
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "请求发送政策大脑短信验证码。"
       },
       "New.Zcdn.SharedModel.Dto.Core.Policy.UpdatePolicyProfileDto": {
         "type": "object",
         "properties": {
+          "identity": {
+            "$ref": "#/components/schemas/New.Zcdn.Common.Enums.PolicyUserType"
+          },
+          "companyName": {
+            "type": "string",
+            "description": "公司名称。",
+            "nullable": true
+          },
+          "unifiedSocialCreditCode": {
+            "type": "string",
+            "description": "统一社会信用代码。",
+            "nullable": true
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "职务。",
+            "nullable": true
+          },
           "nickname": {
             "type": "string",
+            "description": "个人昵称。",
+            "nullable": true
+          },
+          "inviter": {
+            "type": "string",
+            "description": "邀请人。",
+            "nullable": true
+          },
+          "invitationCode": {
+            "type": "string",
+            "description": "邀请码。",
             "nullable": true
           },
           "avatar": {
             "type": "string",
+            "description": "头像地址。",
             "nullable": true
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "更新当前政策大脑用户的个人资料。"
       },
       "New.Zcdn.SharedModel.Dto.Core.Policy.VerifyPolicyCodeDto": {
         "type": "object",
         "properties": {
           "phone": {
             "type": "string",
+            "description": "手机号。",
             "nullable": true
           },
           "code": {
             "type": "string",
+            "description": "短信验证码。",
+            "nullable": true
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/New.Zcdn.Common.Enums.PolicySmsPurpose"
+          }
+        },
+        "additionalProperties": false,
+        "description": "校验政策大脑短信验证码。"
+      },
+      "New.Zcdn.ViewModel.Core.Policy.PolicyUserProfileVo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "用户 Id。",
+            "format": "int64"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号。",
+            "nullable": true
+          },
+          "identity": {
+            "$ref": "#/components/schemas/New.Zcdn.Common.Enums.PolicyUserType"
+          },
+          "companyName": {
+            "type": "string",
+            "description": "公司名称。",
+            "nullable": true
+          },
+          "unifiedSocialCreditCode": {
+            "type": "string",
+            "description": "统一社会信用代码。",
+            "nullable": true
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "职务。",
+            "nullable": true
+          },
+          "nickname": {
+            "type": "string",
+            "description": "个人昵称。",
+            "nullable": true
+          },
+          "inviter": {
+            "type": "string",
+            "description": "邀请人。",
+            "nullable": true
+          },
+          "invitationCode": {
+            "type": "string",
+            "description": "邀请码。",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像地址。",
+            "nullable": true
+          },
+          "lastLoginTime": {
+            "type": "string",
+            "description": "最后登录时间。",
+            "format": "date-time",
             "nullable": true
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "政策大脑个人中心展示模型。"
       }
     },
     "securitySchemes": {
@@ -303,13 +457,13 @@
   },
   "tags": [
     {
-      "name": "PolicyAccount"
+      "name": "个人中心"
+    },
+    {
+      "name": "授权管理"
     },
     {
       "name": "系统管理"
-    },
-    {
-      "name": "认证授权"
     }
   ]
 }

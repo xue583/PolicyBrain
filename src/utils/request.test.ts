@@ -7,7 +7,7 @@ vi.mock('ant-design-vue', () => ({
   },
 }))
 
-const { ApiError, shouldSkipRefresh, unwrapEnvelope } =
+const { ApiError, shouldSkipApiPrefix, shouldSkipRefresh, unwrapEnvelope } =
   await import('./request')
 
 describe('unwrapEnvelope', () => {
@@ -37,6 +37,18 @@ describe('shouldSkipRefresh', () => {
   it('skips when the flag is set or the url is an auth endpoint', () => {
     expect(shouldSkipRefresh({ skipAuthRefresh: true })).toBe(true)
     expect(shouldSkipRefresh({ url: '/tokenRefreshes' })).toBe(true)
+    expect(shouldSkipRefresh({ url: '/auth/smsCodes' })).toBe(true)
     expect(shouldSkipRefresh({ url: '/policies' })).toBe(false)
+  })
+})
+
+describe('shouldSkipApiPrefix', () => {
+  it('skips /api for /auth and /account routes', () => {
+    expect(shouldSkipApiPrefix('/auth/smsCodes')).toBe(true)
+    expect(shouldSkipApiPrefix('/auth/sessions')).toBe(true)
+    expect(shouldSkipApiPrefix('/auth/tokenRefreshes')).toBe(true)
+    expect(shouldSkipApiPrefix('/account/users/me')).toBe(true)
+    expect(shouldSkipApiPrefix('/users/me')).toBe(false)
+    expect(shouldSkipApiPrefix('/authenticate')).toBe(false)
   })
 })

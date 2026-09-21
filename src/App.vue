@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import dayjs from 'dayjs'
@@ -11,17 +12,26 @@ import { useAuthStore } from '@/stores/auth'
 
 dayjs.locale('zh-cn')
 
+const route = useRoute()
 const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 const promoOpen = ref(false)
 
 onMounted(() => {
-  if (!isLoggedIn.value) promoOpen.value = true
+  if (!isLoggedIn.value && route.name !== 'membership') promoOpen.value = true
 })
 
 watch(isLoggedIn, (loggedIn) => {
   if (loggedIn) promoOpen.value = false
 })
+
+watch(
+  () => route.name,
+  (name) => {
+    if (name === 'membership') promoOpen.value = false
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

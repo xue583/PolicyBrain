@@ -15,7 +15,7 @@ import roleEnterprise from '../assets/login/register/role-enterprise.png'
 import roleService from '../assets/login/register/role-service.png'
 import { ApiError } from '@/utils/request'
 import { useAuthStore } from '@/stores/auth'
-import { PolicyUserType } from '@/api/auth'
+import { PolicySmsPurpose, PolicyUserType } from '@/api/auth'
 import LoginForm from './login/LoginForm.vue'
 import RegisterStepAccount from './login/RegisterStepAccount.vue'
 import RegisterStepIdentity from './login/RegisterStepIdentity.vue'
@@ -179,7 +179,12 @@ const sendCode = async () => {
   if (!validatePhone(phone.value)) return
   sendingCode.value = true
   try {
-    await auth.requestSmsCode(phone.value)
+    await auth.requestSmsCode(
+      phone.value,
+      tab.value === 'register'
+        ? PolicySmsPurpose.Register
+        : PolicySmsPurpose.Login,
+    )
     message.success('验证码已发送')
     startCountdown()
   } catch (err) {
@@ -199,7 +204,11 @@ const onLoginSubmit = async () => {
   }
   submitting.value = true
   try {
-    await auth.loginBySms(phone.value, code.value.trim())
+    await auth.loginBySms(
+      phone.value,
+      code.value.trim(),
+      PolicySmsPurpose.Login,
+    )
     message.success('登录成功')
     emit('success')
     close()
@@ -261,7 +270,11 @@ const submitRegister = async () => {
   formError.value = ''
   submitting.value = true
   try {
-    await auth.loginBySms(phone.value, code.value.trim())
+    await auth.loginBySms(
+      phone.value,
+      code.value.trim(),
+      PolicySmsPurpose.Register,
+    )
     try {
       await auth.updateProfile({
         identity: identity.value || undefined,

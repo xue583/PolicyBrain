@@ -1,8 +1,18 @@
 import { request, type RequestConfig } from '@/utils/request'
 import type { AuthUser, SessionTokens } from '@/utils/auth'
 
+/** POST /auth/smsCodes — PolicySmsPurpose：1 注册，2 登录 */
+export const PolicySmsPurpose = {
+  Register: 1,
+  Login: 2,
+} as const
+
+export type PolicySmsPurpose =
+  (typeof PolicySmsPurpose)[keyof typeof PolicySmsPurpose]
+
 export type SendSmsPayload = {
   phone: string
+  purpose: PolicySmsPurpose
 }
 
 export type VerifyCodePayload = {
@@ -10,11 +20,15 @@ export type VerifyCodePayload = {
   code: string
 }
 
+export type CreateSessionPayload = VerifyCodePayload & {
+  purpose: PolicySmsPurpose
+}
+
 export type RefreshTokenPayload = {
   token: string
 }
 
-/** PATCH /api/users/me — PolicyUserType */
+/** PATCH /account/users/me/profile — PolicyUserType */
 export const PolicyUserType = {
   EnterpriseSpecialist: 1,
   EnterpriseService: 2,
@@ -34,83 +48,83 @@ export type UpdateProfilePayload = {
   avatar?: string
 }
 
-/** POST /api/smsCodes */
+/** POST /auth/smsCodes */
 export const sendSmsCode = (
   data: SendSmsPayload,
   config?: RequestConfig,
 ): Promise<unknown> => {
   return request({
-    url: '/smsCodes',
+    url: '/auth/smsCodes',
     method: 'post',
     data,
     ...config,
   })
 }
 
-/** POST /api/smsCodeVerifications */
+/** POST /auth/smsCodeVerifications */
 export const verifySmsCode = (
   data: VerifyCodePayload,
   config?: RequestConfig,
 ): Promise<unknown> => {
   return request({
-    url: '/smsCodeVerifications',
+    url: '/auth/smsCodeVerifications',
     method: 'post',
     data,
     ...config,
   })
 }
 
-/** POST /api/sessions — 创建会话（登录） */
+/** POST /auth/sessions — 创建会话（登录/注册），需带 purpose */
 export const createSession = (
-  data: VerifyCodePayload,
+  data: CreateSessionPayload,
   config?: RequestConfig,
 ): Promise<SessionTokens> => {
   return request({
-    url: '/sessions',
+    url: '/auth/sessions',
     method: 'post',
     data,
     ...config,
   })
 }
 
-/** DELETE /api/sessions/current */
+/** DELETE /auth/sessions/current */
 export const logoutSession = (config?: RequestConfig): Promise<unknown> => {
   return request({
-    url: '/sessions/current',
+    url: '/auth/sessions/current',
     method: 'delete',
     ...config,
   })
 }
 
-/** POST /api/tokenRefreshes */
+/** POST /auth/tokenRefreshes */
 export const refreshToken = (
   data: RefreshTokenPayload,
   config?: RequestConfig,
 ): Promise<SessionTokens> => {
   return request({
-    url: '/tokenRefreshes',
+    url: '/auth/tokenRefreshes',
     method: 'post',
     data,
     ...config,
   })
 }
 
-/** GET /api/users/me */
+/** GET /account/users/me */
 export const fetchCurrentUser = (config?: RequestConfig): Promise<AuthUser> => {
   return request({
-    url: '/users/me',
+    url: '/account/users/me',
     method: 'get',
     ...config,
   })
 }
 
-/** PATCH /api/users/me */
+/** PATCH /account/users/me/profile */
 export const updateCurrentUser = (
   data: UpdateProfilePayload,
   config?: RequestConfig,
 ): Promise<AuthUser> => {
   return request({
-    url: '/users/me',
+    url: '/account/users/me/profile',
     method: 'patch',
     data,
     ...config,

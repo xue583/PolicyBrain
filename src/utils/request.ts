@@ -74,7 +74,7 @@ type ApiEnvelope = {
 type RetriableConfig = InternalAxiosRequestConfig & RequestConfig
 
 const timeout = Number(import.meta.env.VITE_REQUEST_TIMEOUT || 60000)
-const baseURL = import.meta.env.VITE_BASE_API || '/api'
+const baseURL = import.meta.env.VITE_BASE_API || '/auth'
 
 const service: AxiosInstance = axios.create({
   baseURL,
@@ -110,6 +110,13 @@ let refreshPromise: Promise<string> | null = null
 
 const AUTH_SKIP_RE =
   /\/(tokenRefreshes|sessions|smsCodes|smsCodeVerifications)(\/|$|\?)/i
+
+/** Swagger 上 /auth、/account 本身就是完整路径，不要再拼 VITE_BASE_API=/api */
+const SKIP_API_PREFIX_RE = /^\/(auth|account)(\/|$|\?)/i
+
+export const shouldSkipApiPrefix = (url?: string) => {
+  return SKIP_API_PREFIX_RE.test(url || '')
+}
 
 export const shouldSkipRefresh = (config?: {
   skipAuthRefresh?: boolean
@@ -151,9 +158,9 @@ const refreshAccessToken = async (): Promise<string> => {
   }
 
   // 使用裸 axios，避免走业务拦截器造成死循环
-  // Swagger: PolicyRefreshTokenDto { token }
+  // Swagger: POST /auth/tokenRefreshes  PolicyRefreshTokenDto { token }
   const { data } = await axios.post(
-    `${baseURL}/tokenRefreshes`,
+    '/auth/tokenRefreshes',
     { token: refreshToken },
     {
       timeout,
@@ -211,6 +218,10 @@ const handleUnauthorized = async (
 service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const cfg = config as RetriableConfig
   if (cfg.loading) startLoading()
+
+  if (shouldSkipApiPrefix(cfg.url)) {
+    cfg.baseURL = ''
+  }
 
   const token = getToken()
   if (token) {
