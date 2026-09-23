@@ -1351,6 +1351,7 @@ const changeSeats = (delta: number) => {
   border-left: 0;
   justify-content: flex-start;
   text-align: left;
+  align-items: center;
 }
 
 .compare-head > div {
