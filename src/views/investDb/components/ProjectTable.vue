@@ -19,36 +19,37 @@ const columns: TableColumnType<InvestProject>[] = [
     title: '项目代码',
     dataIndex: 'code',
     key: 'code',
-    width: 200,
+    width: '20%',
   },
   {
     title: '项目名称',
     dataIndex: 'name',
     key: 'name',
+    width: '24%',
   },
   {
     title: '审批单位',
     dataIndex: 'approvalUnit',
     key: 'approvalUnit',
-    width: 200,
+    width: '15%',
   },
   {
     title: '审批结果',
     dataIndex: 'result',
     key: 'result',
-    width: 160,
+    width: '16%',
   },
   {
     title: '审批时间',
     dataIndex: 'approvalDate',
     key: 'approvalDate',
-    width: 130,
+    width: '12%',
   },
   {
     title: '备案单位名称',
     dataIndex: 'recordUnit',
     key: 'recordUnit',
-    width: 200,
+    width: '13%',
   },
 ]
 </script>
@@ -57,6 +58,7 @@ const columns: TableColumnType<InvestProject>[] = [
   <a-card :bordered="false" class="project-table-card">
     <a-table
       class="invest-table"
+      table-layout="fixed"
       :columns="columns"
       :data-source="dataSource"
       :pagination="false"
@@ -95,6 +97,10 @@ const columns: TableColumnType<InvestProject>[] = [
 <style scoped lang="scss">
 .project-table-card {
   border-radius: 12px;
+
+  :deep(.ant-card-body) {
+    overflow-x: auto;
+  }
 }
 
 .invest-table {
@@ -103,12 +109,19 @@ const columns: TableColumnType<InvestProject>[] = [
     font-size: 15px;
   }
 
+  :deep(table) {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 980px;
+  }
+
   :deep(.ant-table-thead > tr > th) {
     background: #eaf4ff;
     color: #262626;
     font-size: 15px;
     font-weight: 600;
     border-bottom: none;
+    white-space: nowrap;
     padding: 16px 14px !important;
   }
 
@@ -117,6 +130,7 @@ const columns: TableColumnType<InvestProject>[] = [
     color: #434343;
     border-bottom: 1px solid #f0f0f0;
     vertical-align: middle;
+    word-break: break-word;
     padding: 18px 14px !important;
   }
 
@@ -134,8 +148,11 @@ const columns: TableColumnType<InvestProject>[] = [
 }
 
 .project-name {
+  display: inline;
   color: var(--pb-primary);
   line-height: 1.6;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .result {

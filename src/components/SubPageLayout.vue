@@ -9,7 +9,7 @@ import { useSyncedSearchQuery } from '@/composables/useRouteKeyword'
 import logoLightImg from '@/assets/logo-light.png'
 import heroBg from '@/assets/hero-bg.png'
 import policyDbBg from '@/assets/policy-db-bg.png'
-import enterpriseDbBg from '@/assets/enterprise-db-bg.png'
+import enterpriseDbBg from '@/assets/enterpriseDb/banner@2x.png'
 import exportBanner from '@/assets/export/banner@2x.png'
 import investDb from '@/assets/investDb/banner@2x.png'
 import apiBg from '@/assets/api/banner.png'
@@ -33,6 +33,7 @@ const currentHeroBg = computed(() => heroBgByPage[pageKey.value] ?? heroBg)
 const isFullBanner = computed(() => pageKey.value === 'export')
 const isInvestDb = computed(() => pageKey.value === 'invest-db')
 const isApiBg = computed(() => pageKey.value === 'api')
+const isEnterpriseDb = computed(() => pageKey.value === 'enterprise-db')
 const isPersonalCenter = computed(() => pageKey.value === 'personal-center')
 const { keyword, applyKeyword } = useSyncedSearchQuery({
   clearWhen: pageKey,
@@ -52,7 +53,7 @@ const openBeian = () => {
     <div
       v-if="!hideHero && !isFullBanner && !isInvestDb"
       class="page-bg"
-      :class="{ 'api-bg': isApiBg }"
+      :class="{ 'api-bg': isApiBg, 'enterprise-bg': isEnterpriseDb }"
       :style="{ backgroundImage: `url(${currentHeroBg})` }"
     />
 
@@ -178,11 +179,26 @@ const openBeian = () => {
   width: 100%;
   height: 386px;
   opacity: 1;
+  overflow: hidden;
   background-repeat: no-repeat;
   background-position: left top;
   background-size: 100% 100%;
   pointer-events: none;
   z-index: 0;
+
+  &.enterprise-bg::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 42%;
+    background: linear-gradient(
+      180deg,
+      rgb(240 242 245 / 0) 0%,
+      var(--pb-bg) 72%
+    );
+  }
 }
 
 .logo {

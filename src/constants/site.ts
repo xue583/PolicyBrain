@@ -1,7 +1,7 @@
 export const SITE = {
   name: '政策大脑',
   englishName: 'AI Policy Brain',
-  company: '河南政策大脑数字科技有限公司',
+  company: '郑州峰淼技术咨询有限责任公司',
   icp: '豫ICP备2026034913号-1',
   icpUrl: 'https://beian.miit.gov.cn/',
   phone: '13838137683',

@@ -22,7 +22,7 @@ withDefaults(
         decoding="async"
       />
       <span v-if="variant === 'footer'">关注微信公众号</span>
-      <a-button v-else type="primary" class="qr-btn">政策宝公众号</a-button>
+      <a-button v-else type="primary" class="qr-btn">政策大脑公众号</a-button>
     </div>
     <div class="qr-item">
       <img :src="qrMini" alt="政策大脑小程序" loading="lazy" decoding="async" />

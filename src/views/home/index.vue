@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   RightOutlined,
@@ -20,6 +20,7 @@ import { SITE } from '@/constants/site'
 import { navItems } from '@/mock/nav'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
 import heroDecorSm from '../../assets/home/hero-decor-sm.png'
+import heroBanner from '../../assets/home/hero-banner.mp4'
 import promoBanner from '../../assets/home/promo-banner.png'
 import iconPolicy from '../../assets/home/icon-policy.png'
 import iconEnterprise from '../../assets/home/icon-enterprise.png'
@@ -41,8 +42,6 @@ const newsLimit = ref(5)
 watch(newsTab, () => {
   newsLimit.value = 5
 })
-const heroBgMd = ref('')
-const heroBgLg = ref('')
 
 const iconMap: Record<string, string> = {
   policy: iconPolicy,
@@ -87,41 +86,25 @@ const goNav = (key: string) => {
 const openBeian = () => {
   window.open(SITE.icpUrl, '_blank', 'noopener,noreferrer')
 }
-
-const loadHeroDecor = () => {
-  if (window.innerWidth >= 1920 && !heroBgLg.value) {
-    void import('../../assets/home/hero-decor.png').then((mod) => {
-      heroBgLg.value = mod.default
-    })
-  } else if (window.innerWidth >= 1440 && !heroBgMd.value) {
-    void import('../../assets/home/hero-decor-1x.png').then((mod) => {
-      heroBgMd.value = mod.default
-    })
-  }
-}
-
-onMounted(() => {
-  loadHeroDecor()
-  window.addEventListener('resize', loadHeroDecor, { passive: true })
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', loadHeroDecor)
-})
 </script>
 
 <template>
   <div class="home-page">
-    <div
-      class="page-bg"
-      :style="{
-        '--home-bg-sm': `url(${heroDecorSm})`,
-        '--home-bg-md': heroBgMd ? `url(${heroBgMd})` : `url(${heroDecorSm})`,
-        '--home-bg-lg': heroBgLg ? `url(${heroBgLg})` : `url(${heroDecorSm})`,
-      }"
-    />
-
     <section class="hero">
+      <div class="page-bg" :style="{ backgroundImage: `url(${heroDecorSm})` }">
+        <video
+          class="page-bg-video"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="auto"
+          disablepictureinpicture
+          aria-hidden="true"
+          :poster="heroDecorSm"
+          :src="heroBanner"
+        />
+      </div>
       <div class="hero-inner">
         <h1 class="hero-title">
           <span class="line1">全国政策数据</span>
@@ -196,11 +179,8 @@ onUnmounted(() => {
         </a>
       </div>
 
-      <a
-        class="promo-banner"
-        :style="{ backgroundImage: `url(${promoBanner})` }"
-      >
-        <span class="sr-only">限时活动：注册即送3个月会员</span>
+      <a class="promo-banner">
+        <img :src="promoBanner" alt="限时活动：注册即送3个月会员" />
       </a>
 
       <div class="main-grid">
@@ -365,40 +345,60 @@ onUnmounted(() => {
   -webkit-font-smoothing: antialiased;
 }
 
-.page-bg {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 52%;
-  background-image: var(--home-bg-sm);
-  background-repeat: no-repeat;
-  background-position: left top;
-  background-size: 100% 70%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@media (min-width: 1440px) {
-  .page-bg {
-    background-image: var(--home-bg-md);
-  }
-}
-
-@media (min-width: 1920px) {
-  .page-bg {
-    background-image: var(--home-bg-lg);
-  }
-}
-
 .hero {
   position: relative;
   z-index: 1;
   width: 100%;
+  overflow: hidden;
   background: transparent;
 }
 
+.page-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--pb-bg);
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  pointer-events: none;
+  z-index: 0;
+
+  /* 只在与下方内容衔接处做短淡出，避免盖住动效主体 */
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: min(120px, 18%);
+    background: linear-gradient(
+      180deg,
+      rgb(240 242 245 / 0) 0%,
+      rgb(240 242 245 / 0.42) 58%,
+      var(--pb-bg) 100%
+    );
+  }
+}
+
+.page-bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-bg-video {
+    display: none;
+  }
+}
+
 .hero-inner {
+  position: relative;
+  z-index: 1;
   width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
@@ -624,23 +624,18 @@ onUnmounted(() => {
 .promo-banner {
   display: block;
   width: 100%;
-  height: 200px;
-  margin-bottom: 20px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
+  margin: 16px 0 20px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  border-radius: var(--pb-radius);
+  line-height: 0;
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2888 / 360;
+    object-fit: contain;
+  }
 }
 
 .main-grid {
@@ -1074,8 +1069,11 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .promo-banner {
-    height: 60px;
+  .promo-banner img {
+    height: 72px;
+    aspect-ratio: auto;
+    object-fit: cover;
+    object-position: center;
   }
 
   .hero-title .line1 {

@@ -17,6 +17,7 @@ const {
   fetchCurrentUser,
   logoutSession,
   sendSmsCode,
+  verifySmsCode,
   PolicySmsPurpose,
 } = await import('@/api/auth')
 
@@ -109,6 +110,23 @@ describe('useAuthStore', () => {
 
     expect(auth.isLoggedIn).toBe(true)
     expect(auth.user?.phone).toBe('19545670526')
+  })
+
+  it('verifies register sms with purpose 1', async () => {
+    vi.mocked(verifySmsCode).mockResolvedValue({})
+
+    const auth = useAuthStore()
+    await auth.verifyRegisterCode(
+      '13900000000',
+      '123456',
+      PolicySmsPurpose.Register,
+    )
+
+    expect(verifySmsCode).toHaveBeenCalledWith({
+      phone: '13900000000',
+      code: '123456',
+      purpose: 1,
+    })
   })
 
   it('sends sms with the given purpose', async () => {

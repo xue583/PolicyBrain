@@ -34,6 +34,8 @@ export type SessionTokens = {
 type Listener = () => void
 const authListeners = new Set<Listener>()
 const needLoginListeners = new Set<Listener>()
+/** 路由守卫可能早于 Header 订阅登录弹窗 */
+let pendingNeedLogin = false
 
 const resolveStorage = (): Storage => {
   if (typeof window === 'undefined') {
@@ -64,10 +66,19 @@ export const onAuthChange = (fn: Listener) => {
 
 export const onNeedLogin = (fn: Listener) => {
   needLoginListeners.add(fn)
+  if (pendingNeedLogin) {
+    pendingNeedLogin = false
+    fn()
+  }
   return () => needLoginListeners.delete(fn)
 }
 
 export const triggerNeedLogin = () => {
+  if (needLoginListeners.size === 0) {
+    pendingNeedLogin = true
+    return
+  }
+  pendingNeedLogin = false
   needLoginListeners.forEach((fn) => fn())
 }
 

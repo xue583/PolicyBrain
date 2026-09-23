@@ -24,7 +24,6 @@ import {
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(getToken())
   const user = ref<AuthUser | null>(getStoredUser())
-  const loading = ref(false)
 
   const isLoggedIn = computed(() => Boolean(token.value))
 
@@ -73,23 +72,22 @@ export const useAuthStore = defineStore('auth', () => {
     code: string,
     purpose: PolicySmsPurpose,
   ) => {
-    loading.value = true
+    const result = await createSession({ phone, code, purpose })
+    applySession(result)
     try {
-      const result = await createSession({ phone, code, purpose })
-      applySession(result)
-      try {
-        await loadCurrentUser()
-      } catch {
-        // 登录成功但拉用户失败时，仍保留会话
-      }
-      return result
-    } finally {
-      loading.value = false
+      await loadCurrentUser()
+    } catch {
+      // 登录成功但拉用户失败时，仍保留会话
     }
+    return result
   }
 
-  const verifyRegisterCode = async (phone: string, code: string) => {
-    return verifySmsCode({ phone, code })
+  const verifyRegisterCode = async (
+    phone: string,
+    code: string,
+    purpose: PolicySmsPurpose,
+  ) => {
+    return verifySmsCode({ phone, code, purpose })
   }
 
   const updateProfile = async (payload: UpdateProfilePayload) => {
@@ -128,7 +126,6 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     token,
     user,
-    loading,
     isLoggedIn,
     requestSmsCode,
     loginBySms,

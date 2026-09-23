@@ -15,14 +15,14 @@ export type SendSmsPayload = {
   purpose: PolicySmsPurpose
 }
 
+/** POST /auth/smsCodeVerifications、/auth/sessions — purpose：1 注册，2 登录 */
 export type VerifyCodePayload = {
   phone: string
   code: string
-}
-
-export type CreateSessionPayload = VerifyCodePayload & {
   purpose: PolicySmsPurpose
 }
+
+export type CreateSessionPayload = VerifyCodePayload
 
 export type RefreshTokenPayload = {
   token: string
@@ -48,6 +48,11 @@ export type UpdateProfilePayload = {
   avatar?: string
 }
 
+const withSilentError = (config?: RequestConfig): RequestConfig => ({
+  hideError: true,
+  ...config,
+})
+
 /** POST /auth/smsCodes */
 export const sendSmsCode = (
   data: SendSmsPayload,
@@ -57,7 +62,7 @@ export const sendSmsCode = (
     url: '/auth/smsCodes',
     method: 'post',
     data,
-    ...config,
+    ...withSilentError(config),
   })
 }
 
@@ -70,7 +75,7 @@ export const verifySmsCode = (
     url: '/auth/smsCodeVerifications',
     method: 'post',
     data,
-    ...config,
+    ...withSilentError(config),
   })
 }
 
@@ -83,7 +88,7 @@ export const createSession = (
     url: '/auth/sessions',
     method: 'post',
     data,
-    ...config,
+    ...withSilentError(config),
   })
 }
 
@@ -92,7 +97,7 @@ export const logoutSession = (config?: RequestConfig): Promise<unknown> => {
   return request({
     url: '/auth/sessions/current',
     method: 'delete',
-    ...config,
+    ...withSilentError(config),
   })
 }
 
@@ -105,7 +110,7 @@ export const refreshToken = (
     url: '/auth/tokenRefreshes',
     method: 'post',
     data,
-    ...config,
+    ...withSilentError(config),
   })
 }
 
@@ -114,7 +119,7 @@ export const fetchCurrentUser = (config?: RequestConfig): Promise<AuthUser> => {
   return request({
     url: '/account/users/me',
     method: 'get',
-    ...config,
+    ...withSilentError(config),
   })
 }
 
@@ -127,6 +132,6 @@ export const updateCurrentUser = (
     url: '/account/users/me/profile',
     method: 'patch',
     data,
-    ...config,
+    ...withSilentError(config),
   })
 }

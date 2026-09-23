@@ -4,10 +4,12 @@ import {
   getRefreshToken,
   getStoredUser,
   getToken,
+  onNeedLogin,
   pickTokens,
   saveSessionTokens,
   setStoredUser,
   setToken,
+  triggerNeedLogin,
 } from './auth'
 
 describe('pickTokens', () => {
@@ -68,5 +70,18 @@ describe('auth storage', () => {
 
     localStorage.setItem('pb_user', '{not-json')
     expect(getStoredUser()).toBeNull()
+  })
+})
+
+describe('need login', () => {
+  it('replays the request if the modal has not subscribed yet', () => {
+    const seen: number[] = []
+    triggerNeedLogin()
+    const off = onNeedLogin(() => seen.push(1))
+    expect(seen).toEqual([1])
+
+    triggerNeedLogin()
+    expect(seen).toEqual([1, 1])
+    off()
   })
 })

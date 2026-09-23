@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onUnmounted, reactive, ref, watch } from 'vue'
-import { QrcodeOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import frameBg from '../assets/login/header-bg.png'
 import closeIcon from '../assets/login/close.png'
@@ -34,12 +33,12 @@ const submitting = ref(false)
 const sendingCode = ref(false)
 
 type AuthTab = 'login' | 'register'
-type AuthMode = 'phone' | 'qrcode'
 type RegisterStep = 1 | 2 | 3
 type IdentityRole = PolicyUserType | ''
 
+const SMS_CODE_RE = /^\d{4,6}$/
+
 const tab = ref<AuthTab>('login')
-const mode = ref<AuthMode>('phone')
 const registerStep = ref<RegisterStep>(1)
 const phone = ref('')
 const code = ref('')
@@ -108,7 +107,6 @@ const stopCountdown = () => {
 
 const resetAll = () => {
   tab.value = 'login'
-  mode.value = 'phone'
   registerStep.value = 1
   phone.value = ''
   code.value = ''
@@ -125,31 +123,41 @@ const resetAll = () => {
   stopCountdown()
 }
 
-watch(open, (v) => {
-  if (v) resetAll()
-  else stopCountdown()
-})
-
-onUnmounted(() => {
-  stopCountdown()
-})
-
 const close = () => {
   open.value = false
 }
 
+const onKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') close()
+}
+
+watch(
+  open,
+  (v) => {
+    if (v) {
+      resetAll()
+      window.addEventListener('keydown', onKeydown)
+    } else {
+      stopCountdown()
+      window.removeEventListener('keydown', onKeydown)
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  stopCountdown()
+  window.removeEventListener('keydown', onKeydown)
+})
+
 const switchTab = (next: AuthTab) => {
   tab.value = next
+  code.value = ''
   phoneError.value = ''
   identityError.value = ''
   formError.value = ''
-  mode.value = 'phone'
   registerStep.value = 1
-}
-
-const toggleQr = () => {
-  mode.value = mode.value === 'phone' ? 'qrcode' : 'phone'
-  phoneError.value = ''
+  stopCountdown()
 }
 
 const validatePhone = (value: string) => {
@@ -158,6 +166,14 @@ const validatePhone = (value: string) => {
     return false
   }
   phoneError.value = ''
+  return true
+}
+
+const validateSmsCode = () => {
+  if (!SMS_CODE_RE.test(code.value.trim())) {
+    phoneError.value = '请输入4-6位短信验证码'
+    return false
+  }
   return true
 }
 
@@ -198,10 +214,7 @@ const sendCode = async () => {
 const onLoginSubmit = async () => {
   if (submitting.value) return
   if (!validatePhone(phone.value)) return
-  if (!/^\d{4}$/.test(code.value.trim())) {
-    phoneError.value = '请输入4位短信验证码'
-    return
-  }
+  if (!validateSmsCode()) return
   submitting.value = true
   try {
     await auth.loginBySms(
@@ -222,14 +235,19 @@ const onLoginSubmit = async () => {
 
 const goRegisterStep2 = async () => {
   if (submitting.value) return
-  if (!validatePhone(phone.value)) return
-  if (!/^\d{4}$/.test(code.value.trim())) {
-    phoneError.value = '请输入4位短信验证码'
+  if (auth.isLoggedIn) {
+    registerStep.value = 2
     return
   }
+  if (!validatePhone(phone.value)) return
+  if (!validateSmsCode()) return
   submitting.value = true
   try {
-    await auth.verifyRegisterCode(phone.value, code.value.trim())
+    await auth.loginBySms(
+      phone.value,
+      code.value.trim(),
+      PolicySmsPurpose.Register,
+    )
     registerStep.value = 2
   } catch (err) {
     phoneError.value =
@@ -257,43 +275,42 @@ const submitRegister = async () => {
   if (submitting.value) return
   const creditRequired = identity.value === PolicyUserType.EnterpriseSpecialist
   if (
+    !identity.value ||
     !authForm.companyName.trim() ||
     (creditRequired && !authForm.unifiedSocialCreditCode.trim())
   ) {
     formError.value = '请填写带 * 的必填信息'
     return
   }
-  if (!validatePhone(phone.value) || !/^\d{4}$/.test(code.value.trim())) {
-    formError.value = '请返回账户验证步骤检查手机号与验证码'
-    return
-  }
   formError.value = ''
   submitting.value = true
   try {
-    await auth.loginBySms(
-      phone.value,
-      code.value.trim(),
-      PolicySmsPurpose.Register,
-    )
-    try {
-      await auth.updateProfile({
-        identity: identity.value || undefined,
-        companyName: authForm.companyName.trim(),
-        unifiedSocialCreditCode:
-          authForm.unifiedSocialCreditCode.trim() || undefined,
-        jobTitle: authForm.jobTitle.trim() || undefined,
-        nickname: authForm.nickname.trim() || undefined,
-        invitationCode: authForm.invitationCode.trim() || undefined,
-      })
-    } catch {
-      // 资料更新失败不影响已建立的会话
+    if (!auth.isLoggedIn) {
+      if (!validatePhone(phone.value) || !validateSmsCode()) {
+        formError.value = '请返回账户验证步骤检查手机号与验证码'
+        return
+      }
+      await auth.loginBySms(
+        phone.value,
+        code.value.trim(),
+        PolicySmsPurpose.Register,
+      )
     }
+    await auth.updateProfile({
+      identity: identity.value,
+      companyName: authForm.companyName.trim(),
+      unifiedSocialCreditCode:
+        authForm.unifiedSocialCreditCode.trim() || undefined,
+      jobTitle: authForm.jobTitle.trim() || undefined,
+      nickname: authForm.nickname.trim() || undefined,
+      invitationCode: authForm.invitationCode.trim() || undefined,
+    })
     message.success('注册成功')
     emit('success')
     close()
   } catch (err) {
     formError.value =
-      err instanceof ApiError ? err.message : '注册失败，请稍后重试'
+      err instanceof ApiError ? err.message : '资料提交失败，请稍后重试'
   } finally {
     submitting.value = false
   }
@@ -323,21 +340,56 @@ const submitRegister = async () => {
             <div
               class="login-header"
               :style="{ backgroundImage: `url(${frameBg})` }"
-            >
-              <button
-                type="button"
-                class="qr-toggle"
-                :title="mode === 'phone' ? '扫码登录' : '手机号登录'"
-                @click="toggleQr"
-              >
-                <span v-if="mode === 'qrcode'" class="qr-toggle-pc">PC</span>
-              </button>
-            </div>
+            ></div>
 
             <div class="login-body">
-              <template v-if="mode === 'phone'">
-                <LoginForm
-                  v-if="tab === 'login'"
+              <LoginForm
+                v-if="tab === 'login'"
+                v-model:phone="phone"
+                v-model:code="code"
+                :phone-error="phoneError"
+                :countdown="countdown"
+                :sending-code="sendingCode"
+                :submitting="submitting"
+                :code-btn-text="codeBtnText"
+                @switch-tab="switchTab"
+                @blur-phone="onPhoneBlur"
+                @send-code="sendCode"
+                @submit="onLoginSubmit"
+              />
+
+              <template v-else>
+                <p class="login-welcome">{{ registerTitle }}</p>
+
+                <div class="login-tabs">
+                  <button
+                    type="button"
+                    class="login-tab"
+                    @click="switchTab('login')"
+                  >
+                    登录
+                  </button>
+                  <button type="button" class="login-tab active">注册</button>
+                </div>
+
+                <a-steps
+                  class="reg-steps"
+                  label-placement="vertical"
+                  :current="stepsCurrent"
+                >
+                  <a-step
+                    v-for="s in registerSteps"
+                    :key="s.title"
+                    :title="s.title"
+                  >
+                    <template #icon>
+                      <img class="reg-step-icon" :src="s.icon" :alt="s.title" />
+                    </template>
+                  </a-step>
+                </a-steps>
+
+                <RegisterStepAccount
+                  v-if="registerStep === 1"
                   v-model:phone="phone"
                   v-model:code="code"
                   :phone-error="phoneError"
@@ -345,107 +397,45 @@ const submitRegister = async () => {
                   :sending-code="sendingCode"
                   :submitting="submitting"
                   :code-btn-text="codeBtnText"
-                  @switch-tab="switchTab"
+                  :vip-banner="vipBanner"
+                  :vip-badge="vipBadge"
                   @blur-phone="onPhoneBlur"
                   @send-code="sendCode"
-                  @submit="onLoginSubmit"
+                  @next="goRegisterStep2"
                 />
 
-                <template v-else>
-                  <p class="login-welcome">{{ registerTitle }}</p>
+                <RegisterStepIdentity
+                  v-else-if="registerStep === 2"
+                  :identity="identity"
+                  :identity-error="identityError"
+                  :roles="roles"
+                  @update:identity="onIdentityChange"
+                  @prev="registerStep = 1"
+                  @next="goRegisterStep3"
+                />
 
-                  <div class="login-tabs">
-                    <button
-                      type="button"
-                      class="login-tab"
-                      @click="switchTab('login')"
-                    >
-                      登录
-                    </button>
-                    <button type="button" class="login-tab active">注册</button>
-                  </div>
-
-                  <a-steps
-                    class="reg-steps"
-                    label-placement="vertical"
-                    :current="stepsCurrent"
-                  >
-                    <a-step
-                      v-for="s in registerSteps"
-                      :key="s.title"
-                      :title="s.title"
-                    >
-                      <template #icon>
-                        <img
-                          class="reg-step-icon"
-                          :src="s.icon"
-                          :alt="s.title"
-                        />
-                      </template>
-                    </a-step>
-                  </a-steps>
-
-                  <RegisterStepAccount
-                    v-if="registerStep === 1"
-                    v-model:phone="phone"
-                    v-model:code="code"
-                    :phone-error="phoneError"
-                    :countdown="countdown"
-                    :sending-code="sendingCode"
-                    :submitting="submitting"
-                    :code-btn-text="codeBtnText"
-                    :vip-banner="vipBanner"
-                    :vip-badge="vipBadge"
-                    @blur-phone="onPhoneBlur"
-                    @send-code="sendCode"
-                    @next="goRegisterStep2"
-                  />
-
-                  <RegisterStepIdentity
-                    v-else-if="registerStep === 2"
-                    :identity="identity"
-                    :identity-error="identityError"
-                    :roles="roles"
-                    @update:identity="onIdentityChange"
-                    @prev="registerStep = 1"
-                    @next="goRegisterStep3"
-                  />
-
-                  <RegisterStepAuth
-                    v-else
-                    :identity="identity"
-                    :form-error="formError"
-                    :submitting="submitting"
-                    :vip-banner="vipBanner"
-                    :company-name="authForm.companyName"
-                    :unified-social-credit-code="
-                      authForm.unifiedSocialCreditCode
-                    "
-                    :job-title="authForm.jobTitle"
-                    :nickname="authForm.nickname"
-                    :invitation-code="authForm.invitationCode"
-                    @update:company-name="authForm.companyName = $event"
-                    @update:unified-social-credit-code="
-                      authForm.unifiedSocialCreditCode = $event
-                    "
-                    @update:job-title="authForm.jobTitle = $event"
-                    @update:nickname="authForm.nickname = $event"
-                    @update:invitation-code="authForm.invitationCode = $event"
-                    @prev="registerStep = 2"
-                    @submit="submitRegister"
-                  />
-                </template>
+                <RegisterStepAuth
+                  v-else
+                  :identity="identity"
+                  :form-error="formError"
+                  :submitting="submitting"
+                  :vip-banner="vipBanner"
+                  :company-name="authForm.companyName"
+                  :unified-social-credit-code="authForm.unifiedSocialCreditCode"
+                  :job-title="authForm.jobTitle"
+                  :nickname="authForm.nickname"
+                  :invitation-code="authForm.invitationCode"
+                  @update:company-name="authForm.companyName = $event"
+                  @update:unified-social-credit-code="
+                    authForm.unifiedSocialCreditCode = $event
+                  "
+                  @update:job-title="authForm.jobTitle = $event"
+                  @update:nickname="authForm.nickname = $event"
+                  @update:invitation-code="authForm.invitationCode = $event"
+                  @prev="registerStep = 2"
+                  @submit="submitRegister"
+                />
               </template>
-
-              <div v-else class="login-qr">
-                <p class="login-welcome">
-                  微信扫码{{ tab === 'login' ? '登录' : '注册' }}
-                </p>
-                <div class="qr-box">
-                  <QrcodeOutlined class="qr-placeholder" />
-                </div>
-                <p class="qr-hint">打开微信扫一扫，关注「政策大脑」完成认证</p>
-              </div>
             </div>
           </div>
         </div>

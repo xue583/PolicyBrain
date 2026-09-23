@@ -37,25 +37,22 @@ const emit = defineEmits<{
     </button>
   </div>
 
-  <PhoneCodeFields
-    :phone="phone"
-    :code="code"
-    :phone-error="phoneError"
-    :countdown="countdown"
-    :sending-code="sendingCode"
-    :code-btn-text="codeBtnText"
-    @update:phone="emit('update:phone', $event)"
-    @update:code="emit('update:code', $event)"
-    @blur-phone="emit('blurPhone')"
-    @send-code="emit('sendCode')"
-  />
+  <form @submit.prevent="emit('submit')">
+    <PhoneCodeFields
+      :phone="phone"
+      :code="code"
+      :phone-error="phoneError"
+      :countdown="countdown"
+      :sending-code="sendingCode"
+      :code-btn-text="codeBtnText"
+      @update:phone="emit('update:phone', $event)"
+      @update:code="emit('update:code', $event)"
+      @blur-phone="emit('blurPhone')"
+      @send-code="emit('sendCode')"
+    />
 
-  <button
-    type="button"
-    class="login-submit"
-    :disabled="submitting"
-    @click="emit('submit')"
-  >
-    {{ submitting ? '登录中...' : '登录账号' }}
-  </button>
+    <button type="submit" class="login-submit" :disabled="submitting">
+      {{ submitting ? '登录中...' : '登录账号' }}
+    </button>
+  </form>
 </template>

@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import {
   FileTextOutlined,
   TeamOutlined,
-  DollarOutlined,
-  SafetyCertificateOutlined,
+  DesktopOutlined,
+  ContainerOutlined,
+  FolderOpenFilled,
 } from '@ant-design/icons-vue'
 import advertisementImg from '@/assets/api/advertisement.png'
 import openImg from '@/assets/api/open.png'
@@ -151,14 +152,14 @@ const apiMainCategory = ref<ApiMainCategory>({
 })
 
 const menuItems = [
-  { key: '政策接口', label: '政策接口', count: 9, icon: FileTextOutlined },
+  { key: '政策接口', label: '政策接口', count: 9, icon: ContainerOutlined },
   { key: '企业接口', label: '企业接口', count: 12, icon: TeamOutlined },
-  { key: '财税接口', label: '财税接口', count: 5, icon: DollarOutlined },
+  { key: '功能接口', label: '功能接口', count: 5, icon: DesktopOutlined },
   {
-    key: '信用资质接口',
-    label: '信用资质接口',
+    key: '投资项目接口',
+    label: '投资项目接口',
     count: 5,
-    icon: SafetyCertificateOutlined,
+    icon: FileTextOutlined,
   },
 ]
 const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
@@ -213,7 +214,7 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 
           <div v-for="item in group.items" :key="item.id" class="api-card">
             <div class="card-icon">
-              <FileTextOutlined />
+              <FolderOpenFilled />
             </div>
             <div class="card-body">
               <div class="card-header">
@@ -277,13 +278,11 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 .sidebar-menu {
   background: transparent;
   border-inline-end: none;
-  padding: 12px 0;
+  padding: 12px 12px;
 
   :deep(.ant-menu-item) {
     height: 48px;
     line-height: 48px;
-    margin: 4px 12px;
-    padding-inline: 12px;
     border-radius: var(--pb-radius);
   }
 
@@ -303,9 +302,9 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 }
 
 .menu-icon {
-  color: var(--pb-muted);
+  color: #333333;
   margin-right: 10px;
-  font-size: 14px;
+  font-size: 18px;
 
   .ant-menu-item-selected & {
     color: var(--pb-primary);
@@ -314,12 +313,12 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 
 .menu-text {
   flex: 1;
-  font-size: 14px;
-  color: var(--pb-text);
+  font-size: 18px;
+  color: #333333;
 }
 
 .menu-count {
-  font-size: 14px;
+  font-size: 18px;
   color: var(--pb-muted);
 }
 
@@ -415,7 +414,7 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 .card-icon {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, #4a90e2 0%, #50c6ff 100%);
+  background: #0e5dd8;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -423,7 +422,7 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
   color: #fff;
   flex-shrink: 0;
   margin-right: 20px;
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .card-body {

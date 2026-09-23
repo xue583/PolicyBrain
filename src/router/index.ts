@@ -1,5 +1,10 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { getToken } from '@/utils/auth'
+import {
+  createRouter,
+  createWebHistory,
+  type RouteLocationNormalized,
+  type RouteRecordRaw,
+} from 'vue-router'
+import { getToken, triggerNeedLogin } from '@/utils/auth'
 import SubPageLayout from '@/components/SubPageLayout.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -140,20 +145,16 @@ export const router = createRouter({
   },
 })
 
-const AUTH_PAGES = new Set(['personal-center'])
-
-router.beforeEach((to) => {
-  // 动态页面标题
+export const applyAuthGuard = (to: RouteLocationNormalized) => {
   const title = (to.meta.title as string) || '政策大脑'
   document.title = `${title} - 政策大脑`
 
-  // 需要登录的页面鉴权
-  if (to.meta.requiresAuth && !getToken()) {
+  const needsAuth = to.matched.some((record) => record.meta.requiresAuth)
+  if (needsAuth && !getToken()) {
+    triggerNeedLogin()
     return { name: 'home' }
   }
+  return true
+}
 
-  // 通过 route name 检查（子路由的 name 在 to.name 上）
-  if (AUTH_PAGES.has(to.name as string) && !getToken()) {
-    return { name: 'home' }
-  }
-})
+router.beforeEach(applyAuthGuard)

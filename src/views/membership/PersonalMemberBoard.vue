@@ -614,7 +614,6 @@ const selectPlan = (id: string) => {
 }
 
 .plan-desc {
-  margin-top: auto;
   padding-top: 12px;
   font-size: 12px;
   line-height: 1.6;

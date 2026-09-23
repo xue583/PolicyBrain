@@ -298,6 +298,7 @@ const onBatchUploaded = (name: string) => {
   display: flex;
   flex-direction: column;
   gap: var(--pb-gap);
+  margin-top: -130px;
 }
 
 .filter-card,
