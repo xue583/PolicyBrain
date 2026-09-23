@@ -63,7 +63,10 @@ const heroFeatures = [
   left: 0;
   top: -20px;
   width: 100%;
-  height: min(720px, 60vh);
+  // 图片底部约 14% 是渐隐到透明的区域，容器必须能完整显示它，
+  // 否则渐隐被裁会在图片下边缘留下一条硬接线；小屏时仍保留 60vh 起底
+  aspect-ratio: 3840 / 1436;
+  min-height: min(720px, 60vh);
   background-repeat: no-repeat;
   background-position: right top;
   background-size: cover;

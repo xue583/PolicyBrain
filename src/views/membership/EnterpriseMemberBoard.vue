@@ -31,6 +31,7 @@ defineOptions({ name: 'EnterpriseMemberBoard' })
 
 type BoardTab = 'vip' | 'svip' | 'org'
 type OrgSub = 'vip' | 'svip'
+type PlanTier = 'vip' | 'svip' | `org-${OrgSub}`
 
 type Plan = {
   id: string
@@ -238,8 +239,8 @@ const orgPerks = [
   },
 ]
 
-type CompareMark = 'none' | 'vip' | 'svip' | 'text'
-type CompareCell = { mark?: CompareMark; text?: string }
+type CompareMark = 'none' | 'vip' | 'svip'
+type CompareCell = { icon?: string; note?: string }
 type CompareRow =
   | { kind: 'section'; label: string; img?: string; icon?: string }
   | {
@@ -249,6 +250,9 @@ type CompareRow =
       vip: CompareCell
       svip: CompareCell
     }
+
+// 单元格内容：会员标记图、文字说明，或留空
+type CellSpec = CompareMark | 'declare' | 'limit' | 'empty'
 
 const declareNote = '1次/年(可单独购买)'
 const limitNote = '前五条'
@@ -264,411 +268,115 @@ const glyphFileLib =
 const glyphExtData =
   'M4 20.5h16v1.8H4zM6.5 20.5V11.5h3.2v9zM10.9 20.5V7h3.2v13.5zM15.3 20.5v-6.1h3.2v6.1z'
 
-const compareRows: CompareRow[] = [
-  {
-    kind: 'feature',
-    label: '多账号统一管理',
-    normal: {},
-    vip: {},
-    svip: {},
-  },
-  { kind: 'section', label: '功能应用', img: sectionApp },
-  {
-    kind: 'feature',
-    label: '高级搜索',
-    normal: { mark: 'none' },
-    vip: { mark: 'none' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '数据导出',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '批量查询',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '智能申报',
-    normal: { mark: 'none' },
-    vip: { text: declareNote },
-    svip: { text: declareNote },
-  },
-  {
-    kind: 'feature',
-    label: '政策汇编',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '城市对比',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策对比',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '数据大屏',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '管理系统(标准版)',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '匹配政策(企业找政策)',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '匹配企业(政策找企业)',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策大脑文库上传',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策大脑文库下载',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  { kind: 'section', label: '政策资讯', icon: glyphNews },
-  {
-    kind: 'feature',
-    label: '正文查看',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政府原文跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策数据库跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  { kind: 'section', label: '政策数据库', icon: glyphPolicyDb },
-  {
-    kind: 'feature',
-    label: '政策搜索',
-    normal: { mark: 'none' },
-    vip: { mark: 'none' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策筛选',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '关注政策',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '支持领域',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '依据文件',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '依据文件跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '申报条件',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '申报入口或材料',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '最新动态',
-    normal: { mark: 'none' },
-    vip: { text: limitNote },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '最新动态跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '支持力度',
-    normal: { mark: 'none' },
-    vip: { text: limitNote },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '支持力度跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '公示名单',
-    normal: { mark: 'none' },
-    vip: { text: limitNote },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '公示名单跳转业务线索',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '业务线索跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  { kind: 'section', label: '企业数据库', icon: glyphEntDb },
-  {
-    kind: 'feature',
-    label: '企业检索',
-    normal: { mark: 'none' },
-    vip: { mark: 'none' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '企业筛选',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '企业导出',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '关注企业',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '企业获得政策',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '企业获得政策跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '企业获得政策筛选',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '工商信息',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '股东信息',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '联系方式',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '知识产权',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '资质证书',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '招投标',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '经营异常',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '信息变动',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  { kind: 'section', label: '政策文件库', icon: glyphFileLib },
-  {
-    kind: 'feature',
-    label: '政策文件搜索',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策文件筛选',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策文件原文(截图)',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '政策文件跳转',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  { kind: 'section', label: '延伸数据', icon: glyphExtData },
-  {
-    kind: 'feature',
-    label: '专利成果',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '研发平台',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '研发项目',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-  {
-    kind: 'feature',
-    label: '创业载体',
-    normal: { mark: 'none' },
-    vip: { mark: 'vip' },
-    svip: { mark: 'svip' },
-  },
-]
-
-const markSrc: Record<Exclude<CompareMark, 'text'>, string> = {
+const markImages: Record<CompareMark, string> = {
   none: markNone,
   vip: markVip,
   svip: markSvip,
 }
 
-const currentPlans = computed(() => {
-  if (tab.value === 'vip') return vipPlans
-  if (tab.value === 'svip') return svipPlans
-  return orgSub.value === 'vip' ? orgVipPlans : orgSvipPlans
+const compareCell = (spec: CellSpec): CompareCell => {
+  if (spec === 'declare') return { note: declareNote }
+  if (spec === 'limit') return { note: limitNote }
+  if (spec === 'empty') return {}
+  return { icon: markImages[spec] }
+}
+
+// 普通会员列固定为灰色不可用，VIP/SVIP 列默认可用，例外情况显式传入
+const feature = (
+  label: string,
+  vip: CellSpec = 'vip',
+  svip: CellSpec = 'svip',
+): CompareRow => ({
+  kind: 'feature',
+  label,
+  normal: { icon: markImages.none },
+  vip: compareCell(vip),
+  svip: compareCell(svip),
 })
+
+const cellKeys = ['normal', 'vip', 'svip'] as const
+
+const compareRows: CompareRow[] = [
+  { kind: 'feature', label: '多账号统一管理', normal: {}, vip: {}, svip: {} },
+  { kind: 'section', label: '功能应用', img: sectionApp },
+  feature('高级搜索', 'none'),
+  feature('数据导出'),
+  feature('批量查询'),
+  feature('智能申报', 'declare', 'declare'),
+  feature('政策汇编'),
+  feature('城市对比'),
+  feature('政策对比'),
+  feature('数据大屏'),
+  feature('管理系统(标准版)'),
+  feature('匹配政策(企业找政策)'),
+  feature('匹配企业(政策找企业)'),
+  feature('政策大脑文库上传'),
+  feature('政策大脑文库下载'),
+
+  { kind: 'section', label: '政策资讯', icon: glyphNews },
+  feature('正文查看'),
+  feature('政府原文跳转'),
+  feature('政策数据库跳转'),
+
+  { kind: 'section', label: '政策数据库', icon: glyphPolicyDb },
+  feature('政策搜索', 'none'),
+  feature('政策筛选'),
+  feature('关注政策'),
+  feature('支持领域'),
+  feature('依据文件'),
+  feature('依据文件跳转'),
+  feature('申报条件'),
+  feature('申报入口或材料'),
+  feature('最新动态', 'limit'),
+  feature('最新动态跳转'),
+  feature('支持力度', 'limit'),
+  feature('支持力度跳转'),
+  feature('公示名单', 'limit'),
+  feature('公示名单跳转业务线索'),
+  feature('业务线索跳转'),
+
+  { kind: 'section', label: '企业数据库', icon: glyphEntDb },
+  feature('企业检索', 'none'),
+  feature('企业筛选'),
+  feature('企业导出'),
+  feature('关注企业'),
+  feature('企业获得政策'),
+  feature('企业获得政策跳转'),
+  feature('企业获得政策筛选'),
+  feature('工商信息'),
+  feature('股东信息'),
+  feature('联系方式'),
+  feature('知识产权'),
+  feature('资质证书'),
+  feature('招投标'),
+  feature('经营异常'),
+  feature('信息变动'),
+
+  { kind: 'section', label: '政策文件库', icon: glyphFileLib },
+  feature('政策文件搜索'),
+  feature('政策文件筛选'),
+  feature('政策文件原文(截图)'),
+  feature('政策文件跳转'),
+
+  { kind: 'section', label: '延伸数据', icon: glyphExtData },
+  feature('专利成果'),
+  feature('研发平台'),
+  feature('研发项目'),
+  feature('创业载体'),
+]
+
+const planGroups: Record<PlanTier, Plan[]> = {
+  vip: vipPlans,
+  svip: svipPlans,
+  'org-vip': orgVipPlans,
+  'org-svip': orgSvipPlans,
+}
+
+const currentTier = computed<PlanTier>(() =>
+  tab.value === 'org' ? `org-${orgSub.value}` : tab.value,
+)
+
+const currentPlans = computed(() => planGroups[currentTier.value])
 
 const currentPlan = computed(
   () =>
@@ -1037,24 +745,10 @@ const changeSeats = (delta: number) => {
           </template>
           <template v-else>
             <div class="col-label">{{ row.label }}</div>
-            <div class="col-normal">
-              <img
-                v-if="row.normal.mark"
-                :src="markSrc[row.normal.mark]"
-                alt=""
-              />
-              <span v-if="row.normal.text">{{ row.normal.text }}</span>
-            </div>
-            <div class="col-vip">
-              <img v-if="row.vip.mark" :src="markSrc[row.vip.mark]" alt="" />
-              <span v-if="row.vip.text" class="cell-note">{{
-                row.vip.text
-              }}</span>
-            </div>
-            <div class="col-svip">
-              <img v-if="row.svip.mark" :src="markSrc[row.svip.mark]" alt="" />
-              <span v-if="row.svip.text" class="cell-note">{{
-                row.svip.text
+            <div v-for="key in cellKeys" :key="key" :class="`col-${key}`">
+              <img v-if="row[key].icon" :src="row[key].icon" alt="" />
+              <span v-if="row[key].note" class="cell-note">{{
+                row[key].note
               }}</span>
             </div>
           </template>
