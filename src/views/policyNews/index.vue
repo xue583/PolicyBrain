@@ -17,7 +17,6 @@ import {
   type PolicyItem,
 } from '../../mock/policyNews'
 import { filterPolicyNews } from '@/utils/filterPolicies'
-import infoTitleBg from '../../assets/home/info-title-bg.png'
 
 defineOptions({ name: 'PolicyNews' })
 
@@ -223,12 +222,7 @@ const openDetail = (item: PolicyItem) => {
       </div>
 
       <!-- Tips -->
-      <div
-        class="result-bar"
-        :style="{ '--result-bar-bg': `url(${infoTitleBg})` }"
-      >
-        共找到 {{ total }} 条政策资讯
-      </div>
+      <div class="result-bar">共找到 {{ total }} 条政策资讯</div>
 
       <!-- List -->
       <div class="list-section">
@@ -329,13 +323,11 @@ const openDetail = (item: PolicyItem) => {
 }
 
 .result-bar {
-  padding-left: 20px;
+  padding-left: 12px;
   margin-bottom: 16px;
-  border-radius: 6px;
   font-size: 18px;
   color: #343434;
-  background: var(--result-bar-bg) no-repeat;
-  background-size: 94px 26px;
+  border-left: 3px solid var(--pb-primary);
 }
 
 .list-section {

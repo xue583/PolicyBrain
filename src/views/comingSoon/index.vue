@@ -226,8 +226,10 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
                 />
               </div>
               <p class="card-desc">{{ item.description }}</p>
-              <div class="card-meta">接口编号：{{ item.code }}</div>
-              <div class="card-meta">返回数据：{{ item.returnData }}</div>
+              <div class="card-meta-container">
+                <div class="card-meta">接口编号：{{ item.code }}</div>
+                <div class="card-meta">返回数据：{{ item.returnData }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -379,7 +381,7 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 }
 
 .group-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--pb-title);
   margin: 0 0 16px;
@@ -438,7 +440,7 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 600;
   color: var(--pb-title);
   margin: 0;
@@ -449,20 +451,25 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 }
 
 .card-desc {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--pb-sub);
-  margin: 0 0 12px;
+  margin-bottom: 10px;
   line-height: 1.6;
 }
 
-.card-meta {
-  font-size: 13px;
-  color: var(--pb-text);
-  margin-bottom: 4px;
-  line-height: 1.8;
+.card-meta-container {
+  background-color: #e2edff;
+  padding: 10px 20px;
 
-  &:last-child {
-    margin-bottom: 0;
+  .card-meta {
+    font-size: 16px;
+    color: var(--pb-text);
+    margin-bottom: 4px;
+    line-height: 1.8;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 }
 

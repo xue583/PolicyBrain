@@ -28,7 +28,6 @@ import iconRobot from '../../assets/home/robot.png'
 import iconWorkbench from '../../assets/home/icon-workbench.svg'
 import iconIndustry from '../../assets/home/icon-industry.png'
 import industryBg from '../../assets/home/industry-card-bg.png'
-import infoTitleBg from '../../assets/home/info-title-bg.png'
 import featureCardBg from '../../assets/home/feature-card-bg.png'
 
 defineOptions({ name: 'HomePage' })
@@ -287,10 +286,7 @@ const openBeian = () => {
             </a-button>
           </div>
 
-          <div
-            class="info-card"
-            :style="{ '--info-title-bg': `url(${infoTitleBg})` }"
-          >
+          <div class="info-card">
             <div class="info-block">
               <h4>关于公司</h4>
               <div class="info-links">
@@ -954,11 +950,11 @@ const openBeian = () => {
 
   h4 {
     margin: 0 0 10px;
-    padding: 6px 20px;
+    padding: 0 0 0 12px;
     font-size: 14px;
     font-weight: 600;
     color: #343434;
-    background: var(--info-title-bg) no-repeat left / 21% 100%;
+    border-left: 3px solid var(--pb-primary);
   }
 
   p {

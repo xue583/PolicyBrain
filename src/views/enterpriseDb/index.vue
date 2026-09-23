@@ -79,10 +79,7 @@ const goDetail = (id: number) => {
   <PageState>
     <a-card class="enterprise-card" :bordered="false">
       <div class="toolbar">
-        <span
-          class="result-count"
-          :style="{ '--result-count-bg': `url(${titleStyleBg})` }"
-        >
+        <span class="result-count">
           共收录
           <em>{{ enterpriseTotal }}</em>
           家企业
@@ -232,12 +229,10 @@ const goDetail = (id: number) => {
 
 .result-count {
   display: inline-block;
-  padding-left: 20px;
+  padding-left: 12px;
   font-size: 15px;
-  line-height: 26px;
   color: #343434;
-  background: var(--result-count-bg) no-repeat left center;
-  background-size: 94px 26px;
+  border-left: 3px solid var(--pb-primary);
 
   em {
     font-style: normal;

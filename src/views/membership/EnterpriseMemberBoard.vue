@@ -241,7 +241,7 @@ const orgPerks = [
 type CompareMark = 'none' | 'vip' | 'svip' | 'text'
 type CompareCell = { mark?: CompareMark; text?: string }
 type CompareRow =
-  | { kind: 'section'; label: string }
+  | { kind: 'section'; label: string; img?: string; icon?: string }
   | {
       kind: 'feature'
       label: string
@@ -251,6 +251,18 @@ type CompareRow =
     }
 
 const declareNote = '1次/年(可单独购买)'
+const limitNote = '前五条'
+
+const glyphNews =
+  'M6 2.5h7.6l4.8 4.8v12.2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2zM8 9.5h8v1.6H8zM8 12.9h8v1.6H8zM8 16.3h5v1.6H8z'
+const glyphPolicyDb =
+  'M4.8 5a7.2 2.5 0 1 0 14.4 0a7.2 2.5 0 1 0-14.4 0zM4.8 7.6v4.4a7.2 2.5 0 0 0 14.4 0V7.6zM4.8 13.6v4.4a7.2 2.5 0 0 0 14.4 0v-4.4z'
+const glyphEntDb =
+  'M5.5 21V6.5L12 3l6.5 3.5V21H21v1.7H3V21zM7.5 8.5h2v2h-2zM14.5 8.5h2v2h-2zM7.5 12.5h2v2h-2zM14.5 12.5h2v2h-2zM7.5 16.5h2v2h-2zM14.5 16.5h2v2h-2z'
+const glyphFileLib =
+  'M3 8V6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3zM3 10h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8z'
+const glyphExtData =
+  'M4 20.5h16v1.8H4zM6.5 20.5V11.5h3.2v9zM10.9 20.5V7h3.2v13.5zM15.3 20.5v-6.1h3.2v6.1z'
 
 const compareRows: CompareRow[] = [
   {
@@ -260,7 +272,7 @@ const compareRows: CompareRow[] = [
     vip: {},
     svip: {},
   },
-  { kind: 'section', label: '功能应用' },
+  { kind: 'section', label: '功能应用', img: sectionApp },
   {
     kind: 'feature',
     label: '高级搜索',
@@ -348,6 +360,298 @@ const compareRows: CompareRow[] = [
   {
     kind: 'feature',
     label: '政策大脑文库下载',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  { kind: 'section', label: '政策资讯', icon: glyphNews },
+  {
+    kind: 'feature',
+    label: '正文查看',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '政府原文跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '政策数据库跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  { kind: 'section', label: '政策数据库', icon: glyphPolicyDb },
+  {
+    kind: 'feature',
+    label: '政策搜索',
+    normal: { mark: 'none' },
+    vip: { mark: 'none' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '政策筛选',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '关注政策',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '支持领域',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '依据文件',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '依据文件跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '申报条件',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '申报入口或材料',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '最新动态',
+    normal: { mark: 'none' },
+    vip: { text: limitNote },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '最新动态跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '支持力度',
+    normal: { mark: 'none' },
+    vip: { text: limitNote },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '支持力度跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '公示名单',
+    normal: { mark: 'none' },
+    vip: { text: limitNote },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '公示名单跳转业务线索',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '业务线索跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  { kind: 'section', label: '企业数据库', icon: glyphEntDb },
+  {
+    kind: 'feature',
+    label: '企业检索',
+    normal: { mark: 'none' },
+    vip: { mark: 'none' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '企业筛选',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '企业导出',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '关注企业',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '企业获得政策',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '企业获得政策跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '企业获得政策筛选',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '工商信息',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '股东信息',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '联系方式',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '知识产权',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '资质证书',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '招投标',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '经营异常',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '信息变动',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  { kind: 'section', label: '政策文件库', icon: glyphFileLib },
+  {
+    kind: 'feature',
+    label: '政策文件搜索',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '政策文件筛选',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '政策文件原文(截图)',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '政策文件跳转',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  { kind: 'section', label: '延伸数据', icon: glyphExtData },
+  {
+    kind: 'feature',
+    label: '专利成果',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '研发平台',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '研发项目',
+    normal: { mark: 'none' },
+    vip: { mark: 'vip' },
+    svip: { mark: 'svip' },
+  },
+  {
+    kind: 'feature',
+    label: '创业载体',
     normal: { mark: 'none' },
     vip: { mark: 'vip' },
     svip: { mark: 'svip' },
@@ -716,7 +1020,15 @@ const changeSeats = (delta: number) => {
         >
           <template v-if="row.kind === 'section'">
             <div class="compare-section">
-              <img :src="sectionApp" alt="" />
+              <img v-if="row.img" :src="row.img" alt="" />
+              <svg
+                v-else
+                class="section-glyph"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path :d="row.icon" fill="currentColor" fill-rule="evenodd" />
+              </svg>
               {{ row.label }}
             </div>
             <div class="col-normal" />
@@ -1449,15 +1761,17 @@ const changeSeats = (delta: number) => {
   border-top-color: #eef1f6;
 }
 
-.compare-section {
+.compare-row > .compare-section {
   gap: 8px;
   font-size: 15px;
   font-weight: 700;
-  color: #c48a2e;
+  color: #8c4c0b;
 
-  img {
+  img,
+  .section-glyph {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
     object-fit: contain;
   }
 }

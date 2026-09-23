@@ -141,6 +141,7 @@ watch([selectedRegion, activeType, keyword], () => {
 
 .region-title {
   display: flex;
+  justify-content: center;
   align-items: center;
   gap: 8px;
   padding: 0 8px 16px;
@@ -157,8 +158,12 @@ watch([selectedRegion, activeType, keyword], () => {
 }
 
 .region-menu {
-  border-inline-end: none;
   background: transparent;
+
+  // antd 用 .ant-menu-light.ant-menu-root.ant-menu-inline 写右边框，单 class 压不过
+  &.ant-menu-root.ant-menu-inline {
+    border-inline-end: none;
+  }
 
   :deep(.ant-menu-item) {
     width: 100%;
@@ -171,15 +176,15 @@ watch([selectedRegion, activeType, keyword], () => {
   }
 
   :deep(.ant-menu-item-selected) {
-    background: var(--pb-primary);
-    color: #fff;
+    background: #ebf2fc;
+    color: #226ce6;
 
     &::after {
       display: none;
     }
 
     .region-count {
-      color: #fff;
+      color: #226ce6;
     }
   }
 

@@ -2,7 +2,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { DownOutlined, EnvironmentOutlined } from '@ant-design/icons-vue'
+import {
+  DownOutlined,
+  EnvironmentOutlined,
+  BellFilled,
+} from '@ant-design/icons-vue'
 import { cities, navItems } from '@/mock/nav'
 import { useAuthStore } from '@/stores/auth'
 import { onNeedLogin } from '@/utils/auth'
@@ -144,7 +148,10 @@ onUnmounted(() => {
           <img :src="mobileImg" alt="" class="mobile-icon" />
           <span>移动端</span>
         </a>
-
+        <a class="mobile-link">
+          <BellFilled />
+          <span>消息</span>
+        </a>
         <UserAccountMenu v-if="isLoggedIn" />
         <a-button v-else type="primary" class="login-btn" @click="openLogin">
           登录/注册

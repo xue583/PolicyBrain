@@ -65,8 +65,10 @@ defineEmits<{
 }
 
 .result-count {
+  padding-left: 12px;
   font-size: 15px;
   color: #595959;
+  border-left: 3px solid var(--pb-primary);
 
   em {
     font-style: normal;
