@@ -29,6 +29,8 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import { message } from 'ant-design-vue'
+import { ApiError } from '@/utils/apiError'
+import { parseData } from '@/utils/crypto'
 import {
   clearToken,
   getRefreshToken,
@@ -38,17 +40,7 @@ import {
   triggerNeedLogin,
 } from '@/utils/auth'
 
-export class ApiError extends Error {
-  status: number
-  path?: string
-
-  constructor(message: string, status = 500, path?: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-    this.path = path
-  }
-}
+export { ApiError }
 
 export type RequestConfig = AxiosRequestConfig & {
   /** 显示全局 loading（并发请求合并计数） */
@@ -151,6 +143,18 @@ export const unwrapEnvelope = (
   return payload
 }
 
+/**
+ * 响应数据解包 + 解密，兼容后端两种加密信封形态：
+ * - 顶层加密体：`{ encrypted: true, data: '<密文>' }`（可无 status 字段）
+ * - 信封内嵌加密体：`{ status, message, data: { encrypted: true, data: '<密文>' } }`
+ * 未加密数据全程原样透传。
+ */
+export const resolveResponseData = (raw: unknown, httpStatus: number) => {
+  const top = parseData(raw)
+  const unwrapped = unwrapEnvelope(top, httpStatus)
+  return parseData(unwrapped)
+}
+
 const refreshAccessToken = async (): Promise<string> => {
   const refreshToken = getRefreshToken()
   if (!refreshToken) {
@@ -241,7 +245,7 @@ service.interceptors.response.use(
     }
 
     try {
-      return unwrapEnvelope(response.data, response.status) as never
+      return resolveResponseData(response.data, response.status) as never
     } catch (err) {
       const apiErr = err as ApiError
       if (apiErr.status === 401 && !shouldSkipRefresh(cfg) && !cfg._retry) {

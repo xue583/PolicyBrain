@@ -18,6 +18,12 @@ import invoiceIcon from '@/assets/personalCenter/发票@2x.png'
 import serviceIcon from '@/assets/personalCenter/客服@2x.png'
 import vipAd from '@/assets/personalCenter/VIP广告@2x.png'
 import userLevel from '@/assets/personalCenter/用户等级@2x.png'
+import MessagePanel from './MessagePanel.vue'
+import SharePanel from './SharePanel.vue'
+import FollowPanel from './FollowPanel.vue'
+import DynamicsPanel from './DynamicsPanel.vue'
+import InvoicePanel from './InvoicePanel.vue'
+import ServicePanel from './ServicePanel.vue'
 
 defineOptions({ name: 'PersonalCenter' })
 
@@ -234,7 +240,13 @@ onMounted(() => {
           <span class="title-bar"></span>
           {{ currentMenu.label }}
         </h2>
-        <div class="empty-card">
+        <MessagePanel v-if="selectedMenu === 'message'" />
+        <SharePanel v-else-if="selectedMenu === 'share'" />
+        <FollowPanel v-else-if="selectedMenu === 'follow'" />
+        <DynamicsPanel v-else-if="selectedMenu === 'dynamic'" />
+        <InvoicePanel v-else-if="selectedMenu === 'invoice'" />
+        <ServicePanel v-else-if="selectedMenu === 'service'" />
+        <div v-else class="empty-card">
           <a-empty :description="currentMenu.emptyText" />
         </div>
       </template>

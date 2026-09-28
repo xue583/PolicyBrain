@@ -603,7 +603,7 @@ const openBeian = () => {
     margin: 0 0 12px 20px;
     font-size: 26px;
     font-weight: 600;
-    color: var(--pb-title);
+    color: #393939;
     line-height: 1.3;
   }
 
@@ -612,7 +612,7 @@ const openBeian = () => {
     font-size: 16px;
     line-height: 1.7;
     margin-left: 20px;
-    color: var(--pb-muted);
+    color: #393939;
     white-space: pre-line;
   }
 }

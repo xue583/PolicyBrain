@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { SearchOutlined } from '@ant-design/icons-vue'
-import { getSubPageHero, navItems } from '@/mock/policyNews'
+import { getSubPageHero } from '@/mock/policyNews'
 import { SITE } from '@/constants/site'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
 import { useSyncedSearchQuery } from '@/composables/useRouteKeyword'
@@ -17,7 +17,6 @@ import apiBg from '@/assets/api/banner.png'
 defineOptions({ name: 'SubPageLayout' })
 
 const route = useRoute()
-const router = useRouter()
 
 const pageKey = computed(() => (route.meta.navKey as string) || '')
 const hideHero = computed(() => Boolean(route.meta.hideHero))
@@ -38,10 +37,6 @@ const isPersonalCenter = computed(() => pageKey.value === 'personal-center')
 const { keyword, applyKeyword } = useSyncedSearchQuery({
   clearWhen: pageKey,
 })
-
-const onFooterNav = (key: string) => {
-  void router.push({ name: key })
-}
 
 const openBeian = () => {
   window.open(SITE.icpUrl, '_blank', 'noopener,noreferrer')
@@ -118,13 +113,55 @@ const openBeian = () => {
             <img :src="logoLightImg" alt="政策大脑 POLICY BRAIN" />
           </div>
           <div class="footer-nav">
-            <a
-              v-for="item in navItems"
-              :key="item.key"
-              :class="{ active: item.key === pageKey }"
-              @click="onFooterNav(item.key)"
-            >
-              {{ item.label }}
+            <a>
+              <svg
+                class="footer-nav-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle cx="9.6" cy="6.7" r="2.9" />
+                <path d="M5 20v-4.8h9.2V20" />
+                <path d="M2.8 17.6h1.6" />
+              </svg>
+              <span>关于我们</span>
+            </a>
+            <a>
+              <svg
+                class="footer-nav-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="3.8" r="1.2" />
+                <path d="M5.2 16.8v-5.4l3.1 2.3L12 6.6l3.7 7.1 3.1-2.3v5.4z" />
+                <circle cx="12" cy="12.2" r="1.1" />
+              </svg>
+              <span>会员协议</span>
+            </a>
+            <a>
+              <svg
+                class="footer-nav-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="7" r="2.9" />
+                <path d="M7.6 20v-2.4a4.4 4.4 0 0 1 8.8 0V20" />
+                <path d="M5.4 20h13.2" />
+              </svg>
+              <span>用户协议</span>
+            </a>
+            <a>
+              <svg
+                class="footer-nav-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6.8 4.2h10.4a2.4 2.4 0 0 1 2.4 2.4v10.8a2.4 2.4 0 0 1-2.4 2.4H6.8a2.4 2.4 0 0 1-2.4-2.4V6.6a2.4 2.4 0 0 1 2.4-2.4z"
+                />
+                <path d="M8.4 9.2h5.2M8.4 12.6h7.2" />
+                <path d="M13.4 20.4l5-5" />
+              </svg>
+              <span>隐私政策</span>
             </a>
           </div>
         </div>
@@ -360,20 +397,37 @@ const openBeian = () => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+// 限宽使四项在 logo 右侧均匀铺开，同时不顶到页脚右边缘
 .footer-nav {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  width: 520px;
+  max-width: 100%;
   margin: 0 auto;
-  gap: 20px;
 
   a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
     color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
 
-    &:hover,
-    &.active {
+    &:hover {
       color: #fff;
     }
   }
+}
+
+.footer-nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .footer-main {
@@ -425,6 +479,24 @@ const openBeian = () => {
 
   .footer-main {
     grid-template-columns: 1fr;
+  }
+}
+
+// 窄屏下一行放不下「logo + 四个链接」，改为 logo 在上、链接两行两列
+@media (max-width: $bp-md) {
+  .footer-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .footer-nav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    justify-items: center;
+    row-gap: 14px;
+    width: 100%;
+    margin: 0;
   }
 }
 </style>

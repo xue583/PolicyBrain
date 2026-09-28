@@ -8,6 +8,10 @@ interface ImportMetaEnv {
   readonly VITE_REQUEST_TIMEOUT?: string
   readonly VITE_DEV_HOST?: string
   readonly VITE_AUTH_STORAGE?: 'localStorage' | 'sessionStorage'
+  /** 后端数据解密密钥（Base64，AES-256-CBC），由后端提供 */
+  readonly VITE_CRYPTO_KEY?: string
+  /** 后端数据解密初始向量（Base64，16 字节），由后端提供 */
+  readonly VITE_CRYPTO_IV?: string
 }
 
 interface ImportMeta {

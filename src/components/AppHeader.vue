@@ -69,6 +69,12 @@ const goMembership = () => {
   }
 }
 
+const goWorkbench = () => {
+  if (route.name !== 'workspace') {
+    void router.push({ name: 'workspace' })
+  }
+}
+
 const openLogin = () => {
   loginOpen.value = true
 }
@@ -133,7 +139,7 @@ onUnmounted(() => {
       />
 
       <div class="header-right">
-        <a class="ai-link">
+        <a class="ai-link" @click.prevent="goWorkbench">
           <img :src="robotImg" alt="" class="ai-icon" />
           <span class="ai-link-text">AI政策大脑</span>
         </a>
@@ -338,6 +344,10 @@ onUnmounted(() => {
     &:hover {
       color: var(--pb-primary);
     }
+  }
+
+  .ai-link {
+    cursor: pointer;
   }
 
   .ai-icon {

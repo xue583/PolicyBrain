@@ -124,6 +124,12 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/workspace',
+    name: 'workspace',
+    component: () => import('@/views/workbench/index.vue'),
+    meta: { title: '工作台', navKey: 'workspace' },
+  },
+  {
     path: '/membership',
     name: 'membership',
     component: () => import('@/views/membership/index.vue'),

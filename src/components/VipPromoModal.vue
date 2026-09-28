@@ -53,7 +53,18 @@ onUnmounted(() => {
             aria-label="关闭"
             @click="close"
           >
-            ×
+            <svg
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
 
           <div class="vip-promo-card">
@@ -119,11 +130,14 @@ onUnmounted(() => {
   border-radius: 50%;
   background: #fff;
   color: #6b7280;
-  font-size: 20px;
-  line-height: 1;
   cursor: pointer;
-  font-family: inherit;
   box-shadow: 0 2px 8px rgba(15, 40, 90, 0.25);
+
+  svg {
+    display: block;
+    width: 50%;
+    height: 50%;
+  }
 
   &:hover,
   &:focus-visible {
@@ -278,7 +292,6 @@ onUnmounted(() => {
     right: -2px;
     width: 24px;
     height: 24px;
-    font-size: 17px;
   }
 
   .vip-promo-title {

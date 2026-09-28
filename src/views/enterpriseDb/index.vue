@@ -13,7 +13,6 @@ import {
   type EnterpriseItem,
 } from '../../mock/enterpriseDb'
 import { filterEnterprises } from '@/utils/filterPolicies'
-import titleStyleBg from '../../assets/home/title-style.png'
 import industryTagIcon from '../../assets/enterpriseDb/industry-tag.png'
 import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
 
