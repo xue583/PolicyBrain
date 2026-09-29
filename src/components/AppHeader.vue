@@ -351,8 +351,8 @@ onUnmounted(() => {
   }
 
   .ai-icon {
-    width: 59px;
-    height: 56px;
+    width: 45px;
+    height: 42px;
     object-fit: contain;
   }
 

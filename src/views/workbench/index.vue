@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   BankFilled,
@@ -12,7 +13,11 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import DeclareList from './DeclareList.vue'
 import DeclareDetail from './DeclareDetail.vue'
+import FinanceList from './FinanceList.vue'
+import IndustryList from './IndustryList.vue'
+import ManageList from './ManageList.vue'
 import TransformList from './TransformList.vue'
+import { declarePolicies } from '@/mock/declare'
 import type { DeclarePolicy } from '@/mock/declare'
 import robotImg from '@/assets/home/robot.png'
 import bubbleIcon from '@/assets/workbench/wb-bubble.png'
@@ -40,20 +45,84 @@ defineOptions({ name: 'WorkbenchPage' })
 
 const authStore = useAuthStore()
 
+const route = useRoute()
+const router = useRouter()
+
 /** 企业身份(1)看企业视角，企服身份(2)看企服视角 */
 const role = computed<'enterprise' | 'service'>(() =>
   Number(authStore.user?.identity) === 2 ? 'service' : 'enterprise',
 )
 
-const mainView = ref<'chat' | 'declare-list' | 'declare-detail' | 'transform'>(
-  'chat',
-)
+type WorkbenchView =
+  | 'chat'
+  | 'declare-list'
+  | 'declare-detail'
+  | 'transform'
+  | 'industry'
+  | 'finance'
+  | 'manage'
+
+/** 路由 query.view → 主区视图；query 镜像 mainView，刷新后恢复当前菜单 */
+const viewFromQuery = (): WorkbenchView => {
+  const v = route.query.view
+  if (v === 'declare') return 'declare-list'
+  if (v === 'declare-detail') return 'declare-detail'
+  if (v === 'transform') return 'transform'
+  if (v === 'industry') return 'industry'
+  if (v === 'finance') return 'finance'
+  if (v === 'manage') return 'manage'
+  return 'chat'
+}
+
 const selectedPolicy = ref<DeclarePolicy | null>(null)
+
+const findPolicyById = (id: unknown) =>
+  id == null
+    ? null
+    : (declarePolicies.find((p) => String(p.id) === String(id)) ?? null)
+
+const initialView = viewFromQuery()
+if (initialView === 'declare-detail') {
+  selectedPolicy.value = findPolicyById(route.query.id)
+}
+const mainView = ref<WorkbenchView>(
+  initialView === 'declare-detail' && !selectedPolicy.value
+    ? 'declare-list'
+    : initialView,
+)
 
 const openDetail = (policy: DeclarePolicy) => {
   selectedPolicy.value = policy
   mainView.value = 'declare-detail'
 }
+
+/** mainView 变化 → 同步到 URL（replace，不堆积历史） */
+watch(mainView, (view) => {
+  const query: Record<string, string> = {}
+  if (view === 'declare-list') query.view = 'declare'
+  else if (view === 'declare-detail') query.view = 'declare-detail'
+  else if (view === 'transform') query.view = 'transform'
+  else if (view === 'industry') query.view = 'industry'
+  else if (view === 'finance') query.view = 'finance'
+  else if (view === 'manage') query.view = 'manage'
+  if (view === 'declare-detail' && selectedPolicy.value) {
+    query.id = String(selectedPolicy.value.id)
+  }
+  void router.replace({ query })
+})
+
+/** 浏览器前进/后退或手动改 URL → 恢复视图 */
+watch(
+  () => [route.query.view, route.query.id],
+  ([v, id]) => {
+    if (v === 'declare-detail') {
+      selectedPolicy.value = findPolicyById(id)
+      mainView.value = selectedPolicy.value ? 'declare-detail' : 'declare-list'
+      return
+    }
+    mainView.value = viewFromQuery()
+  },
+)
 
 interface TaskItem {
   id: number
@@ -179,6 +248,9 @@ const activeTaskId = ref<number | null>(pinnedTasks.value[0]?.id ?? null)
 const activeMenu = computed(() => {
   if (mainView.value === 'chat') return 'new-chat'
   if (mainView.value === 'transform') return 'transform'
+  if (mainView.value === 'industry') return 'industry'
+  if (mainView.value === 'finance') return 'finance'
+  if (mainView.value === 'manage') return 'manage'
   return 'declare'
 })
 const topic = ref('话题任务名称')
@@ -222,6 +294,18 @@ const onMenuClick = (key: string) => {
   }
   if (key === 'transform') {
     mainView.value = 'transform'
+    return
+  }
+  if (key === 'industry') {
+    mainView.value = 'industry'
+    return
+  }
+  if (key === 'finance') {
+    mainView.value = 'finance'
+    return
+  }
+  if (key === 'manage') {
+    mainView.value = 'manage'
     return
   }
   mainView.value = 'chat'
@@ -572,6 +656,9 @@ const taskRowIcon = (task: TaskItem) =>
         @back="mainView = 'declare-list'"
       />
       <TransformList v-else-if="mainView === 'transform'" />
+      <IndustryList v-else-if="mainView === 'industry'" :role="role" />
+      <FinanceList v-else-if="mainView === 'finance'" />
+      <ManageList v-else-if="mainView === 'manage'" :role="role" />
     </main>
 
     <a-modal
