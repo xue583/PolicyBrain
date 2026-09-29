@@ -19,6 +19,7 @@ import ManageList from './ManageList.vue'
 import TransformList from './TransformList.vue'
 import { declarePolicies } from '@/mock/declare'
 import type { DeclarePolicy } from '@/mock/declare'
+import { buildConversation, type ChatMessage } from '@/mock/workbenchChat'
 import robotImg from '@/assets/home/robot.png'
 import bubbleIcon from '@/assets/workbench/wb-bubble.png'
 import chevronDownIcon from '@/assets/workbench/wb-chevron-down.png'
@@ -130,18 +131,6 @@ interface TaskItem {
   icon?: 'bubble' | 'doc'
 }
 
-interface AiBlock {
-  heading?: string
-  paragraphs: string[]
-}
-
-interface ChatMessage {
-  id: number
-  role: 'user' | 'ai'
-  text?: string
-  blocks?: AiBlock[]
-}
-
 const sideMenus = [
   { key: 'new-chat', label: '新建对话', icon: bubbleIcon },
   { key: 'declare', label: '政策申报', icon: declareIcon },
@@ -169,36 +158,6 @@ const initialTasks = (): TaskItem[] => [
     icon: 'doc',
   },
   { id: nextTaskId(), name: '近五年烘培市场超单品月度排名', icon: 'bubble' },
-]
-
-const initialMessages = (): ChatMessage[] => [
-  { id: 1, role: 'user', text: '杭州市西湖区有什么最新政策吗?' },
-  {
-    id: 2,
-    role: 'ai',
-    blocks: [
-      {
-        paragraphs: ['以下是杭州市西湖区近期最新政策动态整理：'],
-      },
-      {
-        heading: '一、推动经济高质量发展综合性政策基地',
-        paragraphs: [
-          '西湖区已落实杭州市政府印发的《推动经济高质量发展若干政策(2026年版)》，该政策共计48条，内容覆盖教育科技人才一体化发展、先进制造业升级、数字经济创新等多个核心领域，针对西湖区重点产业发展、企业创新投入、人才引进培育等方面提供系统性政策支持，目前相关解读文件已公开，辖区企业可对应政策条款申请相关扶持。',
-        ],
-      },
-      {
-        heading: '二、碳达峰碳中和与建筑业专项扶持资金启动',
-        paragraphs: [
-          '西湖区公示下达了2026年第一批碳达峰碳中和专项奖补资金，同时启动了2025年度西湖区建筑业发展专项资金申报工作，对符合条件的绿色低碳项目、建筑业企业给予资金奖补，支持辖区产业绿色转型与建筑业高质量发展，相关申报通知可在西湖区政府官网查询。',
-        ],
-      },
-    ],
-  },
-]
-
-const initialSuggestions = (): string[] => [
-  '西湖区企业能申请哪些奖补资金？',
-  '碳达峰碳中和专项奖补怎么申报？',
 ]
 
 /** 欢迎页推荐问题 */
@@ -239,7 +198,7 @@ const pinnedTasks = ref<TaskItem[]>(initialPinnedTasks())
 const tasks = ref<TaskItem[]>(initialTasks())
 /** 初始为空 → 欢迎页；点击任务或发送消息后进入会话 */
 const messages = ref<ChatMessage[]>([])
-const suggestions = ref<string[]>(initialSuggestions())
+const suggestions = ref<string[]>([])
 
 const inConversation = computed(() => messages.value.length > 0)
 
@@ -273,16 +232,18 @@ const scrollToBottom = () => {
 
 const resetConversation = () => {
   messages.value = []
-  suggestions.value = initialSuggestions()
+  suggestions.value = []
   quotaLeft.value = quotaTotal
   inputText.value = ''
 }
 
-/** 点击置顶/任务列表 → 打开对应会话记录 */
+/** 点击置顶/任务列表 → 切换到该任务的历史会话 */
 const onTaskClick = (task: TaskItem) => {
   activeTaskId.value = task.id
-  messages.value = initialMessages()
-  suggestions.value = initialSuggestions()
+  const conversation = buildConversation(task.name)
+  messages.value = conversation.messages
+  suggestions.value = conversation.suggestions
+  topic.value = task.name
   mainView.value = 'chat'
   scrollToBottom()
 }
@@ -508,7 +469,7 @@ const taskRowIcon = (task: TaskItem) =>
                   <a-menu-item
                     v-for="t in [...pinnedTasks, ...tasks]"
                     :key="t.id"
-                    @click="topic = t.name"
+                    @click="onTaskClick(t)"
                   >
                     {{ t.name }}
                   </a-menu-item>
