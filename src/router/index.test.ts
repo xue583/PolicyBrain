@@ -7,7 +7,7 @@ const authRoute = {
   name: 'personal-center',
   meta: { title: '个人中心', requiresAuth: true },
   matched: [{ meta: { requiresAuth: true } }],
-} as RouteLocationNormalized
+} as unknown as RouteLocationNormalized
 
 describe('applyAuthGuard', () => {
   beforeEach(() => {

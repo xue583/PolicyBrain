@@ -8,7 +8,7 @@ import './styles/db-list.scss'
 
 const app = createApp(App)
 
-app.config.errorHandler = (err, instance, info) => {
+app.config.errorHandler = (err, _instance, info) => {
   console.error('[Global Error]', err, info)
 }
 

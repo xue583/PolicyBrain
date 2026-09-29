@@ -376,7 +376,7 @@ const taskRowIcon = (task: TaskItem) =>
         >
           <img :src="pinIcon" alt="" class="task-icon" />
           <span class="task-name">{{ task.name }}</span>
-          <a-dropdown trigger="['click']" placement="bottomRight">
+          <a-dropdown :trigger="['click']" placement="bottomRight">
             <span class="task-more" @click.stop>⋮</span>
             <template #overlay>
               <a-menu
@@ -422,7 +422,7 @@ const taskRowIcon = (task: TaskItem) =>
         >
           <img :src="taskRowIcon(task)" alt="" class="task-icon" />
           <span class="task-name">{{ task.name }}</span>
-          <a-dropdown trigger="['click']" placement="bottomRight">
+          <a-dropdown :trigger="['click']" placement="bottomRight">
             <span class="task-more" @click.stop>⋮</span>
             <template #overlay>
               <a-menu
@@ -459,7 +459,7 @@ const taskRowIcon = (task: TaskItem) =>
           :class="{ 'is-welcome': !inConversation }"
         >
           <div v-if="inConversation" class="chat-column">
-            <a-dropdown trigger="['click']">
+            <a-dropdown :trigger="['click']">
               <button type="button" class="topic-chip">
                 <span>{{ topic }}</span>
                 <img :src="chevronDownIcon" alt="" class="topic-chevron" />

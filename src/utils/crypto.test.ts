@@ -2,7 +2,8 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import CryptoJS from 'crypto-js'
 import { ApiError } from '@/utils/apiError'
 
-const { decryptData, parseData } = await import('./crypto')
+const { decryptData, parseData, maskSecret, unmaskSecret } =
+  await import('./crypto')
 
 /** AES-256 需要 32 字节密钥，CBC 初始向量 16 字节 */
 const KEY_BASE64 = CryptoJS.enc.Utf8.parse(
@@ -24,8 +25,8 @@ const encrypt = (value: unknown, keyB64 = KEY_BASE64, ivB64 = IV_BASE64) =>
   ).toString()
 
 const stubSecrets = () => {
-  vi.stubEnv('VITE_CRYPTO_KEY', KEY_BASE64)
-  vi.stubEnv('VITE_CRYPTO_IV', IV_BASE64)
+  vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(KEY_BASE64))
+  vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
 }
 
 afterEach(() => {
@@ -76,8 +77,8 @@ describe('decryptData', () => {
     const keyB64 = CryptoJS.enc.Utf8.parse('0123456789abcdef').toString(
       CryptoJS.enc.Base64,
     )
-    vi.stubEnv('VITE_CRYPTO_KEY', keyB64)
-    vi.stubEnv('VITE_CRYPTO_IV', IV_BASE64)
+    vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(keyB64))
+    vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
     const cipher = encrypt({ id: 9 }, keyB64)
     expect(parseData({ encrypted: true, data: cipher })).toEqual({ id: 9 })
   })
@@ -87,8 +88,8 @@ describe('decryptData', () => {
     const badKey = CryptoJS.enc.Utf8.parse('12345678901234567890').toString(
       CryptoJS.enc.Base64,
     )
-    vi.stubEnv('VITE_CRYPTO_KEY', badKey)
-    vi.stubEnv('VITE_CRYPTO_IV', IV_BASE64)
+    vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(badKey))
+    vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
     expect(() => decryptData(encrypt({ id: 1 }))).toThrow(ApiError)
   })
 
@@ -96,8 +97,8 @@ describe('decryptData', () => {
     const badIv = CryptoJS.enc.Utf8.parse('123456789012345').toString(
       CryptoJS.enc.Base64,
     )
-    vi.stubEnv('VITE_CRYPTO_KEY', KEY_BASE64)
-    vi.stubEnv('VITE_CRYPTO_IV', badIv)
+    vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(KEY_BASE64))
+    vi.stubEnv('VITE_CRYPTO_IV', maskSecret(badIv))
     try {
       decryptData(encrypt({ id: 1 }))
       expect.unreachable('应当抛出 ApiError')
@@ -133,5 +134,20 @@ describe('parseData', () => {
       id: 7,
       list: [1, 2, 3],
     })
+  })
+})
+
+describe('maskSecret', () => {
+  it('matches the generator script output (fixed vector)', () => {
+    // 固定向量由 scripts/mask-crypto-secret.mjs 生成，
+    // 用于锁定运行时实现与生成脚本算法一致
+    expect(maskSecret('MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')).toBe(
+      'ehnUuyPeWcJ5N/L2IfNOmm5vw640zkmLejfc8iDwUcB4Gf2qN8lGmG0KyP8=',
+    )
+  })
+
+  it('round-trips: unmasking a masked secret restores the plain secret', () => {
+    expect(unmaskSecret(maskSecret(KEY_BASE64))).toBe(KEY_BASE64)
+    expect(unmaskSecret(maskSecret(IV_BASE64))).toBe(IV_BASE64)
   })
 })

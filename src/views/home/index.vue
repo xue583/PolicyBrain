@@ -560,7 +560,7 @@ const openBeian = () => {
   gap: 16px;
   background: #edf5fd;
   border-radius: var(--pb-radius-lg);
-  padding: 27px 23px;
+  padding: 27px 23px 0;
 }
 
 .feature-card {
@@ -620,7 +620,6 @@ const openBeian = () => {
 .promo-banner {
   display: block;
   width: 100%;
-  margin: 16px 0 20px;
   overflow: hidden;
   border-radius: var(--pb-radius);
   line-height: 0;
@@ -629,7 +628,6 @@ const openBeian = () => {
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 2888 / 360;
     object-fit: contain;
   }
 }

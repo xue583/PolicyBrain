@@ -63,7 +63,7 @@ describe('UserAccountMenu', () => {
     const { wrapper } = await mountMenu()
     await flushPromises()
 
-    expect(wrapper.get('.user-avatar').exists()).toBe(true)
+    expect(wrapper.find('.user-avatar').exists()).toBe(true)
     expect(wrapper.text()).toContain('195****0526')
     expect(wrapper.text()).toContain('企业专员')
     expect(wrapper.text()).toContain('河南省政策宝数字科技有限公司')

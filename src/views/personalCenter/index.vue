@@ -24,6 +24,7 @@ import FollowPanel from './FollowPanel.vue'
 import DynamicsPanel from './DynamicsPanel.vue'
 import InvoicePanel from './InvoicePanel.vue'
 import ServicePanel from './ServicePanel.vue'
+import UploadAvatarModal from './UploadAvatarModal.vue'
 
 defineOptions({ name: 'PersonalCenter' })
 
@@ -126,6 +127,8 @@ const goMembership = () => {
   void router.push({ name: 'membership' })
 }
 
+const uploadAvatarOpen = ref(false)
+
 onMounted(() => {
   void auth.loadCurrentUser().catch(() => undefined)
 })
@@ -192,7 +195,13 @@ onMounted(() => {
                 <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="" />
                 <UserOutlined v-else />
               </div>
-              <a-button type="primary" class="upload-btn">上传头像</a-button>
+              <a-button
+                type="primary"
+                class="upload-btn"
+                @click="uploadAvatarOpen = true"
+              >
+                上传头像
+              </a-button>
             </div>
             <div class="profile-info">
               <div class="info-row">
@@ -251,6 +260,8 @@ onMounted(() => {
         </div>
       </template>
     </div>
+
+    <UploadAvatarModal v-model:open="uploadAvatarOpen" />
   </div>
 </template>
 

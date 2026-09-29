@@ -74,9 +74,22 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            'ant-design-vue': ['ant-design-vue', '@ant-design/icons-vue'],
-            vendor: ['vue', 'vue-router', 'pinia', 'axios'],
+          manualChunks(id: string) {
+            const match = id.match(
+              /[\\/]node_modules[\\/](@[^\\/]+[\\/][^\\/]+|[^\\/]+)/,
+            )
+            if (!match) return undefined
+            const pkg = match[1]!
+            if (pkg === 'ant-design-vue' || pkg === '@ant-design/icons-vue') {
+              return 'ant-design-vue'
+            }
+            if (
+              ['vue', 'vue-router', 'pinia', 'axios'].includes(pkg) ||
+              pkg.startsWith('@vue/')
+            ) {
+              return 'vendor'
+            }
+            return undefined
           },
         },
       },

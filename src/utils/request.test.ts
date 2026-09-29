@@ -16,6 +16,8 @@ const {
   resolveResponseData,
 } = await import('./request')
 
+const { maskSecret } = await import('./crypto')
+
 const KEY_BASE64 = CryptoJS.enc.Utf8.parse(
   '0123456789abcdef0123456789abcdef',
 ).toString(CryptoJS.enc.Base64)
@@ -35,8 +37,9 @@ const encrypt = (value: unknown) =>
   ).toString()
 
 const stubSecrets = () => {
-  vi.stubEnv('VITE_CRYPTO_KEY', KEY_BASE64)
-  vi.stubEnv('VITE_CRYPTO_IV', IV_BASE64)
+  // 环境变量存掩码串（见 utils/crypto.ts），运行时还原后再解密
+  vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(KEY_BASE64))
+  vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
 }
 
 afterEach(() => {

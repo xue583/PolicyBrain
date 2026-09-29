@@ -201,7 +201,7 @@ const getPopupContainer = (node: HTMLElement) =>
           <template v-for="p in visibleProvinces" :key="p">
             <a-dropdown
               v-if="cityMap[p]"
-              trigger="['hover', 'click']"
+              :trigger="['hover', 'click']"
               placement="bottomLeft"
               :get-popup-container="getPopupContainer"
             >
@@ -253,7 +253,7 @@ const getPopupContainer = (node: HTMLElement) =>
           <template v-for="ind in visibleIndustries" :key="ind.label">
             <a-dropdown
               v-if="ind.children"
-              trigger="['hover', 'click']"
+              :trigger="['hover', 'click']"
               placement="bottomLeft"
               :get-popup-container="getPopupContainer"
             >

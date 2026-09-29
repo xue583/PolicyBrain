@@ -229,7 +229,7 @@
 .reg-steps {
   margin: 16px 0 18px;
 
-  :deep(.ant-steps-item) {
+  .ant-steps-item {
     position: relative;
     flex: 1;
     overflow: visible;
@@ -237,12 +237,12 @@
   }
 
   /* 关掉 antd 默认连线，避免错位溢出 */
-  :deep(.ant-steps-item-tail) {
+  .ant-steps-item-tail {
     display: none !important;
   }
 
   /* 自绘连线：当前节点右缘 → 下一节点左缘 */
-  :deep(.ant-steps-item:not(:last-child)::after) {
+  .ant-steps-item:not(:last-child)::after {
     content: '';
     position: absolute;
     top: 14px;
@@ -253,11 +253,11 @@
     pointer-events: none;
   }
 
-  :deep(.ant-steps-item-finish:not(:last-child)::after) {
+  .ant-steps-item-finish:not(:last-child)::after {
     border-top: 1px solid var(--pb-primary);
   }
 
-  :deep(.ant-steps-item-container) {
+  .ant-steps-item-container {
     position: relative;
     z-index: 1;
     display: flex;
@@ -266,7 +266,7 @@
     width: 100%;
   }
 
-  :deep(.ant-steps-item-icon) {
+  .ant-steps-item-icon {
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -280,7 +280,7 @@
     border: none !important;
   }
 
-  :deep(.ant-steps-item-custom .ant-steps-item-icon > .ant-steps-icon) {
+  .ant-steps-item-custom .ant-steps-item-icon > .ant-steps-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -290,14 +290,14 @@
     top: 0;
   }
 
-  :deep(.ant-steps-item-content) {
+  .ant-steps-item-content {
     display: block !important;
     width: 100% !important;
     margin-top: 8px !important;
     text-align: center;
   }
 
-  :deep(.ant-steps-item-title) {
+  .ant-steps-item-title {
     display: inline-block;
     padding-inline-end: 0 !important;
     color: #999 !important;
@@ -306,12 +306,12 @@
     white-space: nowrap;
   }
 
-  :deep(.ant-steps-item-title::after) {
+  .ant-steps-item-title::after {
     display: none !important;
   }
 
-  :deep(.ant-steps-item-process .ant-steps-item-title),
-  :deep(.ant-steps-item-finish .ant-steps-item-title) {
+  .ant-steps-item-process .ant-steps-item-title,
+  .ant-steps-item-finish .ant-steps-item-title {
     color: var(--pb-primary) !important;
     font-weight: 500;
   }
