@@ -407,7 +407,10 @@ const taskRowIcon = (task: TaskItem) =>
       </div>
     </aside>
 
-    <main class="workbench-main">
+    <main
+      class="workbench-main"
+      :class="{ 'is-welcome': mainView === 'chat' && !inConversation }"
+    >
       <template v-if="mainView === 'chat'">
         <div
           ref="scrollRef"
@@ -763,6 +766,25 @@ const taskRowIcon = (task: TaskItem) =>
   flex-direction: column;
   flex: 1;
   min-width: 0;
+
+  &.is-welcome {
+    background-color: #edf3fd;
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(237, 243, 253, 0.78) 0%,
+        rgba(243, 247, 253, 1.84) 55%,
+        rgba(239, 243, 250, 0.9) 100%
+      ),
+      url('../../assets/workbench/wb-chat-banner.png');
+    background-repeat: no-repeat;
+    background-position:
+      center,
+      center top;
+    background-size:
+      100% 100%,
+      120% auto;
+  }
 }
 
 .chat-scroll {
@@ -781,23 +803,6 @@ const taskRowIcon = (task: TaskItem) =>
 .chat-scroll.is-welcome {
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(
-      720px 420px at 12% 8%,
-      rgba(208, 227, 252, 0.8),
-      transparent 62%
-    ),
-    radial-gradient(
-      640px 400px at 88% 14%,
-      rgba(203, 224, 251, 0.7),
-      transparent 60%
-    ),
-    radial-gradient(
-      900px 460px at 50% 112%,
-      rgba(216, 232, 253, 0.9),
-      transparent 66%
-    ),
-    linear-gradient(180deg, #edf3fd 0%, #f3f7fd 55%, #eff3fa 100%);
 }
 
 .welcome {
