@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { usePagination } from '@/composables/usePagination'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
+import PanelTabs from '@/components/common/PanelTabs.vue'
 import msgIcon from '@/assets/personalCenter/msg-icon.png'
 import emptyImg from '@/assets/personalCenter/empty-message.png'
 
@@ -23,8 +27,6 @@ const mockMessages: NoticeMessage[] = Array.from({ length: 15 }, (_, i) => ({
 }))
 
 const activeTab = ref<'all' | 'unread'>('all')
-const current = ref(1)
-const pageSize = 10
 
 const unreadCount = computed(
   () => mockMessages.filter((item) => !item.read).length,
@@ -36,48 +38,40 @@ const filteredMessages = computed(() =>
     : mockMessages.filter((item) => !item.read),
 )
 
-const pagedMessages = computed(() =>
-  filteredMessages.value.slice(
-    (current.value - 1) * pageSize,
-    current.value * pageSize,
-  ),
+const { currentPage, pageSize, total, pagedList, resetPage } = usePagination(
+  () => filteredMessages.value,
 )
+
+const tabs = computed(() => [
+  { key: 'all' as const, label: `全部（${mockMessages.length}）` },
+  { key: 'unread' as const, label: `未读（${unreadCount.value}）` },
+])
 
 const switchTab = (tab: 'all' | 'unread') => {
   activeTab.value = tab
-  current.value = 1
+  resetPage()
 }
 </script>
 
 <template>
   <div class="message-panel">
-    <div class="msg-tabs">
-      <button
-        type="button"
-        class="msg-tab"
-        :class="{ active: activeTab === 'all' }"
-        @click="switchTab('all')"
-      >
-        全部（{{ mockMessages.length }}）
-      </button>
-      <button
-        type="button"
-        class="msg-tab"
-        :class="{ active: activeTab === 'unread' }"
-        @click="switchTab('unread')"
-      >
-        未读（{{ unreadCount }}）
-      </button>
-    </div>
+    <PanelTabs
+      variant="filled"
+      :tabs="tabs"
+      :active-key="activeTab"
+      @update:active-key="switchTab"
+    />
 
-    <div v-if="filteredMessages.length === 0" class="msg-empty">
-      <img :src="emptyImg" alt="" />
-      <p class="msg-empty-text">暂无数据</p>
-    </div>
+    <EmptyState
+      v-if="filteredMessages.length === 0"
+      class="msg-empty"
+      :image="emptyImg"
+      :image-width="110"
+    />
 
     <template v-else>
       <div class="msg-list">
-        <div v-for="item in pagedMessages" :key="item.id" class="msg-card">
+        <div v-for="item in pagedList" :key="item.id" class="msg-card">
           <img class="msg-icon" :src="msgIcon" alt="" />
           <div class="msg-main">
             <div class="msg-title">
@@ -93,15 +87,12 @@ const switchTab = (tab: 'all' | 'unread') => {
         </div>
       </div>
 
-      <div class="msg-pagination">
-        <span class="msg-total">共{{ filteredMessages.length }}条</span>
-        <a-pagination
-          v-model:current="current"
-          :total="filteredMessages.length"
-          :page-size="pageSize"
-          :show-size-changer="false"
-        />
-      </div>
+      <PaginationBar
+        class="msg-pagination"
+        v-model:current="currentPage"
+        :total="total"
+        :page-size="pageSize"
+      />
     </template>
   </div>
 </template>
@@ -112,28 +103,9 @@ const switchTab = (tab: 'all' | 'unread') => {
   flex-direction: column;
 }
 
-.msg-tabs {
-  display: flex;
-  align-items: center;
-  gap: 36px;
-  padding: 12px 24px;
-  background: #ecf3ff;
-  border-radius: 8px;
-}
-
-.msg-tab {
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: 15px;
-  font-family: inherit;
-  color: #8c8c8c;
-  cursor: pointer;
-
-  &.active {
-    color: var(--pb-title);
-    font-weight: 600;
-  }
+.msg-empty {
+  --empty-gap: 36px;
+  --empty-padding: 60px 0;
 }
 
 .msg-list {
@@ -224,37 +196,8 @@ const switchTab = (tab: 'all' | 'unread') => {
 }
 
 .msg-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
+  --pagination-space: 0;
+
   margin-top: 24px;
-}
-
-.msg-total {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--pb-text);
-}
-
-.msg-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 36px;
-  padding: 60px 0;
-
-  img {
-    width: 110px;
-    height: auto;
-    user-select: none;
-  }
-}
-
-.msg-empty-text {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--pb-primary);
 }
 </style>

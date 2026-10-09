@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import 'ant-design-vue/dist/reset.css'
 import App from './App.vue'
 import { router } from './router'
+import './styles/fonts.scss'
 import './style.css'
 import './styles/db-list.scss'
 

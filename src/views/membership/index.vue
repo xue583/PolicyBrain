@@ -89,6 +89,7 @@ const heroFeatures = [
 
 .hero-title {
   margin: 20px 0 14px;
+  font-family: var(--pb-font-display);
   font-size: 48px;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -102,6 +103,7 @@ const heroFeatures = [
 
 .hero-sub {
   margin: 25px 0 50px;
+  font-family: var(--pb-font-slogan);
   font-size: 24px;
   color: rgba(255, 255, 255, 0.82);
 }

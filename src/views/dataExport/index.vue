@@ -19,6 +19,7 @@ import ExportFilterSider, {
 import BatchQueryPanel from './BatchQueryPanel.vue'
 import { useFilteredList } from '@/composables/useFilteredList'
 import { downloadCsv } from '@/utils/downloadCsv'
+import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import searchIcon from '../../assets/export/search.png'
 import search2Icon from '../../assets/export/search2.png'
 
@@ -254,11 +255,12 @@ const onBatchUploaded = (name: string) => {
               @export="exportExcel"
             >
               <template #count>
-                <span class="result-count">
-                  共收录
-                  <em>{{ exportEnterpriseTotal.toLocaleString('zh-CN') }}</em>
-                  家企业
-                </span>
+                <ResultCountBar
+                  class="export-count"
+                  prefix="共收录"
+                  :total="exportEnterpriseTotal.toLocaleString('zh-CN')"
+                  unit="家企业"
+                />
               </template>
             </ExportResultTable>
           </section>
@@ -282,10 +284,14 @@ const onBatchUploaded = (name: string) => {
           @export="exportExcel"
         >
           <template #count>
-            <span class="result-count">
-              已匹配 <em>{{ total }}</em> 家企业
+            <ResultCountBar
+              class="export-count"
+              prefix="已匹配"
+              :total="total"
+              unit="家企业"
+            >
               <span class="file-name">（{{ uploadedName }}）</span>
-            </span>
+            </ResultCountBar>
           </template>
         </ExportResultTable>
       </BatchQueryPanel>
@@ -402,16 +408,9 @@ const onBatchUploaded = (name: string) => {
   min-width: 0;
 }
 
-.result-count {
-  font-size: 14px;
-  color: #595959;
-
-  em {
-    margin: 0 4px;
-    font-style: normal;
-    font-weight: 600;
-    color: var(--pb-primary);
-  }
+.export-count {
+  --rc-font-size: 14px;
+  --rc-em-margin: 4px;
 }
 
 .file-name {

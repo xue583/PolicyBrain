@@ -16,6 +16,7 @@ import {
   homeNewsList,
   homeFollowList,
 } from '../../mock/home'
+import { Divider } from 'ant-design-vue'
 import { SITE } from '@/constants/site'
 import { navItems } from '@/mock/nav'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
@@ -268,9 +269,9 @@ const openBeian = () => {
               <img :src="iconIndustry" alt="" class="industry-icon" />
               <h3>产业标签</h3>
             </div>
-            <p class="industry-desc">
-              覆盖 20 个一级产业、249 个细分标签，支持按产业精准匹配企业与政策。
-            </p>
+            <Divider />
+            <p class="industry-desc">政策资讯已为您关联以下标签</p>
+            <p class="industry-desc-sub">覆盖20个一级产业、249个细分标签</p>
             <div class="tag-cloud">
               <span v-for="tag in industryTags" :key="tag" class="industry-tag">
                 {{ tag }}
@@ -333,7 +334,7 @@ const openBeian = () => {
   position: relative;
   min-height: calc(100vh - 64px);
   margin-top: -64px;
-  overflow-x: hidden;
+  overflow-x: clip;
   background: #f0f2f5;
   color: var(--pb-text);
   font-family:
@@ -350,6 +351,11 @@ const openBeian = () => {
 }
 
 .page-bg {
+  /* 背景视频取景参数：
+     --bg-zoom 垂直放大倍率，>1 时裁掉上下只取中间展示（宽度始终平铺不裁）
+     --bg-focus-y 视频中心对齐到容器的垂直位置，偏上可避开底部被内容遮挡的区域 */
+  --bg-zoom: 1.4;
+  --bg-focus-y: 67%;
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -379,11 +385,13 @@ const openBeian = () => {
 
 .page-bg-video {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: var(--bg-focus-y);
   width: 100%;
-  height: 100%;
+  height: calc(var(--bg-zoom) * 100%);
+  transform: translateY(-50%);
   object-fit: cover;
-  object-position: center top;
+  object-position: center;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -398,12 +406,13 @@ const openBeian = () => {
   width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
-  padding: 108px 0 200px;
+  padding: 100px 0 200px;
   text-align: center;
 }
 
 .hero-title {
-  margin: 59px 0 34px;
+  margin: 0 0 34px;
+  font-family: var(--pb-font-display);
   line-height: 1.2;
 
   .line1 {
@@ -417,7 +426,7 @@ const openBeian = () => {
   .line2 {
     display: block;
     margin-top: 8px;
-    font-size: 64px;
+    font-size: 48px;
     font-weight: 700;
     color: var(--pb-primary);
     letter-spacing: 2px;
@@ -548,14 +557,15 @@ const openBeian = () => {
 .home-body {
   position: relative;
   z-index: 1;
-  width: 75%;
+  width: 78.1%;
   max-width: calc(100% - 32px);
-  margin: 0 auto;
+  margin: -150px auto 0;
   padding-bottom: 56px;
 }
 
 .feature-row {
   display: grid;
+  min-height: 276px;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   background: #edf5fd;
@@ -601,17 +611,17 @@ const openBeian = () => {
 
   h3 {
     margin: 0 0 12px 20px;
-    font-size: 26px;
+    font-family: var(--pb-font-display);
+    font-size: 24px;
     font-weight: 600;
     color: #393939;
     line-height: 1.3;
   }
 
   p {
-    margin: 0;
+    margin: 0 0 0 20px;
     font-size: 16px;
     line-height: 1.7;
-    margin-left: 20px;
     color: #393939;
     white-space: pre-line;
   }
@@ -623,6 +633,7 @@ const openBeian = () => {
   overflow: hidden;
   border-radius: var(--pb-radius);
   line-height: 0;
+  margin: 20px auto;
 
   img {
     display: block;
@@ -660,7 +671,7 @@ const openBeian = () => {
   border: none;
   background: transparent;
   padding: 16px 0 14px;
-  font-size: 22px;
+  font-size: 16px;
   color: var(--pb-sub);
   cursor: pointer;
   font-family: inherit;
@@ -863,6 +874,11 @@ const openBeian = () => {
   background-position: top center;
   background-repeat: no-repeat;
   box-shadow: 0 2px 12px rgba(22, 119, 255, 0.06);
+
+  :deep(.ant-divider-horizontal) {
+    margin: 10px 0 15px;
+    border-block-start: 1px solid rgba(255, 255, 255, 0.8);
+  }
 }
 
 .industry-head {
@@ -873,7 +889,7 @@ const openBeian = () => {
 
   h3 {
     margin: 0;
-    font-size: 24px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--pb-title);
   }
@@ -887,9 +903,17 @@ const openBeian = () => {
 
 .industry-desc {
   margin: 0 0 14px;
+  font-size: 20px;
+  color: #0c164a;
+  font-family: AlibabaPuHuiTi_2_65_Medium;
+  font-weight: 500;
+}
+
+.industry-desc-sub {
   font-size: 12px;
-  line-height: 1.7;
-  color: var(--pb-muted);
+  font-family: AlibabaPuHuiTi_2_55_Regular;
+  font-size: 14px;
+  color: #3d3d3d;
 }
 
 .tag-cloud {
@@ -926,7 +950,7 @@ const openBeian = () => {
   background: #0e5dd8;
   border-radius: 4px;
   color: #fff;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
   cursor: pointer;
 
@@ -986,8 +1010,8 @@ const openBeian = () => {
   gap: 14px;
 
   a {
-    font-size: 12px;
-    color: var(--pb-sub);
+    font-size: 14px;
+    color: #343434;
 
     &:hover {
       color: var(--pb-primary);
@@ -1038,6 +1062,21 @@ const openBeian = () => {
   font-size: 12px;
   color: #bfbfbf;
   line-height: 1.5;
+}
+
+@media (max-width: 1400px) {
+  .feature-text {
+    h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    p {
+      margin-left: 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  }
 }
 
 @include below-lg {

@@ -8,7 +8,8 @@ import {
 import type { EnterpriseContact } from '../../mock/enterpriseDb'
 import { useAuthStore } from '@/stores/auth'
 import { triggerNeedLogin } from '@/utils/auth'
-import titleStyleBg from '../../assets/home/title-style.png'
+import EmptyState from '@/components/common/EmptyState.vue'
+import SectionTitle from '@/components/common/SectionTitle.vue'
 import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
 import vipLockBg from '../../assets/enterpriseDb/container-279.png'
 import phoneIcon from '../../assets/enterpriseDb/phone.png'
@@ -32,12 +33,7 @@ const onUnlock = () => {
 
 <template>
   <section class="contact-panel">
-    <h2
-      class="section-title"
-      :style="{ '--section-title-bg': `url(${titleStyleBg})` }"
-    >
-      联系方式
-    </h2>
+    <SectionTitle title="联系方式" />
 
     <div v-if="!isLoggedIn" class="contact-lock">
       <button type="button" class="vip-lock" @click="onUnlock">
@@ -46,10 +42,13 @@ const onUnlock = () => {
       </button>
     </div>
 
-    <div v-else-if="!contacts.length" class="tab-empty">
-      <img :src="emptyIllustration" alt="" />
-      <p>暂无联系方式</p>
-    </div>
+    <EmptyState
+      v-else-if="!contacts.length"
+      class="tab-empty"
+      :image="emptyIllustration"
+      text="暂无联系方式"
+      :image-width="420"
+    />
 
     <div v-else class="contact-body">
       <div class="person-grid">
@@ -102,20 +101,6 @@ const onUnlock = () => {
 </template>
 
 <style scoped lang="scss">
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 0 16px;
-  padding-left: 20px;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 26px;
-  color: #262626;
-  background: var(--section-title-bg) no-repeat left center;
-  background-size: 94px 26px;
-}
-
 .contact-lock {
   display: flex;
   align-items: center;
@@ -165,21 +150,11 @@ const onUnlock = () => {
 }
 
 .tab-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 0 16px;
-  color: #8c8c8c;
-
-  img {
-    width: min(420px, 100%);
-    height: auto;
-    margin-bottom: 12px;
-  }
-
-  p {
-    margin: 0;
-  }
+  --empty-gap: 12px;
+  --empty-padding: 24px 0 16px;
+  --empty-text-size: 16px;
+  --empty-text-weight: 400;
+  --empty-text-color: #8c8c8c;
 }
 
 .contact-body {

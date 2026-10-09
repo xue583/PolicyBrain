@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import {
-  DownOutlined,
-  FileTextOutlined,
-  SearchOutlined,
-} from '@ant-design/icons-vue'
+import { FileTextOutlined } from '@ant-design/icons-vue'
 import {
   policyDbYears,
   publicityAddresses,
@@ -16,7 +12,11 @@ import {
 } from '../../mock/policyDb'
 import { filterPolicyDbPublicity } from '@/utils/filterPolicies'
 import { useFilteredList } from '@/composables/useFilteredList'
+import { useCollapsedList } from '@/composables/useCollapsedList'
 import { downloadCsv } from '@/utils/downloadCsv'
+import FilterRow from '@/components/common/FilterRow.vue'
+import PagedTable from '@/components/common/PagedTable.vue'
+import SearchRow from '@/components/common/SearchRow.vue'
 import titleStyleBg from '../../assets/home/title-style.png'
 
 defineOptions({ name: 'PolicyDbPublicityPanel' })
@@ -29,10 +29,8 @@ const props = defineProps<{
 }>()
 
 const category = ref<PolicyDbPublicityCategory>('approved')
-const showMoreAddresses = ref(false)
-const showMorePolicies = ref(false)
-const keywordInput = ref('')
 const appliedKeyword = ref('')
+const searchRowRef = ref<InstanceType<typeof SearchRow>>()
 
 const filters = reactive({
   district: '',
@@ -40,53 +38,37 @@ const filters = reactive({
   obtainedPolicy: '',
 })
 
-const resetFilters = () => {
-  filters.district = ''
-  filters.years = []
-  filters.obtainedPolicy = ''
-  keywordInput.value = ''
-  appliedKeyword.value = ''
-  showMoreAddresses.value = false
-  showMorePolicies.value = false
-  resetPage()
-}
-
-watch(
-  () => props.list,
-  () => {
-    category.value = 'approved'
-    resetFilters()
-  },
-)
-
-const categoryList = computed(() =>
-  props.list.filter((item) => item.category === category.value),
-)
-
-const addressOptions = computed(() => {
+const addressOptionsAll = computed(() => {
   const counts = new Map<string, number>()
   counts.set('郑州市', categoryList.value.length)
   for (const item of categoryList.value) {
     counts.set(item.district, (counts.get(item.district) ?? 0) + 1)
   }
-  const options = publicityAddresses.map((label) => ({
+  return publicityAddresses.map((label) => ({
     label,
     count: counts.get(label) ?? 0,
   }))
-  return showMoreAddresses.value ? options : options.slice(0, COLLAPSED_COUNT)
 })
 
-const policyOptions = computed(() => {
+const policyOptionsAll = computed(() => {
   const counts = new Map<string, number>()
   for (const item of categoryList.value) {
     counts.set(item.obtainedPolicy, (counts.get(item.obtainedPolicy) ?? 0) + 1)
   }
-  const options = publicityObtainedPolicies.map((label) => ({
+  return publicityObtainedPolicies.map((label) => ({
     label,
     count: counts.get(label) ?? 0,
   }))
-  return showMorePolicies.value ? options : options.slice(0, 5)
 })
+
+const { showMore: showMoreAddresses, visibleList: addressOptions } =
+  useCollapsedList(addressOptionsAll, COLLAPSED_COUNT)
+const { showMore: showMorePolicies, visibleList: policyOptions } =
+  useCollapsedList(policyOptionsAll, 5)
+
+const categoryList = computed(() =>
+  props.list.filter((item) => item.category === category.value),
+)
 
 const filteredList = computed(() =>
   filterPolicyDbPublicity(props.list, {
@@ -100,6 +82,25 @@ const filteredList = computed(() =>
 
 const { currentPage, pageSize, pagedList, total, resetPage } =
   useFilteredList(filteredList)
+
+const resetFilters = () => {
+  filters.district = ''
+  filters.years = []
+  filters.obtainedPolicy = ''
+  appliedKeyword.value = ''
+  searchRowRef.value?.clearKeyword()
+  showMoreAddresses.value = false
+  showMorePolicies.value = false
+  resetPage()
+}
+
+watch(
+  () => props.list,
+  () => {
+    category.value = 'approved'
+    resetFilters()
+  },
+)
 
 const selectCategory = (value: PolicyDbPublicityCategory) => {
   category.value = value
@@ -123,8 +124,8 @@ const selectPolicy = (value: string) => {
   resetPage()
 }
 
-const onSearch = () => {
-  appliedKeyword.value = keywordInput.value
+const onSearch = (keyword: string) => {
+  appliedKeyword.value = keyword
   resetPage()
 }
 
@@ -152,7 +153,6 @@ const exportList = () => {
 }
 
 const columns = [
-  { title: '序号', key: 'index', width: 72, align: 'center' as const },
   { title: '企业名称', dataIndex: 'name', key: 'name', ellipsis: true },
   { title: '所在区域', dataIndex: 'region', key: 'region', ellipsis: true },
   { title: '所属行业', dataIndex: 'industry', key: 'industry', width: 120 },
@@ -181,74 +181,57 @@ const columns = [
     </div>
 
     <div class="filter-box">
-      <div class="filter-row">
-        <span class="filter-label">注册地址：</span>
-        <div class="filter-options">
-          <a
-            v-for="item in addressOptions"
-            :key="item.label"
-            class="option-link"
-            :class="{ active: filters.district === item.label }"
-            @click="selectDistrict(item.label)"
-          >
-            {{ item.label }} ({{ item.count }})
-          </a>
-        </div>
-        <a class="more-link" @click="showMoreAddresses = !showMoreAddresses">
-          {{ showMoreAddresses ? '收起' : '更多' }}
-          <DownOutlined :class="{ rotated: showMoreAddresses }" />
+      <FilterRow
+        label="注册地址："
+        v-model:expanded="showMoreAddresses"
+        collapsible
+      >
+        <a
+          v-for="item in addressOptions"
+          :key="item.label"
+          class="option-link"
+          :class="{ active: filters.district === item.label }"
+          @click="selectDistrict(item.label)"
+        >
+          {{ item.label }} ({{ item.count }})
         </a>
-      </div>
+      </FilterRow>
 
-      <div class="filter-row">
-        <span class="filter-label">选择年份：</span>
-        <div class="filter-options">
-          <a
-            v-for="year in policyDbYears"
-            :key="year"
-            class="option-link"
-            :class="{ active: filters.years.includes(year) }"
-            @click="toggleYear(year)"
-          >
-            {{ year }}
-          </a>
-        </div>
-      </div>
-
-      <div class="filter-row">
-        <span class="filter-label">已获政策：</span>
-        <div class="filter-options">
-          <a
-            v-for="item in policyOptions"
-            :key="item.label"
-            class="option-link"
-            :class="{ active: filters.obtainedPolicy === item.label }"
-            @click="selectPolicy(item.label)"
-          >
-            {{ item.label }}
-          </a>
-        </div>
-        <a class="more-link" @click="showMorePolicies = !showMorePolicies">
-          {{ showMorePolicies ? '收起' : '更多' }}
-          <DownOutlined :class="{ rotated: showMorePolicies }" />
+      <FilterRow label="选择年份：">
+        <a
+          v-for="year in policyDbYears"
+          :key="year"
+          class="option-link"
+          :class="{ active: filters.years.includes(year) }"
+          @click="toggleYear(year)"
+        >
+          {{ year }}
         </a>
-      </div>
+      </FilterRow>
+
+      <FilterRow
+        label="已获政策："
+        v-model:expanded="showMorePolicies"
+        collapsible
+      >
+        <a
+          v-for="item in policyOptions"
+          :key="item.label"
+          class="option-link"
+          :class="{ active: filters.obtainedPolicy === item.label }"
+          @click="selectPolicy(item.label)"
+        >
+          {{ item.label }}
+        </a>
+      </FilterRow>
 
       <div class="filter-row search-row">
         <span class="filter-label">原文标题：</span>
-        <a-input
-          v-model:value="keywordInput"
-          class="search-input"
-          allow-clear
-          placeholder="请输入内容"
-          @press-enter="onSearch"
-        >
-          <template #prefix>
-            <SearchOutlined />
-          </template>
-        </a-input>
-        <a-button type="primary" @click="onSearch">查询</a-button>
-        <a-button @click="resetFilters">重置</a-button>
+        <SearchRow
+          ref="searchRowRef"
+          @search="onSearch"
+          @reset="resetFilters"
+        />
       </div>
     </div>
 
@@ -261,37 +244,28 @@ const columns = [
       <span class="current-region">当前区域：{{ regionLabel }}</span>
     </div>
 
-    <a-table
-      class="db-table"
-      bordered
+    <PagedTable
+      v-model:current="currentPage"
+      :total="total"
+      :page-size="pageSize"
       :columns="columns"
       :data-source="pagedList"
-      :pagination="false"
       :row-key="(row: PolicyDbPublicity) => row.id"
-      size="middle"
     >
-      <template #bodyCell="{ column, record, index }">
-        <template v-if="column.key === 'index'">
-          {{ (currentPage - 1) * pageSize + index + 1 }}
-        </template>
-        <template v-else-if="column.key === 'amount'">
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'amount'">
           {{ formatAmount(record.amount as number | null) }}
         </template>
       </template>
-    </a-table>
-
-    <div class="pagination-wrap">
-      <a-pagination
-        v-model:current="currentPage"
-        :total="total"
-        :page-size="pageSize"
-        :show-total="(t: number) => `共 ${t} 条`"
-      />
-    </div>
+    </PagedTable>
   </div>
 </template>
 
 <style scoped lang="scss">
+.publicity-panel {
+  --pagination-padding: 20px 0 4px;
+}
+
 .category-row {
   display: flex;
   align-items: center;
@@ -343,18 +317,9 @@ const columns = [
   --filter-row-border: 1px dashed #ebebeb;
 }
 
-.pagination-wrap {
-  --pagination-padding: 20px 0 4px;
-}
-
 .search-row {
   align-items: center;
   padding-top: 12px;
-}
-
-.search-input {
-  width: 320px;
-  max-width: 100%;
 }
 
 .summary-bar {
@@ -387,12 +352,12 @@ const columns = [
     flex-direction: column;
   }
 
-  .filter-label {
+  :deep(.filter-label) {
     width: auto;
   }
 
-  .search-input {
-    width: 100%;
+  .search-row {
+    --search-input-width: 100%;
   }
 }
 </style>

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { DownOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import {
   policyDbUpdateStatuses,
   policyDbYears,
@@ -10,6 +9,10 @@ import {
 } from '../../mock/policyDb'
 import { filterPolicyDbUpdates } from '@/utils/filterPolicies'
 import { useFilteredList } from '@/composables/useFilteredList'
+import { useCollapsedList } from '@/composables/useCollapsedList'
+import FilterRow from '@/components/common/FilterRow.vue'
+import PagedTable from '@/components/common/PagedTable.vue'
+import SearchRow from '@/components/common/SearchRow.vue'
 
 defineOptions({ name: 'PolicyDbUpdatesPanel' })
 
@@ -19,11 +22,10 @@ const props = defineProps<{
   updates: PolicyDbUpdate[]
 }>()
 
-const showMoreGrades = ref(false)
-const keywordInput = ref('')
 const appliedKeyword = ref('')
 const contactOpen = ref(false)
 const contactUpdate = ref<PolicyDbUpdate | null>(null)
+const searchRowRef = ref<InstanceType<typeof SearchRow>>()
 
 const filters = reactive({
   grade: '',
@@ -31,9 +33,8 @@ const filters = reactive({
   statuses: [] as PolicyDbUpdateStatus[],
 })
 
-const visibleGrades = computed(() =>
-  showMoreGrades.value ? policyGrades : policyGrades.slice(0, COLLAPSED_COUNT),
-)
+const { showMore: showMoreGrades, visibleList: visibleGrades } =
+  useCollapsedList(policyGrades, COLLAPSED_COUNT)
 
 const filteredSource = computed(() =>
   filterPolicyDbUpdates(props.updates, {
@@ -51,8 +52,8 @@ const resetFilters = () => {
   filters.grade = ''
   filters.years = []
   filters.statuses = []
-  keywordInput.value = ''
   appliedKeyword.value = ''
+  searchRowRef.value?.clearKeyword()
   showMoreGrades.value = false
   resetPage()
 }
@@ -76,8 +77,8 @@ const toggleStatus = (status: PolicyDbUpdateStatus) => {
   resetPage()
 }
 
-const onSearch = () => {
-  appliedKeyword.value = keywordInput.value
+const onSearch = (keyword: string) => {
+  appliedKeyword.value = keyword
   resetPage()
 }
 
@@ -87,7 +88,6 @@ const openContact = (record: unknown) => {
 }
 
 const columns = [
-  { title: '序号', key: 'index', width: 72, align: 'center' as const },
   { title: '标题', key: 'title', ellipsis: true },
   { title: '政策级别', dataIndex: 'grade', key: 'grade', width: 140 },
   { title: '发布单位', dataIndex: 'department', key: 'department', width: 150 },
@@ -100,87 +100,59 @@ const columns = [
 
 <template>
   <div class="update-filters">
-    <div class="filter-row">
-      <span class="filter-label">选择等级：</span>
-      <div class="filter-options">
-        <a
-          v-for="grade in visibleGrades"
-          :key="grade"
-          class="option-link"
-          :class="{ active: filters.grade === grade }"
-          @click="selectGrade(grade)"
-        >
-          {{ grade }}
-        </a>
-      </div>
-      <a class="more-link" @click="showMoreGrades = !showMoreGrades">
-        {{ showMoreGrades ? '收起' : '更多' }}
-        <DownOutlined :class="{ rotated: showMoreGrades }" />
+    <FilterRow label="选择等级：" v-model:expanded="showMoreGrades" collapsible>
+      <a
+        v-for="grade in visibleGrades"
+        :key="grade"
+        class="option-link"
+        :class="{ active: filters.grade === grade }"
+        @click="selectGrade(grade)"
+      >
+        {{ grade }}
       </a>
-    </div>
+    </FilterRow>
 
-    <div class="filter-row">
-      <span class="filter-label">选择年份：</span>
-      <div class="filter-options">
-        <a
-          v-for="year in policyDbYears"
-          :key="year"
-          class="option-link"
-          :class="{ active: filters.years.includes(year) }"
-          @click="toggleYear(year)"
-        >
-          {{ year }}
-        </a>
-      </div>
-    </div>
+    <FilterRow label="选择年份：">
+      <a
+        v-for="year in policyDbYears"
+        :key="year"
+        class="option-link"
+        :class="{ active: filters.years.includes(year) }"
+        @click="toggleYear(year)"
+      >
+        {{ year }}
+      </a>
+    </FilterRow>
 
-    <div class="filter-row">
-      <span class="filter-label">政策状态：</span>
-      <div class="filter-options">
-        <a
-          v-for="item in policyDbUpdateStatuses"
-          :key="item.value"
-          class="option-link"
-          :class="{ active: filters.statuses.includes(item.value) }"
-          @click="toggleStatus(item.value)"
-        >
-          {{ item.label }}
-        </a>
-      </div>
-    </div>
+    <FilterRow label="政策状态：">
+      <a
+        v-for="item in policyDbUpdateStatuses"
+        :key="item.value"
+        class="option-link"
+        :class="{ active: filters.statuses.includes(item.value) }"
+        @click="toggleStatus(item.value)"
+      >
+        {{ item.label }}
+      </a>
+    </FilterRow>
 
     <div class="filter-row search-row">
       <span class="filter-label">原文标题：</span>
-      <a-input
-        v-model:value="keywordInput"
-        class="search-input"
-        allow-clear
-        placeholder="请输入内容"
-        @press-enter="onSearch"
-      >
-        <template #prefix>
-          <SearchOutlined />
-        </template>
-      </a-input>
-      <a-button type="primary" @click="onSearch">查询</a-button>
-      <a-button @click="resetFilters">重置</a-button>
+      <SearchRow ref="searchRowRef" @search="onSearch" @reset="resetFilters" />
     </div>
   </div>
 
-  <a-table
-    class="db-table"
-    bordered
+  <PagedTable
+    v-model:current="currentPage"
+    class="updates-table"
+    :total="total"
+    :page-size="pageSize"
     :columns="columns"
     :data-source="pagedList"
-    :pagination="false"
     :row-key="(row: PolicyDbUpdate) => row.id"
-    size="middle"
   >
-    <template #bodyCell="{ column, record, index }">
-      <template v-if="column.key === 'index'">
-        {{ (currentPage - 1) * pageSize + index + 1 }}
-      </template>
-      <template v-else-if="column.key === 'title'">
+    <template #bodyCell="{ column, record }">
+      <template v-if="column.key === 'title'">
         <router-link
           class="update-title"
           :to="{
@@ -199,16 +171,7 @@ const columns = [
         <a class="contact-link" @click="openContact(record)">点击查看</a>
       </template>
     </template>
-  </a-table>
-
-  <div class="pagination-wrap">
-    <a-pagination
-      v-model:current="currentPage"
-      :total="total"
-      :page-size="pageSize"
-      :show-total="(t: number) => `共 ${t} 条`"
-    />
-  </div>
+  </PagedTable>
 
   <a-modal
     v-model:open="contactOpen"
@@ -236,18 +199,13 @@ const columns = [
   --filter-row-padding: 8px 0;
 }
 
-.pagination-wrap {
+.updates-table {
   --pagination-padding: 20px 0 4px;
 }
 
 .search-row {
   align-items: center;
   padding-top: 12px;
-}
-
-.search-input {
-  width: 320px;
-  max-width: 100%;
 }
 
 .update-title,
@@ -277,12 +235,12 @@ const columns = [
 }
 
 @media (max-width: 768px) {
-  .filter-label {
+  :deep(.filter-label) {
     width: auto;
   }
 
-  .search-input {
-    width: 100%;
+  .search-row {
+    --search-input-width: 100%;
   }
 }
 </style>

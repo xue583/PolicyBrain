@@ -171,6 +171,7 @@ const openWebsite = () => {
 
   :deep(.ant-card-body) {
     padding: 28px 32px;
+    margin-top: 22px;
   }
 
   &.header-card {

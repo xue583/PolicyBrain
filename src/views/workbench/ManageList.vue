@@ -12,7 +12,7 @@ import {
   manageProfile,
   manageTabs,
 } from '@/mock/manage'
-import emptySearchImg from '@/assets/workbench/wb-empty-search.png'
+import WbEmptyState from './components/WbEmptyState.vue'
 
 defineProps<{ role: 'enterprise' | 'service' }>()
 
@@ -258,8 +258,7 @@ const contactRight: TextField[] = [
       </div>
 
       <div v-else class="tab-empty">
-        <img :src="emptySearchImg" alt="" class="empty-img" />
-        <p class="empty-text">暂无{{ activeTab }}数据</p>
+        <WbEmptyState :text="`暂无${activeTab}数据`" />
       </div>
     </section>
   </div>
@@ -549,17 +548,6 @@ const contactRight: TextField[] = [
   flex-direction: column;
   align-items: center;
   padding: 56px 0 24px;
-}
-
-.empty-img {
-  width: 180px;
-  object-fit: contain;
-}
-
-.empty-text {
-  margin: 14px 0 0;
-  color: #999;
-  font-size: 14px;
 }
 
 @include below-lg {

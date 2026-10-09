@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFilteredList } from '@/composables/useFilteredList'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
-import { DownOutlined } from '@ant-design/icons-vue'
+import { useCollapsedList } from '@/composables/useCollapsedList'
+import FilterRow from '@/components/common/FilterRow.vue'
+import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import {
   enterpriseIndustries,
   enterpriseProvinces,
@@ -24,25 +26,18 @@ const COLLAPSED_INDUSTRY_COUNT = 20
 const router = useRouter()
 const keyword = useRouteKeyword()
 
-const showMoreProvinces = ref(true)
-const showMoreIndustries = ref(false)
-
 const filters = reactive({
   province: '',
   industries: [] as string[],
 })
 
-const visibleProvinces = computed(() =>
-  showMoreProvinces.value
-    ? enterpriseProvinces
-    : enterpriseProvinces.slice(0, COLLAPSED_PROVINCE_COUNT),
-)
+const { showMore: showMoreProvinces, visibleList: visibleProvinces } =
+  useCollapsedList(enterpriseProvinces, COLLAPSED_PROVINCE_COUNT, {
+    initialExpanded: true,
+  })
 
-const visibleIndustries = computed(() =>
-  showMoreIndustries.value
-    ? enterpriseIndustries
-    : enterpriseIndustries.slice(0, COLLAPSED_INDUSTRY_COUNT),
-)
+const { showMore: showMoreIndustries, visibleList: visibleIndustries } =
+  useCollapsedList(enterpriseIndustries, COLLAPSED_INDUSTRY_COUNT)
 
 const filteredList = computed(() =>
   filterEnterprises(mockEnterprises, {
@@ -63,10 +58,6 @@ watch([keyword, () => filters.province, () => filters.industries], () => {
   resetPage()
 })
 
-const onIndustryChange = () => {
-  // resetPage 由 watch 自动触发
-}
-
 const locationText = (item: EnterpriseItem) => `${item.province}/${item.city}`
 
 const goDetail = (id: number) => {
@@ -78,47 +69,43 @@ const goDetail = (id: number) => {
   <PageState>
     <a-card class="enterprise-card" :bordered="false">
       <div class="toolbar">
-        <span class="result-count">
-          共收录
-          <em>{{ enterpriseTotal }}</em>
-          家企业
-        </span>
+        <ResultCountBar
+          class="total-count"
+          prefix="共收录"
+          :total="enterpriseTotal"
+          unit="家企业"
+          decorated
+        />
         <a-button type="primary" class="map-btn">产业图谱</a-button>
       </div>
 
-      <div class="filter-row">
-        <span class="filter-label">注册地址：</span>
-        <div class="filter-options">
-          <a
-            v-for="province in visibleProvinces"
-            :key="province"
-            class="option-link"
-            :class="{ active: filters.province === province }"
-            @click="selectProvince(province)"
-          >
-            {{ province }}
-          </a>
-        </div>
-        <a class="more-link" @click="showMoreProvinces = !showMoreProvinces">
-          {{ showMoreProvinces ? '收起' : '更多' }}
-          <DownOutlined :class="{ rotated: showMoreProvinces }" />
+      <FilterRow
+        label="注册地址："
+        v-model:expanded="showMoreProvinces"
+        collapsible
+      >
+        <a
+          v-for="province in visibleProvinces"
+          :key="province"
+          class="option-link"
+          :class="{ active: filters.province === province }"
+          @click="selectProvince(province)"
+        >
+          {{ province }}
         </a>
-      </div>
+      </FilterRow>
 
-      <div class="filter-row industry-row">
-        <span class="filter-label">所属产业：</span>
-        <div class="filter-options">
-          <a-checkbox-group
-            v-model:value="filters.industries"
-            :options="visibleIndustries"
-            @change="onIndustryChange"
-          />
-        </div>
-        <a class="more-link" @click="showMoreIndustries = !showMoreIndustries">
-          {{ showMoreIndustries ? '收起' : '更多' }}
-          <DownOutlined :class="{ rotated: showMoreIndustries }" />
-        </a>
-      </div>
+      <FilterRow
+        class="industry-row"
+        label="所属产业："
+        v-model:expanded="showMoreIndustries"
+        collapsible
+      >
+        <a-checkbox-group
+          v-model:value="filters.industries"
+          :options="visibleIndustries"
+        />
+      </FilterRow>
 
       <div v-if="!pagedList.length" class="empty-state">
         <img :src="emptyIllustration" alt="" class="empty-illustration" />
@@ -226,19 +213,8 @@ const goDetail = (id: number) => {
   margin-bottom: 8px;
 }
 
-.result-count {
-  display: inline-block;
-  padding-left: 12px;
-  font-size: 15px;
-  color: #343434;
-  border-left: 3px solid var(--pb-primary);
-
-  em {
-    font-style: normal;
-    font-weight: 600;
-    color: var(--pb-primary);
-    margin: 0 2px;
-  }
+.total-count {
+  --rc-color: #343434;
 }
 
 .map-btn {
@@ -248,25 +224,23 @@ const goDetail = (id: number) => {
   font-weight: 500;
 }
 
-.filter-options {
-  :deep(.ant-checkbox-group) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 20px;
-  }
+:deep(.filter-options .ant-checkbox-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
 
-  :deep(.ant-checkbox-wrapper) {
-    font-size: 16px;
-    color: #262626;
-    margin-inline-end: 0;
-  }
+:deep(.filter-options .ant-checkbox-wrapper) {
+  font-size: 16px;
+  color: #262626;
+  margin-inline-end: 0;
 }
 
 .option-link {
   font-size: 16px;
 }
 
-.more-link .anticon {
+:deep(.more-link .anticon) {
   font-size: 12px;
 }
 
@@ -471,7 +445,7 @@ const goDetail = (id: number) => {
     grid-template-columns: 1fr;
   }
 
-  .filter-label {
+  :deep(.filter-label) {
     width: auto;
   }
 }

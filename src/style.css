@@ -24,6 +24,19 @@
   --pb-bp-md: 768px;
   --pb-bp-lg: 992px;
   --pb-bp-xl: 1440px;
+  /* 正文；普惠体子集缺字时逐级回退系统字体 */
+  --pb-font-body:
+    'Alibaba PuHuiTi 2.0', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  /* 展示型大标题（数黑体仅 700 一档字重） */
+  --pb-font-display:
+    'Alimama ShuHeiTi', 'Alibaba PuHuiTi 2.0', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+  /* 标语/营销文案 */
+  --pb-font-slogan:
+    'DingTalk JinBuTi', 'Alibaba PuHuiTi 2.0', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
 }
 
 html,
@@ -34,9 +47,7 @@ body,
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: var(--pb-font-body);
   color: var(--pb-text);
   background: var(--pb-bg);
   -webkit-font-smoothing: antialiased;

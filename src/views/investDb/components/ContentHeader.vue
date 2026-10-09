@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { investTypeTabs, type InvestProjectType } from '../../../mock/investDb'
+import ResultCountBar from '@/components/common/ResultCountBar.vue'
 
 defineProps<{
   totalCount: number
@@ -24,11 +25,13 @@ defineEmits<{
       wrap="wrap"
       :gap="12"
     >
-      <span class="result-count">
-        <span class="result-count-label">共收录</span>
-        <em>{{ totalCount.toLocaleString('zh-CN') }}</em>
-        <span class="result-count-label">家企业</span>
-      </span>
+      <ResultCountBar
+        class="invest-count"
+        prefix="共收录"
+        :total="totalCount.toLocaleString('zh-CN')"
+        unit="家企业"
+        decorated
+      />
       <a-input-search
         :value="keyword"
         class="project-search"
@@ -64,18 +67,8 @@ defineEmits<{
   min-height: 48px;
 }
 
-.result-count {
-  padding-left: 12px;
-  font-size: 15px;
-  color: #595959;
-  border-left: 3px solid var(--pb-primary);
-
-  em {
-    font-style: normal;
-    font-weight: 600;
-    color: var(--pb-primary);
-    margin: 0 4px;
-  }
+.invest-count {
+  --rc-em-margin: 0px;
 }
 
 .project-search {

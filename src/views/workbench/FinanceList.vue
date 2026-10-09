@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons-vue'
 import { financeBanks, type FinanceBank } from '@/mock/finance'
 import bannerImg from '@/assets/workbench/wb-finance-banner.png'
+import WbPageBanner from './components/WbPageBanner.vue'
 
 defineOptions({ name: 'FinanceList' })
 
@@ -23,15 +24,11 @@ const toggleBank = (bank: FinanceBank) => {
 
 <template>
   <div class="finance-list">
-    <section
-      class="page-banner"
-      :style="{ backgroundImage: `url(${bannerImg})` }"
-    >
-      <div class="banner-text">
-        <h2>科技金融</h2>
-        <p>郑州本地合作银行，为科技企业提供专属贷款支持</p>
-      </div>
-    </section>
+    <WbPageBanner
+      title="科技金融"
+      description="郑州本地合作银行，为科技企业提供专属贷款支持"
+      :image="bannerImg"
+    />
 
     <section class="page-card">
       <div class="bank-grid">
@@ -97,34 +94,6 @@ const toggleBank = (bank: FinanceBank) => {
   flex: 1;
   padding: 20px 24px 28px;
   overflow-y: auto;
-}
-
-.page-banner {
-  display: flex;
-  align-items: center;
-  min-height: 100px;
-  padding: 18px 26px 18px 90px;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  border-radius: 16px;
-}
-
-.banner-text {
-  h2 {
-    margin: 0;
-    color: #1f1f1f;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  p {
-    margin: 6px 0 0;
-    color: #999;
-    font-size: 14px;
-    line-height: 1.5;
-  }
 }
 
 .page-card {

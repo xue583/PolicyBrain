@@ -7,6 +7,9 @@ import type {
   EnterpriseTrademark,
   EnterpriseWorkCopyright,
 } from '../../mock/enterpriseDb'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PagedTable from '@/components/common/PagedTable.vue'
+import SectionTitle from '@/components/common/SectionTitle.vue'
 import ipPatentBg from '../../assets/enterpriseDb/container-291.png'
 import ipTrademarkBg from '../../assets/enterpriseDb/container-293.png'
 import ipSoftwareBg from '../../assets/enterpriseDb/container-294.png'
@@ -81,7 +84,6 @@ const ipPageTotal = (total: number) =>
   `共 ${Math.ceil(total / PAGE_SIZE) || 1} 页`
 
 const patentColumns = [
-  { title: '序号', key: 'index', width: 64, align: 'center' as const },
   { title: '专利名称', dataIndex: 'name', key: 'name', ellipsis: true },
   { title: '申请日', dataIndex: 'applyDate', key: 'applyDate', width: 120 },
   { title: '申请号', dataIndex: 'applyNo', key: 'applyNo', width: 156 },
@@ -107,7 +109,6 @@ const patentColumns = [
 ]
 
 const trademarkColumns = [
-  { title: '序号', key: 'index', width: 64, align: 'center' as const },
   { title: '商标', dataIndex: 'mark', key: 'mark', width: 140 },
   { title: '商标名称', dataIndex: 'name', key: 'name', ellipsis: true },
   { title: '申请日期', dataIndex: 'applyDate', key: 'applyDate', width: 130 },
@@ -117,7 +118,6 @@ const trademarkColumns = [
 ]
 
 const softwareColumns = [
-  { title: '序号', key: 'index', width: 64, align: 'center' as const },
   { title: '软件全称', dataIndex: 'fullName', key: 'fullName', ellipsis: true },
   { title: '软件简称', dataIndex: 'shortName', key: 'shortName', width: 150 },
   {
@@ -138,7 +138,6 @@ const softwareColumns = [
 ]
 
 const workColumns = [
-  { title: '序号', key: 'index', width: 64, align: 'center' as const },
   { title: '作品全称', dataIndex: 'fullName', key: 'fullName', ellipsis: true },
   { title: '登记号', dataIndex: 'registerNo', key: 'registerNo', width: 240 },
   { title: '作品类别', dataIndex: 'category', key: 'category', width: 110 },
@@ -164,10 +163,13 @@ const workColumns = [
 </script>
 
 <template>
-  <div v-if="!ipTotal" class="tab-empty">
-    <img :src="ipPatentBg" alt="" />
-    <p>暂无知识产权信息</p>
-  </div>
+  <EmptyState
+    v-if="!ipTotal"
+    class="tab-empty"
+    :image="ipPatentBg"
+    text="暂无知识产权信息"
+    :image-width="420"
+  />
   <template v-else>
     <div class="ip-summary">
       <article
@@ -185,167 +187,86 @@ const workColumns = [
     </div>
 
     <section v-if="patents.length" class="ip-section">
-      <h2 class="section-title">
-        专利
-        <em>{{ patents.length }}</em>
-        条
-      </h2>
-      <a-table
-        class="db-table"
-        bordered
+      <SectionTitle title="专利" :count="patents.length" />
+      <PagedTable
+        v-model:current="patentPage"
+        :index-width="64"
+        :show-total="ipPageTotal"
+        :show-pagination="patents.length > PAGE_SIZE"
+        :total="patents.length"
+        :page-size="PAGE_SIZE"
         :columns="patentColumns"
         :data-source="pagedPatents"
-        :pagination="false"
         :row-key="(row: EnterprisePatent) => row.id"
-        size="middle"
       >
-        <template #bodyCell="{ column, record, index }">
-          <template v-if="column.key === 'index'">
-            {{ (patentPage - 1) * PAGE_SIZE + index + 1 }}
-          </template>
-          <template v-else-if="column.key === 'name'">
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'name'">
             <span class="ip-name">{{ record.name }}</span>
           </template>
         </template>
-      </a-table>
-      <div
-        v-if="patents.length > PAGE_SIZE"
-        class="pagination-wrap ip-pagination"
-      >
-        <a-pagination
-          v-model:current="patentPage"
-          :total="patents.length"
-          :page-size="PAGE_SIZE"
-          :show-total="ipPageTotal"
-        />
-      </div>
+      </PagedTable>
     </section>
 
     <section v-if="trademarks.length" class="ip-section">
-      <h2 class="section-title">
-        商标
-        <em>{{ trademarks.length }}</em>
-        条
-      </h2>
-      <a-table
-        class="db-table"
-        bordered
+      <SectionTitle title="商标" :count="trademarks.length" />
+      <PagedTable
+        v-model:current="trademarkPage"
+        :index-width="64"
+        :show-total="ipPageTotal"
+        :show-pagination="trademarks.length > PAGE_SIZE"
+        :total="trademarks.length"
+        :page-size="PAGE_SIZE"
         :columns="trademarkColumns"
         :data-source="pagedTrademarks"
-        :pagination="false"
         :row-key="(row: EnterpriseTrademark) => row.id"
-        size="middle"
       >
-        <template #bodyCell="{ column, record, index }">
-          <template v-if="column.key === 'index'">
-            {{ (trademarkPage - 1) * PAGE_SIZE + index + 1 }}
-          </template>
-          <template v-else-if="column.key === 'mark'">
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'mark'">
             <span class="tm-mark">{{ record.mark }}</span>
           </template>
         </template>
-      </a-table>
-      <div
-        v-if="trademarks.length > PAGE_SIZE"
-        class="pagination-wrap ip-pagination"
-      >
-        <a-pagination
-          v-model:current="trademarkPage"
-          :total="trademarks.length"
-          :page-size="PAGE_SIZE"
-          :show-total="ipPageTotal"
-        />
-      </div>
+      </PagedTable>
     </section>
 
     <section v-if="softwareCopyrights.length" class="ip-section">
-      <h2 class="section-title">
-        软件著作权
-        <em>{{ softwareCopyrights.length }}</em>
-        条
-      </h2>
-      <a-table
-        class="db-table"
-        bordered
+      <SectionTitle title="软件著作权" :count="softwareCopyrights.length" />
+      <PagedTable
+        v-model:current="softwarePage"
+        :index-width="64"
+        :show-total="ipPageTotal"
+        :show-pagination="softwareCopyrights.length > PAGE_SIZE"
+        :total="softwareCopyrights.length"
+        :page-size="PAGE_SIZE"
         :columns="softwareColumns"
         :data-source="pagedSoftware"
-        :pagination="false"
         :row-key="(row: EnterpriseSoftwareCopyright) => row.id"
-        size="middle"
-      >
-        <template #bodyCell="{ column, index }">
-          <template v-if="column.key === 'index'">
-            {{ (softwarePage - 1) * PAGE_SIZE + index + 1 }}
-          </template>
-        </template>
-      </a-table>
-      <div
-        v-if="softwareCopyrights.length > PAGE_SIZE"
-        class="pagination-wrap ip-pagination"
-      >
-        <a-pagination
-          v-model:current="softwarePage"
-          :total="softwareCopyrights.length"
-          :page-size="PAGE_SIZE"
-          :show-total="ipPageTotal"
-        />
-      </div>
+      />
     </section>
 
     <section v-if="workCopyrights.length" class="ip-section">
-      <h2 class="section-title">
-        作品著作权
-        <em>{{ workCopyrights.length }}</em>
-        条
-      </h2>
-      <a-table
-        class="db-table"
-        bordered
+      <SectionTitle title="作品著作权" :count="workCopyrights.length" />
+      <PagedTable
+        v-model:current="workPage"
+        :index-width="64"
+        :show-total="ipPageTotal"
+        :show-pagination="workCopyrights.length > PAGE_SIZE"
+        :total="workCopyrights.length"
+        :page-size="PAGE_SIZE"
         :columns="workColumns"
         :data-source="pagedWorks"
-        :pagination="false"
         :row-key="(row: EnterpriseWorkCopyright) => row.id"
-        size="middle"
-      >
-        <template #bodyCell="{ column, index }">
-          <template v-if="column.key === 'index'">
-            {{ (workPage - 1) * PAGE_SIZE + index + 1 }}
-          </template>
-        </template>
-      </a-table>
-      <div
-        v-if="workCopyrights.length > PAGE_SIZE"
-        class="pagination-wrap ip-pagination"
-      >
-        <a-pagination
-          v-model:current="workPage"
-          :total="workCopyrights.length"
-          :page-size="PAGE_SIZE"
-          :show-total="ipPageTotal"
-        />
-      </div>
+      />
     </section>
   </template>
 </template>
 
 <style scoped lang="scss">
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 0 16px;
-  padding-left: 20px;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 26px;
-  color: #262626;
-  background: var(--section-title-bg) no-repeat left center;
-  background-size: 94px 26px;
-
-  em {
-    font-style: normal;
-    color: var(--pb-primary);
-  }
+.tab-empty {
+  --empty-gap: 12px;
+  --empty-padding: 24px 0 16px;
+  --empty-text-size: 16px;
+  --empty-text-weight: 400;
+  --empty-text-color: #8c8c8c;
 }
 
 .ip-summary {
@@ -390,6 +311,8 @@ const workColumns = [
 
 .ip-section {
   margin-bottom: 28px;
+  --pagination-padding: 20px 0 0;
+  --pagination-justify: flex-end;
 
   &:last-child {
     margin-bottom: 0;
@@ -415,32 +338,6 @@ const workColumns = [
   line-height: 1.3;
   text-align: center;
   word-break: break-all;
-}
-
-.pagination-wrap {
-  --pagination-padding: 20px 0 0;
-
-  &.ip-pagination {
-    --pagination-justify: flex-end;
-  }
-}
-
-.tab-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 0 16px;
-  color: #8c8c8c;
-
-  img {
-    width: min(420px, 100%);
-    height: auto;
-    margin-bottom: 12px;
-  }
-
-  p {
-    margin: 0;
-  }
 }
 
 @include below-lg {

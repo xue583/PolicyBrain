@@ -1,0 +1,53 @@
+// 设计稿应用字体（均可免费商用）：
+// - Alibaba PuHuiTi 2.0  正文/UI 字体，400/500/600/700 四档字重，
+//   子集为 GB2312 全集 + ASCII，缺失生僻字回退系统字体；
+// - Alimama ShuHeiTi     展示型标题字体（hero、板块标题）；
+// - DingTalk JinBuTi     标语/营销文案字体。
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi 2.0';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/alibaba-puhuiti-2.0-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi 2.0';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/alibaba-puhuiti-2.0-medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi 2.0';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/alibaba-puhuiti-2.0-semibold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi 2.0';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../assets/fonts/alibaba-puhuiti-2.0-bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Alimama ShuHeiTi';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../assets/fonts/alimama-shuheiti-bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DingTalk JinBuTi';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/dingtalk-jinbuti.woff2') format('woff2');
+}

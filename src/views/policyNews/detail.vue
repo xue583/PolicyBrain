@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import {
   ClockCircleOutlined,
   ExportOutlined,
@@ -8,30 +8,16 @@ import {
 } from '@ant-design/icons-vue'
 import { getPolicyById } from '../../mock/policyNews'
 import { sanitizeHtml } from '@/utils/sanitize'
-import type { BreadcrumbItem } from '@/components/BreadcrumbNav.vue'
+import DetailCard from '@/components/common/DetailCard.vue'
+import DetailPageShell from '@/components/common/DetailPageShell.vue'
 
 defineOptions({ name: 'PolicyNewsDetail' })
 
 const route = useRoute()
-const router = useRouter()
 
 const policyId = computed(() => Number(route.params.id))
 const policy = computed(() => getPolicyById(policyId.value))
 const safeContent = computed(() => sanitizeHtml(policy.value?.content ?? ''))
-
-const goHome = () => {
-  void router.push({ name: 'home' })
-}
-
-const goList = () => {
-  void router.push({ name: 'news' })
-}
-
-const breadcrumbItems: BreadcrumbItem[] = [
-  { label: '首页', onClick: goHome },
-  { label: '政策资讯', onClick: goList },
-  { label: '资讯详情' },
-]
 
 const openOriginal = () => {
   const url = policy.value?.originalUrl
@@ -40,94 +26,82 @@ const openOriginal = () => {
 </script>
 
 <template>
-  <div class="policy-detail">
-    <BreadcrumbNav :items="breadcrumbItems" @back="goList" />
-
-    <PageState :empty="policy ? '' : '未找到该政策资讯'">
-      <template v-if="policy">
-        <a-card class="detail-card header-card" :bordered="false">
-          <div class="title-row">
-            <h1 class="detail-title">{{ policy.title }}</h1>
-            <div class="status-area">
-              <span
-                class="status-badge"
-                :class="policy.status === 'expired' ? 'expired' : 'applying'"
-              >
-                {{ policy.status === 'expired' ? '已过期' : '申报中' }}
-              </span>
-              <p class="status-tip">请关注公示期及政府原文文件</p>
-            </div>
-          </div>
-
-          <div class="meta-row">
-            <span>发布日期：{{ policy.date }}</span>
-            <span>发文机构：{{ policy.department }}</span>
-            <span class="remain">
-              <ClockCircleOutlined />
-              剩余天数：{{ policy.daysRemaining }}天
-            </span>
-          </div>
-
-          <div class="tags-row">
-            <div class="tags">
-              <a-tag
-                v-for="tag in policy.tags"
-                :key="tag.text"
-                :color="tag.color"
-              >
-                {{ tag.text }}
-              </a-tag>
-            </div>
-            <a-button type="primary" class="origin-btn" @click="openOriginal">
-              <template #icon><ExportOutlined /></template>
-              查看原文
-            </a-button>
-          </div>
-        </a-card>
-
-        <a-card class="detail-card content-card" :bordered="false">
-          <!-- eslint-disable-next-line vue/no-v-html -- HTML 已通过 DOMPurify 消毒 -->
-          <div class="detail-body" v-html="safeContent" />
-
-          <div v-if="policy.attachments.length" class="attachments">
-            <a
-              v-for="file in policy.attachments"
-              :key="file.name"
-              class="attachment-item"
-              :href="file.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              @click.prevent
+  <DetailPageShell
+    list-label="政策资讯"
+    list-route="news"
+    detail-label="资讯详情"
+    :empty="policy ? '' : '未找到该政策资讯'"
+  >
+    <template v-if="policy">
+      <DetailCard
+        variant="header"
+        style="
+          --detail-header-bg: linear-gradient(180deg, #dbe9ff 0%, #ffffff 50%);
+        "
+      >
+        <div class="title-row">
+          <h1 class="detail-title">{{ policy.title }}</h1>
+          <div class="status-area">
+            <span
+              class="status-badge"
+              :class="policy.status === 'expired' ? 'expired' : 'applying'"
             >
-              <PaperClipOutlined />
-              <span>{{ file.name }}</span>
-            </a>
+              {{ policy.status === 'expired' ? '已过期' : '申报中' }}
+            </span>
+            <p class="status-tip">请关注公示期及政府原文文件</p>
           </div>
-        </a-card>
-      </template>
-    </PageState>
-  </div>
+        </div>
+
+        <div class="meta-row">
+          <span>发布日期：{{ policy.date }}</span>
+          <span>发文机构：{{ policy.department }}</span>
+          <span class="remain">
+            <ClockCircleOutlined />
+            剩余天数：{{ policy.daysRemaining }}天
+          </span>
+        </div>
+
+        <div class="tags-row">
+          <div class="tags">
+            <a-tag
+              v-for="tag in policy.tags"
+              :key="tag.text"
+              :color="tag.color"
+            >
+              {{ tag.text }}
+            </a-tag>
+          </div>
+          <a-button type="primary" class="origin-btn" @click="openOriginal">
+            <template #icon><ExportOutlined /></template>
+            查看原文
+          </a-button>
+        </div>
+      </DetailCard>
+
+      <DetailCard variant="content">
+        <!-- eslint-disable-next-line vue/no-v-html -- HTML 已通过 DOMPurify 消毒 -->
+        <div class="detail-body" v-html="safeContent" />
+
+        <div v-if="policy.attachments.length" class="attachments">
+          <a
+            v-for="file in policy.attachments"
+            :key="file.name"
+            class="attachment-item"
+            :href="file.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            @click.prevent
+          >
+            <PaperClipOutlined />
+            <span>{{ file.name }}</span>
+          </a>
+        </div>
+      </DetailCard>
+    </template>
+  </DetailPageShell>
 </template>
 
 <style scoped lang="scss">
-.policy-detail {
-  min-height: 480px;
-}
-
-.detail-card {
-  border-radius: 16px;
-  box-shadow: var(--pb-shadow-card);
-
-  :deep(.ant-card-body) {
-    padding: 28px 36px;
-  }
-
-  &.header-card {
-    margin-bottom: 16px;
-    background: linear-gradient(180deg, #dbe9ff 0%, #ffffff 50%);
-  }
-}
-
 .title-row {
   display: flex;
   align-items: flex-start;
@@ -270,12 +244,6 @@ const openOriginal = () => {
 }
 
 @media (max-width: 768px) {
-  .detail-card {
-    :deep(.ant-card-body) {
-      padding: 20px 16px;
-    }
-  }
-
   .title-row {
     flex-direction: column;
     gap: 12px;

@@ -19,6 +19,7 @@ import {
   type DeclareTag,
 } from '@/mock/declare'
 import bannerImg from '@/assets/workbench/wb-declare-banner.png'
+import WbPageBanner from './components/WbPageBanner.vue'
 
 defineOptions({ name: 'DeclareList' })
 
@@ -71,15 +72,12 @@ const serviceSections = computed(() =>
 
 <template>
   <div class="declare-list">
-    <section
-      class="page-banner"
-      :style="{ backgroundImage: `url(${bannerImg})` }"
-    >
-      <div class="banner-text">
-        <h2>政策申报</h2>
-        <p>选择需要申报的政策，填写相关信息后在线提交</p>
-      </div>
-    </section>
+    <WbPageBanner
+      title="政策申报"
+      description="选择需要申报的政策，填写相关信息后在线提交"
+      :image="bannerImg"
+      offset="120px"
+    />
 
     <section class="page-card">
       <template v-if="props.role === 'enterprise'">
@@ -220,34 +218,6 @@ const serviceSections = computed(() =>
   flex: 1;
   padding: 20px 24px 28px;
   overflow-y: auto;
-}
-
-.page-banner {
-  display: flex;
-  align-items: center;
-  min-height: 100px;
-  padding: 18px 26px 18px 120px;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
-  border-radius: 16px;
-}
-
-.banner-text {
-  h2 {
-    margin: 0;
-    color: #1f1f1f;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: #999;
-    font-size: 14px;
-    line-height: 1.5;
-  }
 }
 
 .page-card {

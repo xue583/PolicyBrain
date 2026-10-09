@@ -8,6 +8,11 @@ import {
   RollbackOutlined,
   TrophyOutlined,
 } from '@ant-design/icons-vue'
+import { usePagination } from '@/composables/usePagination'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
+import PanelTabs from '@/components/common/PanelTabs.vue'
+import { mockChangedAt } from '@/mock/personalCenter'
 import bannerImg from '@/assets/personalCenter/share-banner.png'
 import emptyImg from '@/assets/personalCenter/empty-message.png'
 
@@ -59,7 +64,7 @@ const inviteRecords: InviteRecord[] = Array.from({ length: 15 }, (_, i) => {
     id: i + 1,
     inviteePhone: phone,
     inviteeRole: rolePattern[i % rolePattern.length]!,
-    createdAt: '2026/8/24 09:15:07',
+    createdAt: mockChangedAt,
     inviterPhone: phone,
     inviterRole: '企服',
     reward: i < 4 ? '赠送一个月' : '超额无赠送',
@@ -85,18 +90,13 @@ const filteredInvites = computed(() =>
     : inviteRecords,
 )
 
-const current = ref(1)
-const pageSize = 10
-const pagedInvites = computed(() =>
-  filteredInvites.value.slice(
-    (current.value - 1) * pageSize,
-    current.value * pageSize,
-  ),
+const { currentPage, pageSize, total, pagedList, resetPage } = usePagination(
+  () => filteredInvites.value,
 )
 
 const switchTab = (tab: 'register' | 'invite') => {
   activeTab.value = tab
-  current.value = 1
+  resetPage()
 }
 
 const goHome = () => {
@@ -109,24 +109,14 @@ const rewardTagClass = (reward: InviteReward) =>
 
 <template>
   <div class="share-panel">
-    <div class="share-tabs">
-      <button
-        type="button"
-        class="share-tab"
-        :class="{ active: activeTab === 'register' }"
-        @click="switchTab('register')"
-      >
-        注册用户
-      </button>
-      <button
-        type="button"
-        class="share-tab"
-        :class="{ active: activeTab === 'invite' }"
-        @click="switchTab('invite')"
-      >
-        邀请情况
-      </button>
-    </div>
+    <PanelTabs
+      :tabs="[
+        { key: 'register', label: '注册用户' },
+        { key: 'invite', label: '邀请情况' },
+      ]"
+      :active-key="activeTab"
+      @update:active-key="switchTab"
+    />
 
     <div class="share-banner">
       <img class="banner-bg" :src="bannerImg" alt="" />
@@ -169,10 +159,7 @@ const rewardTagClass = (reward: InviteReward) =>
         :pagination="false"
       >
         <template #emptyText>
-          <div class="table-empty">
-            <img :src="emptyImg" alt="" />
-            <p>暂无数据</p>
-          </div>
+          <EmptyState :image="emptyImg" />
         </template>
       </a-table>
     </template>
@@ -216,7 +203,7 @@ const rewardTagClass = (reward: InviteReward) =>
           { title: '邀请人身份', dataIndex: 'inviterRole', width: 90 },
           { title: '赠送情况', dataIndex: 'reward', width: 100 },
         ]"
-        :data-source="pagedInvites"
+        :data-source="pagedList"
         :pagination="false"
         :scroll="{ x: 702 }"
       >
@@ -252,61 +239,21 @@ const rewardTagClass = (reward: InviteReward) =>
           </template>
         </template>
         <template #emptyText>
-          <div class="table-empty">
-            <img :src="emptyImg" alt="" />
-            <p>暂无数据</p>
-          </div>
+          <EmptyState :image="emptyImg" />
         </template>
       </a-table>
 
-      <div v-if="filteredInvites.length > 0" class="table-pagination">
-        <span class="table-total">共{{ filteredInvites.length }}条</span>
-        <a-pagination
-          v-model:current="current"
-          :total="filteredInvites.length"
-          :page-size="pageSize"
-          :show-size-changer="false"
-        />
-      </div>
+      <PaginationBar
+        v-if="total > 0"
+        v-model:current="currentPage"
+        :total="total"
+        :page-size="pageSize"
+      />
     </template>
   </div>
 </template>
 
 <style scoped lang="scss">
-.share-tabs {
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  border-bottom: 1px solid var(--pb-line);
-}
-
-.share-tab {
-  position: relative;
-  padding: 0 2px 14px;
-  border: none;
-  background: none;
-  font-size: 16px;
-  font-family: inherit;
-  color: var(--pb-text);
-  cursor: pointer;
-
-  &.active {
-    color: var(--pb-primary);
-    font-weight: 600;
-
-    &::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -1px;
-      height: 3px;
-      border-radius: 2px;
-      background: var(--pb-primary);
-    }
-  }
-}
-
 .share-banner {
   position: relative;
   margin-top: 20px;
@@ -443,29 +390,16 @@ const rewardTagClass = (reward: InviteReward) =>
 
 /* 表格 */
 .invite-table {
-  :deep(.ant-table-cell) {
-    padding: 12px 8px;
-    font-size: 13px;
-  }
-
-  :deep(.ant-table-thead > tr > th) {
-    background: #ecf3ff;
-    color: var(--pb-text);
-    font-weight: 600;
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.9);
-
-    &:last-child {
-      border-inline-end: none;
-    }
-  }
+  @include pc-table(
+    $padding: 12px 8px,
+    $font-size: 14px,
+    $header-dividers: true,
+    $framed: false
+  );
 
   :deep(.ant-table-thead > tr > th:first-child) {
     border-start-start-radius: 8px;
     border-start-end-radius: 0;
-  }
-
-  :deep(.ant-table-cell) {
-    font-size: 14px;
   }
 
   &.with-frame {
@@ -474,27 +408,6 @@ const rewardTagClass = (reward: InviteReward) =>
       border-radius: 8px;
       overflow: hidden;
     }
-  }
-}
-
-.table-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 40px 0 48px;
-
-  img {
-    width: 150px;
-    height: auto;
-    user-select: none;
-  }
-
-  p {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--pb-primary);
   }
 }
 
@@ -527,19 +440,5 @@ const rewardTagClass = (reward: InviteReward) =>
 .reward-tag.reward-exceed {
   background: #f3f3f3;
   color: #8c8c8c;
-}
-
-.table-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 24px 0 8px;
-}
-
-.table-total {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--pb-text);
 }
 </style>

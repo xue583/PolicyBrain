@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PanelTabs from '@/components/common/PanelTabs.vue'
 import emptyImg from '@/assets/personalCenter/empty-invoice.png'
 
 defineOptions({ name: 'InvoicePanel' })
@@ -34,24 +36,15 @@ const switchTab = (tab: 'consum' | 'invoice') => {
 
 <template>
   <div class="invoice-panel">
-    <div class="invoice-tabs">
-      <button
-        type="button"
-        class="invoice-tab"
-        :class="{ active: activeTab === 'consum' }"
-        @click="switchTab('consum')"
-      >
-        消费记录
-      </button>
-      <button
-        type="button"
-        class="invoice-tab"
-        :class="{ active: activeTab === 'invoice' }"
-        @click="switchTab('invoice')"
-      >
-        发票记录
-      </button>
-    </div>
+    <PanelTabs
+      class="panel-tabs-mb"
+      :tabs="[
+        { key: 'consum', label: '消费记录' },
+        { key: 'invoice', label: '发票记录' },
+      ]"
+      :active-key="activeTab"
+      @update:active-key="switchTab"
+    />
 
     <a-table
       v-if="activeTab === 'consum'"
@@ -68,10 +61,7 @@ const switchTab = (tab: 'consum' | 'invoice') => {
       :pagination="false"
     >
       <template #emptyText>
-        <div class="table-empty">
-          <img :src="emptyImg" alt="" />
-          <p>暂无数据</p>
-        </div>
+        <EmptyState :image="emptyImg" style="--empty-padding: 48px 0 56px" />
       </template>
     </a-table>
 
@@ -89,93 +79,18 @@ const switchTab = (tab: 'consum' | 'invoice') => {
       :pagination="false"
     >
       <template #emptyText>
-        <div class="table-empty">
-          <img :src="emptyImg" alt="" />
-          <p>暂无数据</p>
-        </div>
+        <EmptyState :image="emptyImg" style="--empty-padding: 48px 0 56px" />
       </template>
     </a-table>
   </div>
 </template>
 
 <style scoped lang="scss">
-.invoice-tabs {
-  display: flex;
-  align-items: center;
-  gap: 40px;
+.panel-tabs-mb {
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--pb-line);
-}
-
-.invoice-tab {
-  position: relative;
-  padding: 0 2px 14px;
-  border: none;
-  background: none;
-  font-size: 16px;
-  font-family: inherit;
-  color: var(--pb-text);
-  cursor: pointer;
-
-  &.active {
-    color: var(--pb-primary);
-    font-weight: 600;
-
-    &::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -1px;
-      height: 3px;
-      border-radius: 2px;
-      background: var(--pb-primary);
-    }
-  }
 }
 
 .invoice-table {
-  :deep(.ant-table-cell) {
-    padding: 13px 8px;
-    font-size: 13px;
-  }
-
-  :deep(.ant-table-thead > tr > th) {
-    background: #ecf3ff;
-    color: var(--pb-text);
-    font-weight: 600;
-    border-inline-end: 1px solid rgba(255, 255, 255, 0.9);
-
-    &:last-child {
-      border-inline-end: none;
-    }
-  }
-
-  :deep(.ant-table-container) {
-    border: 1px solid #dce7f9;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-}
-
-.table-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 48px 0 56px;
-
-  img {
-    width: 150px;
-    height: auto;
-    user-select: none;
-  }
-
-  p {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--pb-primary);
-  }
+  @include pc-table($header-dividers: true);
 }
 </style>

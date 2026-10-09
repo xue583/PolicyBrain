@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { SearchOutlined } from '@ant-design/icons-vue'
 import {
   enterpriseQualYears,
   type EnterpriseQualPersonnel,
@@ -15,6 +14,10 @@ import {
 } from '@/utils/filterPolicies'
 import { useFilteredList } from '@/composables/useFilteredList'
 import { downloadCsv } from '@/utils/downloadCsv'
+import EmptyState from '@/components/common/EmptyState.vue'
+import FilterRow from '@/components/common/FilterRow.vue'
+import PagedTable from '@/components/common/PagedTable.vue'
+import SearchRow from '@/components/common/SearchRow.vue'
 import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
 import exportIcon from '../../assets/enterpriseDb/export.png'
 import tipsIcon from '../../assets/enterpriseDb/tips.png'
@@ -32,11 +35,11 @@ const props = defineProps<{
 }>()
 
 const subTab = ref<QualSubTab>('certs')
-const keywordInput = ref('')
 const appliedKeyword = ref('')
 const filters = reactive({
   year: null as number | null,
 })
+const searchRowRef = ref<InstanceType<typeof SearchRow>>()
 
 const tabFilters = computed(() => ({
   year: filters.year,
@@ -66,8 +69,8 @@ const { currentPage, pagedList, total, resetPage, pageSize } = useFilteredList(
 
 const resetFilters = () => {
   filters.year = null
-  keywordInput.value = ''
   appliedKeyword.value = ''
+  searchRowRef.value?.clearKeyword()
   resetPage()
 }
 
@@ -81,13 +84,12 @@ const selectYear = (year: number) => {
   resetPage()
 }
 
-const onSearch = () => {
-  appliedKeyword.value = keywordInput.value
+const onSearch = (keyword: string) => {
+  appliedKeyword.value = keyword
   resetPage()
 }
 
 const certColumns = [
-  { title: '序号', key: 'index', width: 72, align: 'center' as const },
   { title: '证书类别', dataIndex: 'category', key: 'category', ellipsis: true },
   { title: '证书名称', dataIndex: 'name', key: 'name', ellipsis: true },
   { title: '证书编号', dataIndex: 'certNo', key: 'certNo', width: 220 },
@@ -101,7 +103,6 @@ const certColumns = [
 ]
 
 const personnelColumns = [
-  { title: '序号', key: 'index', width: 72, align: 'center' as const },
   { title: '姓名', dataIndex: 'name', key: 'name', width: 120 },
   {
     title: '人员证书编号',
@@ -116,7 +117,6 @@ const personnelColumns = [
 ]
 
 const reviewColumns = [
-  { title: '序号', key: 'index', width: 72, align: 'center' as const },
   {
     title: '资质申请事项',
     dataIndex: 'matter',
@@ -251,68 +251,45 @@ const exportList = () => {
       </button>
     </div>
 
-    <div class="filter-row">
-      <span class="filter-label">选择年份：</span>
-      <div class="filter-options">
-        <a
-          v-for="year in enterpriseQualYears"
-          :key="year"
-          class="option-link"
-          :class="{ active: filters.year === year }"
-          @click="selectYear(year)"
-        >
-          {{ year }}
-        </a>
-      </div>
-    </div>
+    <FilterRow label="选择年份：">
+      <a
+        v-for="year in enterpriseQualYears"
+        :key="year"
+        class="option-link"
+        :class="{ active: filters.year === year }"
+        @click="selectYear(year)"
+      >
+        {{ year }}
+      </a>
+    </FilterRow>
 
     <div class="filter-row search-row">
       <span class="filter-label">搜索：</span>
-      <a-input
-        v-model:value="keywordInput"
-        class="search-input"
-        allow-clear
+      <SearchRow
+        ref="searchRowRef"
         placeholder="请输入关键词搜索"
-        @press-enter="onSearch"
-      >
-        <template #prefix>
-          <SearchOutlined />
-        </template>
-      </a-input>
-      <a-button type="primary" @click="onSearch">查询</a-button>
-      <a-button class="reset-btn" @click="resetFilters">重置</a-button>
-    </div>
-
-    <a-table
-      class="db-table"
-      bordered
-      :columns="columns"
-      :data-source="pagedList"
-      :pagination="false"
-      :row-key="(row: { id: number }) => row.id"
-      size="middle"
-    >
-      <template #emptyText>
-        <div class="table-empty">
-          <img :src="emptyIllustration" alt="" />
-          <p>暂无数据</p>
-        </div>
-      </template>
-      <template #bodyCell="{ column, index }">
-        <template v-if="column.key === 'index'">
-          {{ (currentPage - 1) * pageSize + index + 1 }}
-        </template>
-      </template>
-    </a-table>
-
-    <div v-if="total" class="pagination-wrap">
-      <a-pagination
-        v-model:current="currentPage"
-        :total="total"
-        :page-size="pageSize"
-        :show-total="(t: number) => `共 ${t} 条`"
+        @search="onSearch"
+        @reset="resetFilters"
       />
     </div>
+
+    <PagedTable
+      v-model:current="currentPage"
+      :show-pagination="total > 0"
+      :total="total"
+      :page-size="pageSize"
+      :columns="columns"
+      :data-source="pagedList"
+      :row-key="(row: { id: number }) => row.id"
+    >
+      <template #emptyText>
+        <EmptyState
+          class="qual-empty"
+          :image="emptyIllustration"
+          :image-width="280"
+        />
+      </template>
+    </PagedTable>
   </div>
 </template>
 
@@ -414,6 +391,17 @@ const exportList = () => {
 
 .qual-panel {
   --pagination-padding: 20px 0 0;
+
+  :deep(.ant-pagination) {
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  :deep(.ant-pagination-total-text) {
+    flex: 1;
+    margin-inline-end: 0;
+  }
 }
 
 .filter-row {
@@ -432,67 +420,39 @@ const exportList = () => {
 .search-row {
   align-items: center;
   margin-bottom: 16px;
-}
+  --search-input-width: auto;
 
-.search-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.reset-btn {
-  color: var(--pb-primary);
-  border-color: var(--pb-primary);
-  background: #fff;
-
-  &:hover,
-  &:focus {
-    color: var(--pb-primary-hover);
-    border-color: var(--pb-primary-hover);
-  }
-}
-
-.db-table {
-  :deep(.ant-table-placeholder) {
-    padding: 48px 16px !important;
-  }
-
-  :deep(.ant-empty-image) {
-    display: none;
-  }
-}
-
-.table-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 0 8px;
-
-  img {
-    width: min(280px, 100%);
-    height: auto;
-  }
-
-  p {
-    margin: 8px 0 0;
-    color: var(--pb-primary);
-    font-size: 15px;
-  }
-}
-
-.pagination-wrap {
-  --pagination-padding: 20px 0 0;
-
-  :deep(.ant-pagination) {
-    width: 100%;
-    display: flex;
-    align-items: center;
-  }
-
-  :deep(.ant-pagination-total-text) {
+  :deep(.search-input) {
     flex: 1;
-    margin-inline-end: 0;
+    min-width: 0;
   }
+
+  :deep(.search-reset) {
+    color: var(--pb-primary);
+    border-color: var(--pb-primary);
+    background: #fff;
+
+    &:hover,
+    &:focus {
+      color: var(--pb-primary-hover);
+      border-color: var(--pb-primary-hover);
+    }
+  }
+}
+
+:deep(.ant-table-placeholder) {
+  padding: 48px 16px !important;
+}
+
+:deep(.ant-empty-image) {
+  display: none;
+}
+
+.qual-empty {
+  --empty-gap: 8px;
+  --empty-padding: 12px 0 8px;
+  --empty-text-size: 15px;
+  --empty-text-weight: 400;
 }
 
 @media (max-width: 768px) {
@@ -501,17 +461,17 @@ const exportList = () => {
     flex-direction: column;
   }
 
-  .filter-label {
+  :deep(.filter-label) {
     width: auto;
   }
 
   .search-row {
     flex-wrap: wrap;
-  }
 
-  .search-input {
-    flex: 1 1 100%;
-    max-width: 100%;
+    :deep(.search-input) {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
   }
 }
 </style>

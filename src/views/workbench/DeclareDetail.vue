@@ -14,7 +14,7 @@ import {
   type DeclareCondition,
   type DeclarePolicy,
 } from '@/mock/declare'
-import emptySearchImg from '@/assets/workbench/wb-empty-search.png'
+import WbEmptyState from './components/WbEmptyState.vue'
 
 defineOptions({ name: 'DeclareDetail' })
 
@@ -99,8 +99,10 @@ const onEnter = () => {
         <p class="detail-sub">请先选择企业，查看该企业数据与政策条件的对比</p>
 
         <div v-if="!companySelected" class="empty-state">
-          <img :src="emptySearchImg" alt="" class="empty-img" />
-          <p class="empty-text">请选择筛选条件后点击“查看结果”</p>
+          <WbEmptyState
+            text="请选择筛选条件后点击“查看结果”"
+            :image-width="220"
+          />
         </div>
 
         <div v-else class="condition-list">
@@ -296,18 +298,6 @@ const onEnter = () => {
   flex-direction: column;
   align-items: center;
   margin-top: 110px;
-}
-
-.empty-img {
-  width: 220px;
-  height: auto;
-  object-fit: contain;
-}
-
-.empty-text {
-  margin: 18px 0 0;
-  color: #999;
-  font-size: 13px;
 }
 
 .condition-list {

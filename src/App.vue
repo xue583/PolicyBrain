@@ -43,6 +43,7 @@ watch(
         borderRadius: 8,
         borderRadiusLG: 20,
         colorBgLayout: 'transparent',
+        fontFamily: 'var(--pb-font-body)',
       },
       components: {
         Layout: {

@@ -17,6 +17,7 @@ import FinanceList from './FinanceList.vue'
 import IndustryList from './IndustryList.vue'
 import ManageList from './ManageList.vue'
 import TransformList from './TransformList.vue'
+import WbTaskMenu from './components/WbTaskMenu.vue'
 import { declarePolicies } from '@/mock/declare'
 import type { DeclarePolicy } from '@/mock/declare'
 import { buildConversation, type ChatMessage } from '@/mock/workbenchChat'
@@ -26,7 +27,6 @@ import chevronDownIcon from '@/assets/workbench/wb-chevron-down.png'
 import chevronRightIcon from '@/assets/workbench/wb-chevron-right.png'
 import copyIcon from '@/assets/workbench/wb-copy.png'
 import declareIcon from '@/assets/workbench/wb-declare.png'
-import deleteIcon from '@/assets/workbench/wb-delete.png'
 import dislikeIcon from '@/assets/workbench/wb-dislike.png'
 import editIcon from '@/assets/workbench/wb-edit.png'
 import filterIcon from '@/assets/workbench/wb-filter.png'
@@ -376,31 +376,9 @@ const taskRowIcon = (task: TaskItem) =>
         >
           <img :src="pinIcon" alt="" class="task-icon" />
           <span class="task-name">{{ task.name }}</span>
-          <a-dropdown :trigger="['click']" placement="bottomRight">
+          <WbTaskMenu @action="(action) => onMenuAction(task, action)">
             <span class="task-more" @click.stop>⋮</span>
-            <template #overlay>
-              <a-menu
-                class="task-menu"
-                @click="
-                  ({ key }: { key: string | number }) =>
-                    onMenuAction(task, String(key))
-                "
-              >
-                <a-menu-item key="pin">
-                  <img :src="pinIcon" alt="" class="menu-icon" />
-                  <span>置顶任务</span>
-                </a-menu-item>
-                <a-menu-item key="rename">
-                  <img :src="editIcon" alt="" class="menu-icon" />
-                  <span>重命名</span>
-                </a-menu-item>
-                <a-menu-item key="delete" class="is-danger">
-                  <img :src="deleteIcon" alt="" class="menu-icon" />
-                  <span>删除任务</span>
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
+          </WbTaskMenu>
         </div>
       </div>
 
@@ -422,31 +400,9 @@ const taskRowIcon = (task: TaskItem) =>
         >
           <img :src="taskRowIcon(task)" alt="" class="task-icon" />
           <span class="task-name">{{ task.name }}</span>
-          <a-dropdown :trigger="['click']" placement="bottomRight">
+          <WbTaskMenu @action="(action) => onMenuAction(task, action)">
             <span class="task-more" @click.stop>⋮</span>
-            <template #overlay>
-              <a-menu
-                class="task-menu"
-                @click="
-                  ({ key }: { key: string | number }) =>
-                    onMenuAction(task, String(key))
-                "
-              >
-                <a-menu-item key="pin">
-                  <img :src="pinIcon" alt="" class="menu-icon" />
-                  <span>置顶任务</span>
-                </a-menu-item>
-                <a-menu-item key="rename">
-                  <img :src="editIcon" alt="" class="menu-icon" />
-                  <span>重命名</span>
-                </a-menu-item>
-                <a-menu-item key="delete" class="is-danger">
-                  <img :src="deleteIcon" alt="" class="menu-icon" />
-                  <span>删除任务</span>
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
+          </WbTaskMenu>
         </div>
       </div>
     </aside>
@@ -536,8 +492,10 @@ const taskRowIcon = (task: TaskItem) =>
 
           <div v-else class="welcome">
             <div class="welcome-hero">
-              <img :src="robotImg" alt="" class="welcome-avatar" />
-              <h1 class="welcome-title">小通AI 智答</h1>
+              <div class="welcome-hero-inner">
+                <img :src="robotImg" alt="" class="welcome-avatar" />
+                <h1 class="welcome-title">小通AI 智答</h1>
+              </div>
               <p class="welcome-sub">
                 基于郑州市政策数据库，为您提供智能政策咨询与申报指导
               </p>
@@ -800,19 +758,6 @@ const taskRowIcon = (task: TaskItem) =>
   opacity: 1;
 }
 
-.task-menu {
-  .menu-icon {
-    width: 15px;
-    height: 15px;
-    margin-right: 8px;
-    vertical-align: -2px;
-  }
-
-  &.ant-menu .ant-menu-item.is-danger {
-    color: #ff4d4f;
-  }
-}
-
 .workbench-main {
   display: flex;
   flex-direction: column;
@@ -858,9 +803,9 @@ const taskRowIcon = (task: TaskItem) =>
 .welcome {
   display: flex;
   flex-direction: column;
+  align-items: center;
   flex: 1;
   width: 100%;
-  max-width: 760px;
   margin: 0 auto;
 }
 
@@ -871,14 +816,21 @@ const taskRowIcon = (task: TaskItem) =>
   margin-top: 72px;
 }
 
+.welcome-hero-inner {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
 .welcome-avatar {
-  width: 54px;
-  height: 54px;
+  width: 68px;
+  height: 63px;
   object-fit: contain;
 }
 
 .welcome-title {
   margin: 12px 0 0;
+  font-family: var(--pb-font-display);
   font-size: 26px;
   font-weight: 600;
   background: linear-gradient(0deg, #2151a2 0%, #2fabe0 100%);
@@ -891,37 +843,46 @@ const taskRowIcon = (task: TaskItem) =>
 .welcome-sub {
   margin: 12px 0 0;
   color: #666;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .welcome-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: 100%;
   margin-top: 46px;
 }
 
 .welcome-label {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   color: #1f1f1f;
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 600;
+  text-align: left;
 }
 
 .recommend-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  justify-content: start;
+  column-gap: 24px;
+  row-gap: 16px;
+  max-width: 100%;
 }
 
 .recommend-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 10px;
+  padding: 8px 14px;
   color: #333;
-  font-size: 11.5px;
+  font-size: 14px;
   white-space: nowrap;
   background: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 20px;
   box-shadow: 0 2px 8px rgba(31, 56, 88, 0.06);
   cursor: pointer;
   transition:
@@ -1203,6 +1164,21 @@ const taskRowIcon = (task: TaskItem) =>
   .chat-footer {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .recommend-grid {
+    grid-template-columns: repeat(2, max-content);
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .recommend-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recommend-chip {
+    white-space: normal;
   }
 }
 </style>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFilteredList } from '@/composables/useFilteredList'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
+import { useCollapsedList } from '@/composables/useCollapsedList'
 import {
   DownOutlined,
   ClockCircleOutlined,
@@ -22,9 +23,6 @@ defineOptions({ name: 'PolicyNews' })
 
 const router = useRouter()
 
-const showMoreRegions = ref(false)
-const showMoreIndustries = ref(false)
-
 const keyword = useRouteKeyword()
 
 const filters = reactive({
@@ -33,6 +31,11 @@ const filters = reactive({
   levels: [] as string[],
   infoTypes: [] as string[],
 })
+
+const { showMore: showMoreRegions, visibleList: visibleRegions } =
+  useCollapsedList(regions, 12)
+const { showMore: showMoreIndustries, visibleList: visibleIndustries } =
+  useCollapsedList(industries, 5)
 
 const selectedConditions = computed(() => {
   const list: { key: string; label: string }[] = []
@@ -54,14 +57,6 @@ const selectedConditions = computed(() => {
   })
   return list
 })
-
-const visibleRegions = computed(() =>
-  showMoreRegions.value ? regions : regions.slice(0, 12),
-)
-
-const visibleIndustries = computed(() =>
-  showMoreIndustries.value ? industries : industries.slice(0, 5),
-)
 
 const filteredList = computed(() =>
   filterPolicyNews(mockPolicies, {

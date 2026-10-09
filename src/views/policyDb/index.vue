@@ -2,12 +2,12 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useFilteredList } from '@/composables/useFilteredList'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
-import {
-  BankOutlined,
-  DeleteOutlined,
-  DownOutlined,
-  EyeOutlined,
-} from '@ant-design/icons-vue'
+import { useCollapsedList } from '@/composables/useCollapsedList'
+import { BankOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import FilterRow from '@/components/common/FilterRow.vue'
+import PagedTable from '@/components/common/PagedTable.vue'
+import ResultCountBar from '@/components/common/ResultCountBar.vue'
+import SelectedConditionsBar from '@/components/common/SelectedConditionsBar.vue'
 import {
   mockPolicyDb,
   policyDbLevels,
@@ -26,9 +26,6 @@ const COLLAPSED_COUNT = 10
 const keyword = useRouteKeyword()
 
 const levels = ref<string[]>(['municipal'])
-const showMoreGrades = ref(true)
-const showMoreDepartments = ref(false)
-const showMoreTags = ref(false)
 
 const filters = reactive({
   grade: '',
@@ -67,21 +64,12 @@ const selectedConditions = computed(() => {
   return list
 })
 
-const visibleGrades = computed(() =>
-  showMoreGrades.value ? policyGrades : policyGrades.slice(0, COLLAPSED_COUNT),
-)
-
-const visibleDepartments = computed(() =>
-  showMoreDepartments.value
-    ? policyDepartments
-    : policyDepartments.slice(0, COLLAPSED_COUNT),
-)
-
-const visibleIndustryTags = computed(() =>
-  showMoreTags.value
-    ? policyIndustryTags
-    : policyIndustryTags.slice(0, COLLAPSED_COUNT),
-)
+const { showMore: showMoreGrades, visibleList: visibleGrades } =
+  useCollapsedList(policyGrades, COLLAPSED_COUNT, { initialExpanded: true })
+const { showMore: showMoreDepartments, visibleList: visibleDepartments } =
+  useCollapsedList(policyDepartments, COLLAPSED_COUNT)
+const { showMore: showMoreTags, visibleList: visibleIndustryTags } =
+  useCollapsedList(policyIndustryTags, COLLAPSED_COUNT)
 
 const filteredList = computed(() =>
   filterPolicyDb(mockPolicyDb, {
@@ -136,10 +124,6 @@ watch(
   },
 )
 
-const onFilterChange = () => {
-  // resetPage 由 watch 自动触发
-}
-
 const columns = [
   {
     title: '政策名称/支持产业',
@@ -176,65 +160,53 @@ const columns = [
     <div class="policy-db">
       <div class="filter-panel">
         <a-card class="pb-card-lg">
-          <div class="filter-row">
-            <span class="filter-label">政策等级：</span>
-            <div class="filter-options">
-              <a
-                v-for="grade in visibleGrades"
-                :key="grade"
-                class="option-link"
-                :class="{ active: filters.grade === grade }"
-                @click="selectFilter('grade', grade)"
-              >
-                {{ grade }}
-              </a>
-            </div>
-            <a class="more-link" @click="showMoreGrades = !showMoreGrades">
-              {{ showMoreGrades ? '收起' : '更多' }}
-              <DownOutlined :class="{ rotated: showMoreGrades }" />
-            </a>
-          </div>
-
-          <div class="filter-row">
-            <span class="filter-label">发布单位：</span>
-            <div class="filter-options">
-              <a
-                v-for="dept in visibleDepartments"
-                :key="dept"
-                class="option-link"
-                :class="{ active: filters.department === dept }"
-                @click="selectFilter('department', dept)"
-              >
-                {{ dept }}
-              </a>
-            </div>
+          <FilterRow
+            label="政策等级："
+            v-model:expanded="showMoreGrades"
+            collapsible
+          >
             <a
-              class="more-link"
-              @click="showMoreDepartments = !showMoreDepartments"
+              v-for="grade in visibleGrades"
+              :key="grade"
+              class="option-link"
+              :class="{ active: filters.grade === grade }"
+              @click="selectFilter('grade', grade)"
             >
-              {{ showMoreDepartments ? '收起' : '更多' }}
-              <DownOutlined :class="{ rotated: showMoreDepartments }" />
+              {{ grade }}
             </a>
-          </div>
+          </FilterRow>
 
-          <div class="filter-row">
-            <span class="filter-label">产业标签：</span>
-            <div class="filter-options">
-              <a
-                v-for="tag in visibleIndustryTags"
-                :key="tag"
-                class="option-link"
-                :class="{ active: filters.industryTag === tag }"
-                @click="selectFilter('industryTag', tag)"
-              >
-                {{ tag }}
-              </a>
-            </div>
-            <a class="more-link" @click="showMoreTags = !showMoreTags">
-              {{ showMoreTags ? '收起' : '更多' }}
-              <DownOutlined :class="{ rotated: showMoreTags }" />
+          <FilterRow
+            label="发布单位："
+            v-model:expanded="showMoreDepartments"
+            collapsible
+          >
+            <a
+              v-for="dept in visibleDepartments"
+              :key="dept"
+              class="option-link"
+              :class="{ active: filters.department === dept }"
+              @click="selectFilter('department', dept)"
+            >
+              {{ dept }}
             </a>
-          </div>
+          </FilterRow>
+
+          <FilterRow
+            label="产业标签："
+            v-model:expanded="showMoreTags"
+            collapsible
+          >
+            <a
+              v-for="tag in visibleIndustryTags"
+              :key="tag"
+              class="option-link"
+              :class="{ active: filters.industryTag === tag }"
+              @click="selectFilter('industryTag', tag)"
+            >
+              {{ tag }}
+            </a>
+          </FilterRow>
 
           <div class="filter-row">
             <span class="filter-label">资讯类型：</span>
@@ -242,47 +214,22 @@ const columns = [
               <a-checkbox-group
                 v-model:value="filters.infoTypes"
                 :options="infoTypes"
-                @change="onFilterChange"
               />
             </div>
           </div>
 
-          <div class="selected-section">
-            <div class="filter-row selected-row">
-              <span class="filter-label">已选条件：</span>
-              <div class="selected-tags">
-                <template v-if="selectedConditions.length">
-                  <a-tag
-                    v-for="item in selectedConditions"
-                    :key="item.key"
-                    closable
-                    class="condition-tag"
-                    @close="removeCondition(item.key)"
-                  >
-                    {{ item.label }}
-                  </a-tag>
-                </template>
-                <span v-else class="empty-selected">暂无筛选条件</span>
-              </div>
-              <a
-                v-if="selectedConditions.length"
-                class="clear-link"
-                @click="clearConditions"
-              >
-                <DeleteOutlined />
-                删除
-              </a>
-            </div>
-          </div>
+          <SelectedConditionsBar
+            :conditions="selectedConditions"
+            @remove="removeCondition"
+            @clear="clearConditions"
+          />
         </a-card>
       </div>
 
       <a-card class="pb-card-lg">
         <div class="db-panel">
           <div class="toolbar">
-            <span class="result-count">
-              共找到 <em>{{ total }}</em> 项政策
-            </span>
+            <ResultCountBar :total="total" unit="项政策" />
             <div class="level-filter">
               <span class="level-label">政策级别:</span>
               <a-checkbox-group
@@ -292,14 +239,16 @@ const columns = [
             </div>
           </div>
 
-          <a-table
-            class="db-table"
-            bordered
+          <PagedTable
+            v-model:current="currentPage"
+            class="policy-table"
+            :with-index="false"
+            quick-jumper
+            :total="total"
+            :page-size="pageSize"
             :columns="columns"
             :data-source="pagedList"
-            :pagination="false"
             :row-key="(row: PolicyDbItem) => row.id"
-            size="middle"
           >
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'name'">
@@ -339,17 +288,7 @@ const columns = [
                 </span>
               </template>
             </template>
-          </a-table>
-
-          <div class="pagination-wrap">
-            <a-pagination
-              v-model:current="currentPage"
-              :total="total"
-              :page-size="pageSize"
-              show-quick-jumper
-              :show-total="(t: number) => `共 ${t} 条`"
-            />
-          </div>
+          </PagedTable>
         </div>
       </a-card>
     </div>
@@ -380,18 +319,6 @@ const columns = [
   padding: 0 0 12px;
 }
 
-.result-count {
-  font-size: 15px;
-  color: #595959;
-
-  em {
-    font-style: normal;
-    font-weight: 600;
-    color: var(--pb-primary);
-    margin: 0 2px;
-  }
-}
-
 .level-filter {
   display: flex;
   align-items: center;
@@ -410,7 +337,7 @@ const columns = [
   white-space: nowrap;
 }
 
-.db-table {
+.policy-table {
   --db-table-font-size: 16px;
   --db-table-cell-padding: 22px;
 }
@@ -489,7 +416,7 @@ const columns = [
     flex-direction: column;
   }
 
-  .filter-label {
+  :deep(.filter-label) {
     width: auto;
   }
 }

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { EyeOutlined, HeartFilled } from '@ant-design/icons-vue'
 import followHeartIcon from '../../assets/icon-follow-heart.png'
 import { getPolicyDbDetail } from '../../mock/policyDb'
 import { useFollowable } from '@/composables/useFollowable'
-import type { BreadcrumbItem } from '@/components/BreadcrumbNav.vue'
+import DetailCard from '@/components/common/DetailCard.vue'
+import DetailPageShell from '@/components/common/DetailPageShell.vue'
+import DetailTabs from '@/components/common/DetailTabs.vue'
 import PublicityPanel from './PublicityPanel.vue'
 import SupportPanel from './SupportPanel.vue'
 import ApplyInfoPanel from './ApplyInfoPanel.vue'
@@ -16,7 +18,6 @@ defineOptions({ name: 'PolicyDbDetail' })
 const FOLLOW_KEY = 'pb_followed_policy_db'
 
 const route = useRoute()
-const router = useRouter()
 
 const policyId = computed(() => Number(route.params.id))
 const policy = computed(() => getPolicyDbDetail(policyId.value))
@@ -32,138 +33,98 @@ watch(
   },
   { immediate: true },
 )
-
-const goHome = () => {
-  void router.push({ name: 'home' })
-}
-
-const goList = () => {
-  void router.push({ name: 'policy-db' })
-}
-
-const breadcrumbItems: BreadcrumbItem[] = [
-  { label: '首页', onClick: goHome },
-  { label: '政策列表', onClick: goList },
-  { label: '政策详情' },
-]
 </script>
 
 <template>
-  <div class="policy-db-detail">
-    <BreadcrumbNav :items="breadcrumbItems" @back="goList" />
-
-    <PageState :empty="policy ? '' : '未找到该政策'">
-      <template v-if="policy">
-        <a-card class="detail-card header-card" :bordered="false">
-          <div class="summary">
-            <div class="summary-main">
-              <h1 class="detail-title">{{ policy.name }}</h1>
-              <div class="meta-row">
-                <span>发布日期：{{ policy.date }}</span>
-                <span
-                  >发文机构：{{ policy.city }} - {{ policy.department }}</span
-                >
-              </div>
-              <div class="tags-row">
-                <div class="tags">
-                  <a-tag
-                    v-for="tag in policy.tags"
-                    :key="tag.text"
-                    :color="tag.color"
-                    :bordered="false"
-                  >
-                    {{ tag.text }}
-                  </a-tag>
-                </div>
-                <span class="views-cell">
-                  <EyeOutlined />
-                  {{ policy.views }}浏览
-                </span>
-              </div>
+  <DetailPageShell
+    list-label="政策列表"
+    list-route="policy-db"
+    detail-label="政策详情"
+    :empty="policy ? '' : '未找到该政策'"
+  >
+    <template v-if="policy">
+      <DetailCard
+        variant="header"
+        style="
+          --detail-header-bg: linear-gradient(
+            180deg,
+            #d7e8ff 0%,
+            #eaf3ff 55%,
+            #f7fbff 100%
+          );
+        "
+      >
+        <div class="summary">
+          <div class="summary-main">
+            <h1 class="detail-title">{{ policy.name }}</h1>
+            <div class="meta-row">
+              <span>发布日期：{{ policy.date }}</span>
+              <span>发文机构：{{ policy.city }} - {{ policy.department }}</span>
             </div>
-            <div class="follow-area">
-              <a-button
-                class="follow-btn"
-                :class="{ followed }"
-                type="primary"
-                :ghost="true"
-                @click="toggleFollow"
-              >
-                <template #icon>
-                  <HeartFilled v-if="followed" />
-                  <img
-                    v-else
-                    :src="followHeartIcon"
-                    alt=""
-                    class="follow-icon"
-                  />
-                </template>
-                {{ followed ? '已关注' : '关注企业' }}
-              </a-button>
-              <p class="follow-tip">及时获取政策动态与截止提醒</p>
+            <div class="tags-row">
+              <div class="tags">
+                <a-tag
+                  v-for="tag in policy.tags"
+                  :key="tag.text"
+                  :color="tag.color"
+                  :bordered="false"
+                >
+                  {{ tag.text }}
+                </a-tag>
+              </div>
+              <span class="views-cell">
+                <EyeOutlined />
+                {{ policy.views }}浏览
+              </span>
             </div>
           </div>
-        </a-card>
+          <div class="follow-area">
+            <a-button
+              class="follow-btn"
+              :class="{ followed }"
+              type="primary"
+              :ghost="true"
+              @click="toggleFollow"
+            >
+              <template #icon>
+                <HeartFilled v-if="followed" />
+                <img v-else :src="followHeartIcon" alt="" class="follow-icon" />
+              </template>
+              {{ followed ? '已关注' : '关注企业' }}
+            </a-button>
+            <p class="follow-tip">及时获取政策动态与截止提醒</p>
+          </div>
+        </div>
+      </DetailCard>
 
-        <a-card class="detail-card content-card" :bordered="false">
-          <a-tabs
-            v-model:activeKey="activeTab"
-            class="detail-tabs"
-            :tab-bar-gutter="0"
-          >
-            <a-tab-pane key="apply" tab="申报信息">
-              <ApplyInfoPanel :key="policy.id" :apply-info="policy.applyInfo" />
-            </a-tab-pane>
+      <DetailCard variant="content">
+        <DetailTabs v-model:activeKey="activeTab">
+          <a-tab-pane key="apply" tab="申报信息">
+            <ApplyInfoPanel :key="policy.id" :apply-info="policy.applyInfo" />
+          </a-tab-pane>
 
-            <a-tab-pane key="updates" tab="最新动态">
-              <UpdatesPanel :key="policy.id" :updates="policy.updates" />
-            </a-tab-pane>
+          <a-tab-pane key="updates" tab="最新动态">
+            <UpdatesPanel :key="policy.id" :updates="policy.updates" />
+          </a-tab-pane>
 
-            <a-tab-pane key="support" tab="支持力度">
-              <SupportPanel :key="policy.id" :list="policy.supportMeasures" />
-            </a-tab-pane>
+          <a-tab-pane key="support" tab="支持力度">
+            <SupportPanel :key="policy.id" :list="policy.supportMeasures" />
+          </a-tab-pane>
 
-            <a-tab-pane key="publicity" tab="公示名单">
-              <PublicityPanel
-                :key="policy.id"
-                :list="policy.publicity"
-                :region-label="regionLabel"
-              />
-            </a-tab-pane>
-          </a-tabs>
-        </a-card>
-      </template>
-    </PageState>
-  </div>
+          <a-tab-pane key="publicity" tab="公示名单">
+            <PublicityPanel
+              :key="policy.id"
+              :list="policy.publicity"
+              :region-label="regionLabel"
+            />
+          </a-tab-pane>
+        </DetailTabs>
+      </DetailCard>
+    </template>
+  </DetailPageShell>
 </template>
 
 <style scoped lang="scss">
-.policy-db-detail {
-  min-height: 480px;
-}
-
-.detail-card {
-  border-radius: 16px;
-  box-shadow: var(--pb-shadow-card);
-
-  :deep(.ant-card-body) {
-    padding: 28px 36px;
-  }
-
-  &.header-card {
-    margin-bottom: 16px;
-    background: linear-gradient(180deg, #d7e8ff 0%, #eaf3ff 55%, #f7fbff 100%);
-  }
-
-  &.content-card {
-    overflow: hidden;
-
-    :deep(.ant-card-body) {
-      padding: 0;
-    }
-  }
-}
-
 .summary {
   display: flex;
   align-items: flex-start;
@@ -256,97 +217,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
   white-space: nowrap;
 }
 
-.detail-tabs {
-  :deep(.ant-tabs-nav) {
-    margin-bottom: 0;
-
-    &::before {
-      border-bottom: none;
-    }
-  }
-
-  :deep(.ant-tabs-nav-wrap) {
-    overflow: hidden;
-  }
-
-  :deep(.ant-tabs-nav-list) {
-    width: 100%;
-    display: flex;
-  }
-
-  :deep(.ant-tabs-nav-operations) {
-    display: none;
-  }
-
-  :deep(.ant-tabs-tab) {
-    flex: 1;
-    justify-content: center;
-    margin: 0;
-    padding: 16px 8px;
-    font-size: 16px;
-    color: #262626;
-    background: #fff;
-    position: relative;
-
-    + .ant-tabs-tab {
-      border-left: 1px solid #e8e8e8;
-    }
-
-    .ant-tabs-tab-btn {
-      color: inherit;
-    }
-
-    &:hover {
-      color: var(--pb-primary);
-    }
-
-    &.ant-tabs-tab-active {
-      color: var(--pb-primary);
-      font-weight: 600;
-      background: linear-gradient(
-        180deg,
-        rgba(174, 205, 255, 0.57) 0%,
-        rgba(174, 205, 255, 0) 100%
-      );
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: var(--pb-primary);
-      }
-    }
-  }
-
-  :deep(.ant-tabs-ink-bar) {
-    display: none;
-  }
-
-  :deep(.ant-tabs-content-holder) {
-    padding: 20px 36px 28px;
-  }
-}
-
 @media (max-width: 768px) {
-  .detail-card {
-    :deep(.ant-card-body) {
-      padding: 20px 16px;
-    }
-
-    &.content-card {
-      :deep(.ant-card-body) {
-        padding: 0;
-      }
-    }
-  }
-
-  .detail-tabs {
-    :deep(.ant-tabs-content-holder) {
-      padding: 16px 16px 20px;
-    }
+  .detail-tabs :deep(.ant-tabs-content-holder) {
+    padding: 16px 16px 20px;
   }
 
   .summary {

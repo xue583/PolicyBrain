@@ -1,0 +1,55 @@
+/* 个人中心表格皮肤：浅蓝表头 + 圆角描边容器，各面板按需开关修饰项 */
+@mixin pc-table(
+  $padding: 13px 8px,
+  $font-size: 13px,
+  $hover: false,
+  $indent-first: false,
+  $header-dividers: false,
+  $framed: true,
+  $checkbox: false
+) {
+  :deep(.ant-table-cell) {
+    padding: $padding;
+    font-size: $font-size;
+  }
+
+  @if $checkbox {
+    :deep(.ant-checkbox-inner) {
+      border-radius: 4px;
+    }
+  }
+
+  :deep(.ant-table-thead > tr > th) {
+    background: #ecf3ff;
+    color: var(--pb-text);
+    font-weight: 600;
+
+    @if $header-dividers {
+      border-inline-end: 1px solid rgba(255, 255, 255, 0.9);
+
+      &:last-child {
+        border-inline-end: none;
+      }
+    }
+  }
+
+  @if $framed {
+    :deep(.ant-table-container) {
+      border: 1px solid #dce7f9;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+  }
+
+  @if $indent-first {
+    :deep(.ant-table-tbody > tr > td:first-child) {
+      padding-left: 16px;
+    }
+  }
+
+  @if $hover {
+    :deep(.ant-table-tbody > tr:hover > td) {
+      background: #f7faff;
+    }
+  }
+}

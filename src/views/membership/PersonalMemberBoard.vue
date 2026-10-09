@@ -13,7 +13,9 @@ import svipData from '@/assets/membership/svip-data.png'
 import svipMatch from '@/assets/membership/svip-match.png'
 import svipTech from '@/assets/membership/svip-tech.png'
 import svipIndustry from '@/assets/membership/svip-industry.png'
-import iconCheck from '@/assets/membership/icon-check.png'
+import MemberCrownIcon from './components/MemberCrownIcon.vue'
+import MemberPayPanel from './components/MemberPayPanel.vue'
+import { usePlanSelection } from './usePlanSelection'
 
 defineOptions({ name: 'PersonalMemberBoard' })
 
@@ -133,55 +135,12 @@ const currentPlans = computed(() =>
   tier.value === 'vip' ? vipPlans : svipPlans,
 )
 
-const currentPlan = computed(
-  () =>
-    currentPlans.value.find((item) => item.id === selectedPlan.value) ??
-    currentPlans.value.find((item) => item.featured) ??
-    currentPlans.value[0]!,
-)
-
-const qrCells = (() => {
-  const size = 29
-  const cells: Array<[number, number]> = []
-  const set = (x: number, y: number) => cells.push([x, y])
-  const finder = (ox: number, oy: number) => {
-    for (let y = 0; y < 7; y += 1) {
-      for (let x = 0; x < 7; x += 1) {
-        const edge = x === 0 || y === 0 || x === 6 || y === 6
-        const core = x >= 2 && x <= 4 && y >= 2 && y <= 4
-        if (edge || core) set(ox + x, oy + y)
-      }
-    }
-  }
-  finder(0, 0)
-  finder(size - 7, 0)
-  finder(0, size - 7)
-  for (let i = 8; i < size - 8; i += 1) {
-    if (i % 2 === 0) {
-      set(i, 6)
-      set(6, i)
-    }
-  }
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const inFinder =
-        (x < 9 && y < 9) || (x >= size - 9 && y < 9) || (x < 9 && y >= size - 9)
-      if (inFinder) continue
-      const n = (x * 17 + y * 13 + x * y) % 7
-      if (n === 0 || n === 3) set(x, y)
-    }
-  }
-  return cells
-})()
+const { currentPlan, selectPlan } = usePlanSelection(currentPlans, selectedPlan)
 
 const selectTier = (next: Tier) => {
   if (tier.value === next) return
   tier.value = next
   selectedPlan.value = next === 'vip' ? 'year' : 'rec'
-}
-
-const selectPlan = (id: string) => {
-  selectedPlan.value = id
 }
 </script>
 
@@ -204,37 +163,7 @@ const selectPlan = (id: string) => {
         :class="{ active: tier === 'svip' }"
         @click="selectTier('svip')"
       >
-        <svg
-          v-if="tier === 'svip'"
-          class="crown"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            fill="#e2b45a"
-            d="M3.2 16.6 5.6 8.2l4.2 4.6L12 5.1l2.2 7.7 4.2-4.6 2.4 8.4H3.2z"
-          />
-          <path fill="#f0d27a" d="M12 5.1 9.8 12.8 5.6 8.2 3.2 16.6h8.8V5.1z" />
-          <rect
-            x="4.2"
-            y="16.4"
-            width="15.6"
-            height="2.2"
-            rx="0.6"
-            fill="#d4a24c"
-          />
-          <rect
-            x="5"
-            y="18.8"
-            width="14"
-            height="2.1"
-            rx="0.5"
-            fill="#c4923e"
-          />
-          <circle cx="12" cy="5.1" r="1.15" fill="#f6e7a8" />
-          <circle cx="5.6" cy="8.2" r="1.05" fill="#f6e7a8" />
-          <circle cx="18.4" cy="8.2" r="1.05" fill="#f6e7a8" />
-        </svg>
+        <MemberCrownIcon v-if="tier === 'svip'" />
         <strong>SVIP会员</strong>
         <span>深度数据+AI申报材料</span>
       </button>
@@ -320,55 +249,7 @@ const selectPlan = (id: string) => {
         </section>
       </div>
 
-      <aside class="pay-panel">
-        <div class="pay-price"><em>¥</em>{{ currentPlan.price }}</div>
-        <p class="pay-scan">
-          <svg class="pay-brand" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="12" fill="#09bb07" />
-            <path
-              fill="#fff"
-              d="M9.2 11.1c-.5 0-.9-.4-.9-.8s.4-.8.9-.8.9.4.9.8-.4.8-.9.8zm5.6 0c-.5 0-.9-.4-.9-.8s.4-.8.9-.8.9.4.9.8-.4.8-.9.8zM12 6.2c-3.6 0-6.5 2.4-6.5 5.3 0 1.7.9 3.2 2.3 4.2l-.6 1.8 2-.9c.8.2 1.6.4 2.8.4 3.6 0 6.5-2.4 6.5-5.3S15.6 6.2 12 6.2z"
-            />
-          </svg>
-          <svg class="pay-brand" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="12" fill="#1677ff" />
-            <path
-              fill="#fff"
-              d="M17.4 14.2c-.9.8-2.3 1.4-3.8 1.6l-1.6-3.8c.7-.2 1.3-.6 1.8-1.1.7.6 1.4 1.4 1.9 2.3.6-.4 1.1-.8 1.7-1.1-.4-.7-1-1.5-1.7-2.2 1.1-.9 1.8-2.1 2-3.4H9.4v1.1h3.3c-.1.7-.4 1.4-.9 2H9.4v1.1h2.1c-.6.6-1.4 1-2.3 1.2v1.2c1.5-.2 2.8-.8 3.7-1.6l1.3 3.2c-.2 0-.4.1-.6.1H9.4v1.2h8z"
-            />
-          </svg>
-          扫码支付
-        </p>
-        <div class="qr-box" :style="{ backgroundImage: `url(${qrFrame})` }">
-          <svg
-            class="qr-code"
-            viewBox="0 0 29 29"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <rect width="29" height="29" fill="#fff" />
-            <g fill="#1a1a1a">
-              <rect
-                v-for="cell in qrCells"
-                :key="`${cell[0]}-${cell[1]}`"
-                :x="cell[0]"
-                :y="cell[1]"
-                width="1"
-                height="1"
-              />
-            </g>
-          </svg>
-        </div>
-        <p class="pay-safe">
-          <img :src="iconCheck" alt="" />
-          放心购
-        </p>
-        <ol class="pay-tips">
-          <li>开通前请阅读《政策大脑会员服务协议》和购买须知</li>
-          <li>完成支付后可在个人中心-我的发票中申请发票</li>
-          <li>会员自支付完成之时起5分钟内生效</li>
-        </ol>
-      </aside>
+      <MemberPayPanel :price="currentPlan.price" :qr-frame="qrFrame" />
     </div>
   </div>
 </template>
@@ -786,83 +667,6 @@ const selectPlan = (id: string) => {
   }
 }
 
-.pay-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 20px 24px;
-  border-left: 1px solid #f3e4d0;
-}
-
-.pay-price {
-  color: #d08a2a;
-  font-size: 40px;
-  font-weight: 700;
-  line-height: 1.1;
-
-  em {
-    margin-right: 2px;
-    font-size: 20px;
-    font-style: normal;
-    font-weight: 600;
-  }
-}
-
-.pay-scan {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 8px 0 12px;
-  font-size: 13px;
-  color: #8a7a66;
-}
-
-.pay-brand {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.qr-box {
-  width: 168px;
-  height: 168px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-}
-
-.qr-code {
-  width: 100%;
-  height: 100%;
-}
-
-.pay-safe {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 10px 0 16px;
-  font-size: 13px;
-  color: #7a8aa0;
-
-  img {
-    width: 16px;
-    height: 16px;
-    object-fit: contain;
-  }
-}
-
-.pay-tips {
-  width: 100%;
-  margin: 0;
-  padding-left: 16px;
-  color: #9e9e9e;
-  font-size: 14px;
-  line-height: 1.7;
-}
-
 @include below-lg {
   .tier-bar {
     flex-direction: column;
@@ -898,11 +702,6 @@ const selectPlan = (id: string) => {
   .benefit-list,
   .svip-benefits ul {
     grid-template-columns: 1fr;
-  }
-
-  .pay-panel {
-    border-left: 0;
-    border-top: 1px solid #f3e4d0;
   }
 }
 </style>

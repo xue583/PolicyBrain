@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { DownOutlined } from '@ant-design/icons-vue'
 import { policyGrades, type PolicyDbSupportMeasure } from '../../mock/policyDb'
 import {
   attachGradeRowSpan,
@@ -8,6 +7,9 @@ import {
   type PolicyDbSupportRow,
 } from '@/utils/filterPolicies'
 import { useFilteredList } from '@/composables/useFilteredList'
+import { useCollapsedList } from '@/composables/useCollapsedList'
+import FilterRow from '@/components/common/FilterRow.vue'
+import PagedTable from '@/components/common/PagedTable.vue'
 
 defineOptions({ name: 'PolicyDbSupportPanel' })
 
@@ -18,11 +20,9 @@ const props = defineProps<{
 }>()
 
 const grade = ref('')
-const showMoreGrades = ref(false)
 
-const visibleGrades = computed(() =>
-  showMoreGrades.value ? policyGrades : policyGrades.slice(0, COLLAPSED_COUNT),
-)
+const { showMore: showMoreGrades, visibleList: visibleGrades } =
+  useCollapsedList(policyGrades, COLLAPSED_COUNT)
 
 const filteredList = computed(() =>
   filterPolicyDbSupport(props.list, grade.value),
@@ -53,7 +53,6 @@ const selectGrade = (value: string) => {
 }
 
 const columns = [
-  { title: '序号', key: 'index', width: 72, align: 'center' as const },
   {
     title: '支持等级',
     dataIndex: 'grade',
@@ -72,39 +71,28 @@ const columns = [
 
 <template>
   <div class="support-panel">
-    <div class="filter-row">
-      <span class="filter-label">选择等级：</span>
-      <div class="filter-options">
-        <a
-          v-for="item in visibleGrades"
-          :key="item"
-          class="option-link"
-          :class="{ active: grade === item }"
-          @click="selectGrade(item)"
-        >
-          {{ item }}
-        </a>
-      </div>
-      <a class="more-link" @click="showMoreGrades = !showMoreGrades">
-        {{ showMoreGrades ? '收起' : '更多' }}
-        <DownOutlined :class="{ rotated: showMoreGrades }" />
+    <FilterRow label="选择等级：" v-model:expanded="showMoreGrades" collapsible>
+      <a
+        v-for="item in visibleGrades"
+        :key="item"
+        class="option-link"
+        :class="{ active: grade === item }"
+        @click="selectGrade(item)"
+      >
+        {{ item }}
       </a>
-    </div>
+    </FilterRow>
 
-    <a-table
-      class="db-table"
-      bordered
+    <PagedTable
+      v-model:current="currentPage"
+      :total="total"
+      :page-size="pageSize"
       :columns="columns"
       :data-source="pagedList"
-      :pagination="false"
       :row-key="(row: PolicyDbSupportRow) => row.id"
-      size="middle"
     >
-      <template #bodyCell="{ column, record, index }">
-        <template v-if="column.key === 'index'">
-          {{ (currentPage - 1) * pageSize + index + 1 }}
-        </template>
-        <template v-else-if="column.key === 'grade'">
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'grade'">
           <span class="grade-cell">{{ record.grade }}</span>
         </template>
         <template v-else-if="column.key === 'document'">
@@ -118,16 +106,7 @@ const columns = [
           </a>
         </template>
       </template>
-    </a-table>
-
-    <div class="pagination-wrap">
-      <a-pagination
-        v-model:current="currentPage"
-        :total="total"
-        :page-size="pageSize"
-        :show-total="(t: number) => `共 ${t} 条`"
-      />
-    </div>
+    </PagedTable>
   </div>
 </template>
 
@@ -156,7 +135,7 @@ const columns = [
 }
 
 @media (max-width: 768px) {
-  .filter-label {
+  :deep(.filter-label) {
     width: auto;
   }
 }

@@ -41,8 +41,13 @@ export default defineConfig(({ mode }) => {
         scss: {
           additionalData(content: string, filepath: string) {
             const normalized = filepath.replaceAll('\\', '/')
-            if (normalized.endsWith('/styles/tokens.scss')) return content
-            return `@use "styles/tokens" as *;\n${content}`
+            if (
+              normalized.endsWith('/styles/tokens.scss') ||
+              normalized.endsWith('/styles/pc-table.scss')
+            ) {
+              return content
+            }
+            return `@use "styles/tokens" as *;\n@use "styles/pc-table" as *;\n${content}`
           },
           loadPaths: [fileURLToPath(new URL('./src', import.meta.url))],
         },

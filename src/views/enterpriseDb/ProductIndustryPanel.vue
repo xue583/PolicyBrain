@@ -5,7 +5,8 @@ import type {
   EnterpriseProduct,
   ProductCredibility,
 } from '../../mock/enterpriseDb'
-import titleStyleBg from '../../assets/home/title-style.png'
+import EmptyState from '@/components/common/EmptyState.vue'
+import SectionTitle from '@/components/common/SectionTitle.vue'
 import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
 
 defineOptions({ name: 'EnterpriseProductIndustryPanel' })
@@ -19,19 +20,18 @@ defineProps<{
 </script>
 
 <template>
-  <section
-    class="product-panel"
-    :style="{ '--section-title-bg': `url(${titleStyleBg})` }"
-  >
+  <section class="product-panel">
     <template v-if="!products.length">
-      <div class="tab-empty">
-        <img :src="emptyIllustration" alt="" />
-        <p>暂无产品/产业信息</p>
-      </div>
+      <EmptyState
+        class="tab-empty"
+        :image="emptyIllustration"
+        text="暂无产品/产业信息"
+        :image-width="420"
+      />
     </template>
 
     <template v-else>
-      <h2 class="section-title">产品/服务</h2>
+      <SectionTitle title="产品/服务" />
       <div class="product-tags">
         <span v-for="item in products" :key="item.id" class="product-tag">
           <svg
@@ -94,7 +94,7 @@ defineProps<{
         </span>
       </div>
 
-      <h2 class="section-title industry-title">产业归属</h2>
+      <SectionTitle class="industry-title" title="产业归属" />
       <div class="industry-grid">
         <template v-for="chain in industryChains" :key="chain.id">
           <div
@@ -121,40 +121,16 @@ defineProps<{
 </template>
 
 <style scoped lang="scss">
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 0 16px;
-  padding-left: 20px;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 26px;
-  color: #262626;
-  background: var(--section-title-bg) no-repeat left center;
-  background-size: 94px 26px;
-}
-
 .industry-title {
   margin-top: 28px;
 }
 
 .tab-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 0 16px;
-  color: #8c8c8c;
-
-  img {
-    width: min(420px, 100%);
-    height: auto;
-    margin-bottom: 12px;
-  }
-
-  p {
-    margin: 0;
-  }
+  --empty-gap: 12px;
+  --empty-padding: 24px 0 16px;
+  --empty-text-size: 16px;
+  --empty-text-weight: 400;
+  --empty-text-color: #8c8c8c;
 }
 
 .product-tags {
