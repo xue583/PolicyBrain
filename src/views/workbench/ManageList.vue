@@ -12,7 +12,7 @@ import {
   manageProfile,
   manageTabs,
 } from '@/mock/manage'
-import WbEmptyState from './components/WbEmptyState.vue'
+import ManageExtraTab from './manage/ManageExtraTab.vue'
 
 defineProps<{ role: 'enterprise' | 'service' }>()
 
@@ -257,8 +257,8 @@ const contactRight: TextField[] = [
         </div>
       </div>
 
-      <div v-else class="tab-empty">
-        <WbEmptyState :text="`暂无${activeTab}数据`" />
+      <div v-else class="tab-panel">
+        <ManageExtraTab :tab="activeTab" />
       </div>
     </section>
   </div>
@@ -541,13 +541,6 @@ const contactRight: TextField[] = [
     color: var(--pb-primary);
     border-color: var(--pb-primary);
   }
-}
-
-.tab-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 56px 0 24px;
 }
 
 @include below-lg {

@@ -19,12 +19,17 @@ defineOptions({ name: 'EnterpriseIntellectualPropertyPanel' })
 
 const PAGE_SIZE = 10
 
-const props = defineProps<{
-  patents: EnterprisePatent[]
-  trademarks: EnterpriseTrademark[]
-  softwareCopyrights: EnterpriseSoftwareCopyright[]
-  workCopyrights: EnterpriseWorkCopyright[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    patents: EnterprisePatent[]
+    trademarks: EnterpriseTrademark[]
+    softwareCopyrights: EnterpriseSoftwareCopyright[]
+    workCopyrights: EnterpriseWorkCopyright[]
+    /** 工作台企业管理不展示顶部专利/商标等总数卡片 */
+    showSummary?: boolean
+  }>(),
+  { showSummary: true },
+)
 
 const ipTotal = computed(
   () =>
@@ -171,7 +176,7 @@ const workColumns = [
     :image-width="420"
   />
   <template v-else>
-    <div class="ip-summary">
+    <div v-if="showSummary" class="ip-summary">
       <article
         v-for="card in ipSummaryCards"
         :key="card.key"

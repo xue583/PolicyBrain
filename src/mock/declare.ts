@@ -140,22 +140,15 @@ export const declarePolicies: DeclarePolicy[] = [
   },
 ]
 
-/** 企业视角分组（与设计稿一致的项数文案） */
-export const levelGroups: Array<{ level: PolicyLevel; count: number }> = [
-  { level: '国家级', count: 9 },
-  { level: '省级', count: 9 },
-  { level: '市级', count: 1 },
+/** 企业视角分组 */
+export const levelGroups: Array<{ level: PolicyLevel }> = [
+  { level: '国家级' },
+  { level: '省级' },
+  { level: '市级' },
 ]
 
 /** 企服视角分组 */
 export const serviceGroups: ServiceGroup[] = ['可申报', '待评估', '待培育']
-
-/** 企服视角分组数字（与设计稿一致） */
-export const serviceGroupCounts: Record<ServiceGroup, number> = {
-  可申报: 1,
-  待评估: 3,
-  待培育: 5,
-}
 
 /** 企服视角企业名称（设计稿占位文案） */
 export const serviceCompanyName = '郑州市企业名称企业名称'

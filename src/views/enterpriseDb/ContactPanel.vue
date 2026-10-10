@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import {
   EnvironmentFilled,
@@ -17,14 +18,17 @@ import linkIcon from '../../assets/enterpriseDb/container.png'
 
 defineOptions({ name: 'EnterpriseContactPanel' })
 
-defineProps<{
+const props = defineProps<{
   contacts: EnterpriseContact[]
   email: string
   website: string
   address: string
+  /** 企业管理等自有数据场景直接展示，不走会员解锁 */
+  unlocked?: boolean
 }>()
 
 const { isLoggedIn } = storeToRefs(useAuthStore())
+const locked = computed(() => !props.unlocked && !isLoggedIn.value)
 
 const onUnlock = () => {
   if (!isLoggedIn.value) triggerNeedLogin()
@@ -35,7 +39,7 @@ const onUnlock = () => {
   <section class="contact-panel">
     <SectionTitle title="联系方式" />
 
-    <div v-if="!isLoggedIn" class="contact-lock">
+    <div v-if="locked" class="contact-lock">
       <button type="button" class="vip-lock" @click="onUnlock">
         <img :src="vipLockBg" alt="" class="vip-lock-bg" />
         <span class="vip-lock-copy"> 升级VIP，即可解锁全部会员 </span>

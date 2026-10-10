@@ -4,7 +4,6 @@ import {
   CheckOutlined,
   ClockCircleOutlined,
   FlagOutlined,
-  LikeOutlined,
   RightOutlined,
   SwapOutlined,
 } from '@ant-design/icons-vue'
@@ -13,10 +12,10 @@ import {
   declareRequirements,
   levelGroups,
   serviceCompanyName,
-  serviceGroupCounts,
   serviceGroups,
   type DeclarePolicy,
   type DeclareTag,
+  type ServiceGroup,
 } from '@/mock/declare'
 import bannerImg from '@/assets/workbench/wb-declare-banner.png'
 import WbPageBanner from './components/WbPageBanner.vue'
@@ -43,10 +42,10 @@ const tagClassMap: Record<DeclareTag, string> = {
   待培育: 'is-cultivate',
 }
 
-const chipIconColor: Record<string, string> = {
-  可申报: '#0fb5ba',
-  待评估: '#ff9c2e',
-  待培育: '#ff4d4f',
+const chipIconMap: Record<ServiceGroup, string> = {
+  可申报: 'dianzan',
+  待评估: 'huangqi',
+  待培育: 'shuhongqi',
 }
 
 const chipCountClass: Record<string, string> = {
@@ -89,7 +88,9 @@ const serviceSections = computed(() =>
           <div class="group-head">
             <span class="group-bar" />
             <span class="group-name">{{ section.level }}</span>
-            <span class="group-count">{{ section.count }}<i>项</i></span>
+            <span class="group-count"
+              >{{ section.policies.length }}<i>项</i></span
+            >
           </div>
           <div class="policy-grid is-5">
             <div
@@ -147,15 +148,16 @@ const serviceSections = computed(() =>
           <div class="chip-head">
             <span class="chip">
               <span class="chip-inner">
-                <LikeOutlined
+                <IconFont
                   class="chip-icon"
-                  :style="{ color: chipIconColor[section.group] }"
+                  :name="chipIconMap[section.group]"
+                  :size="20"
                 />
                 <span class="chip-label">{{ section.group }}</span>
               </span>
             </span>
             <span class="chip-count" :class="chipCountClass[section.group]">
-              {{ serviceGroupCounts[section.group] }}
+              {{ section.policies.length }}
             </span>
           </div>
           <div class="policy-grid is-3">
@@ -320,7 +322,7 @@ const serviceSections = computed(() =>
 }
 
 .chip-icon {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .chip-label {
@@ -422,7 +424,7 @@ const serviceSections = computed(() =>
 .card-title {
   overflow: hidden;
   color: #1f1f1f;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -436,7 +438,7 @@ const serviceSections = computed(() =>
   padding: 1px 6px;
   color: #fff;
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 1.8;
   border-radius: 8px;
 
   &.is-apply {
@@ -459,7 +461,7 @@ const serviceSections = computed(() =>
 .card-sub {
   overflow: hidden;
   color: #999;
-  font-size: 12px;
+  font-size: 14px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
