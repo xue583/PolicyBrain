@@ -10,8 +10,8 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { formatLastLogin, identityLabel, maskPhone } from '@/utils/userDisplay'
 import baseIcon from '@/assets/personalCenter/基础@2x.png'
-import msgIcon from '@/assets/personalCenter/容器 229@2x.png'
-import shareIcon from '@/assets/personalCenter/容器@2x(1).png'
+import msgIcon from '@/assets/personalCenter/goutong@2x.png'
+import shareIcon from '@/assets/personalCenter/fenxiang2@2x.png'
 import followIcon from '@/assets/personalCenter/关注@2x.png'
 import dynamicIcon from '@/assets/personalCenter/动态@2x.png'
 import invoiceIcon from '@/assets/personalCenter/发票@2x.png'
@@ -145,8 +145,10 @@ onMounted(() => {
           <img v-else :src="userLevel" alt="用户头像" />
         </div>
         <div class="user-phone">{{ userInfo.phone }}</div>
-        <div class="user-badge">
-          <img :src="userLevel" alt="" class="badge-icon" />
+        <div
+          class="user-badge"
+          :style="{ backgroundImage: `url(${userLevel})` }"
+        >
           <span>{{ userInfo.identity }}</span>
         </div>
         <div class="vip-link" @click="goMembership">
@@ -164,7 +166,10 @@ onMounted(() => {
           :class="{ active: selectedMenu === item.key }"
           @click="onMenuClick(item.key)"
         >
-          <img :src="item.icon" alt="" class="menu-icon" />
+          <span
+            class="menu-icon"
+            :style="{ '--menu-icon': `url(${item.icon})` }"
+          />
           <span class="menu-text">{{ item.label }}</span>
         </div>
       </div>
@@ -315,19 +320,25 @@ onMounted(() => {
 }
 
 .user-badge {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: 38% 1fr;
   align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  background: linear-gradient(135deg, #4a90e2 0%, #50c6ff 100%);
-  border-radius: 12px;
-  font-size: 12px;
-  color: #fff;
+  box-sizing: border-box;
+  min-width: 88px;
+  height: 25px;
   margin-bottom: 12px;
+  padding-right: 6px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
 
-  .badge-icon {
-    width: 14px;
-    height: 14px;
+  span {
+    grid-column: 2;
+    text-align: center;
   }
 }
 
@@ -371,13 +382,27 @@ onMounted(() => {
       color: var(--pb-primary);
       font-weight: 500;
     }
+
+    .menu-icon {
+      background-color: var(--pb-primary);
+    }
   }
 }
 
 .menu-icon {
+  display: block;
+  flex-shrink: 0;
   width: 20px;
   height: 20px;
-  object-fit: contain;
+  background-color: #333;
+  mask-image: var(--menu-icon);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-image: var(--menu-icon);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
 }
 
 .menu-text {
