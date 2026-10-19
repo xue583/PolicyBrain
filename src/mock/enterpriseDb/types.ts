@@ -178,5 +178,5 @@ export interface EnterpriseDetail extends EnterpriseItem {
   products: EnterpriseProduct[]
   industryChains: EnterpriseIndustryChain[]
   productBasis: string
-  productCredibility: ProductCredibility
+  productCredibility: ProductCredibility | ''
 }

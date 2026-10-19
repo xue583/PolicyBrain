@@ -3,8 +3,17 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { EyeOutlined, HeartFilled } from '@ant-design/icons-vue'
 import followHeartIcon from '../../assets/icon-follow-heart.png'
-import { getPolicyDbDetail } from '../../mock/policyDb'
+import {
+  fetchPolicyApplyInfo,
+  fetchPolicyDetail,
+  fetchPolicyPublicities,
+  fetchPolicySupports,
+  fetchPolicyUpdates,
+} from '@/api/policies'
+import type { PolicyDbApplyInfo, PolicyDbDetail } from '../../mock/policyDb'
+import { toErrorMessage } from '@/utils/apiError'
 import { useFollowable } from '@/composables/useFollowable'
+import PageState from '@/components/PageState.vue'
 import DetailCard from '@/components/common/DetailCard.vue'
 import DetailPageShell from '@/components/common/DetailPageShell.vue'
 import DetailTabs from '@/components/common/DetailTabs.vue'
@@ -20,26 +29,142 @@ const FOLLOW_KEY = 'pb_followed_policy_db'
 const route = useRoute()
 
 const policyId = computed(() => Number(route.params.id))
-const policy = computed(() => getPolicyDbDetail(policyId.value))
-const regionLabel = computed(() => `河南省 ${policy.value?.city ?? '郑州市'}`)
+const policy = ref<PolicyDbDetail | null>(null)
+const loading = ref(false)
+const error = ref('')
+const regionLabel = computed(() => policy.value?.city || '—')
 
-const POLICY_TABS = ['apply', 'updates', 'support', 'publicity'] as const
-
-const resolveTab = (value: unknown) => {
-  const tab = String(value ?? '')
-  return (POLICY_TABS as readonly string[]).includes(tab) ? tab : 'apply'
+const EMPTY_APPLY_INFO: PolicyDbApplyInfo = {
+  fields: '',
+  conditions: [],
+  regulationNote: '',
+  regulationClauses: [],
+  files: [],
 }
 
-const activeTab = ref('apply')
+const POLICY_TABS = ['apply', 'updates', 'support', 'publicity'] as const
+type PolicyTab = (typeof POLICY_TABS)[number]
+
+const resolveTab = (value: unknown): PolicyTab => {
+  const tab = String(value ?? '')
+  return (POLICY_TABS as readonly string[]).includes(tab)
+    ? (tab as PolicyTab)
+    : 'apply'
+}
+
+const activeTab = ref<PolicyTab>('apply')
+const tabLoading = ref(false)
+const tabError = ref('')
+const loadedTabs = ref<Record<PolicyTab, boolean>>({
+  apply: false,
+  updates: false,
+  support: false,
+  publicity: false,
+})
+
+let pageSeq = 0
+let tabSeq = 0
+
+const resetTabState = () => {
+  tabSeq += 1
+  tabLoading.value = false
+  tabError.value = ''
+  loadedTabs.value = {
+    apply: false,
+    updates: false,
+    support: false,
+    publicity: false,
+  }
+}
+
+const load = async () => {
+  const id = policyId.value
+  if (!id) return
+  const seq = ++pageSeq
+  resetTabState()
+  loading.value = true
+  error.value = ''
+  policy.value = null
+  try {
+    const card = await fetchPolicyDetail(id)
+    if (seq !== pageSeq || policyId.value !== id) return
+    policy.value = {
+      ...card,
+      date: '—',
+      tags: [
+        card.grade ? { text: card.grade, color: 'blue' } : null,
+        card.industryTag ? { text: card.industryTag, color: 'gold' } : null,
+      ].filter((tag): tag is { text: string; color: string } => Boolean(tag)),
+      applyInfo: { ...EMPTY_APPLY_INFO },
+      supportMeasures: [],
+      updates: [],
+      publicity: [],
+    }
+  } catch (err) {
+    if (seq !== pageSeq) return
+    error.value = toErrorMessage(err, '未找到该政策')
+  } finally {
+    if (seq === pageSeq) loading.value = false
+  }
+  if (seq === pageSeq && policy.value) void loadTab(activeTab.value)
+}
+
+const loadTab = async (tab: PolicyTab) => {
+  const id = policyId.value
+  const current = policy.value
+  if (!id || !current || loadedTabs.value[tab]) return
+  const seq = ++tabSeq
+  tabLoading.value = true
+  tabError.value = ''
+  try {
+    if (tab === 'apply') {
+      const applyInfo = await fetchPolicyApplyInfo(id)
+      if (seq !== tabSeq) return
+      current.applyInfo = applyInfo
+    } else if (tab === 'updates') {
+      const updates = await fetchPolicyUpdates(id)
+      if (seq !== tabSeq) return
+      current.updates = updates
+    } else if (tab === 'support') {
+      const supportMeasures = await fetchPolicySupports(id)
+      if (seq !== tabSeq) return
+      current.supportMeasures = supportMeasures
+    } else {
+      const publicity = await fetchPolicyPublicities(id)
+      if (seq !== tabSeq) return
+      current.publicity = publicity
+    }
+    loadedTabs.value[tab] = true
+  } catch (err) {
+    if (seq !== tabSeq) return
+    tabError.value = toErrorMessage(err, '内容加载失败')
+  } finally {
+    if (seq === tabSeq) tabLoading.value = false
+  }
+}
+
+const isTabPending = (tab: PolicyTab) =>
+  activeTab.value === tab && tabLoading.value
+
+const tabErrorOf = (tab: PolicyTab) =>
+  activeTab.value === tab ? tabError.value : ''
+
 const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, policyId)
 
+watch(policyId, () => void load(), { immediate: true })
+
 watch(
-  [policyId, () => route.query.tab],
+  () => route.query.tab,
   () => {
     activeTab.value = resolveTab(route.query.tab)
   },
   { immediate: true },
 )
+
+watch(activeTab, (tab) => {
+  if (!policy.value) return
+  void loadTab(tab)
+})
 </script>
 
 <template>
@@ -47,7 +172,10 @@ watch(
     list-label="政策列表"
     list-route="policy-db"
     detail-label="政策详情"
-    :empty="policy ? '' : '未找到该政策'"
+    :loading="loading"
+    :error="error"
+    :empty="!loading && !error && !policy ? '未找到该政策' : ''"
+    @retry="load"
   >
     <template v-if="policy">
       <DetailCard
@@ -107,23 +235,60 @@ watch(
       <DetailCard variant="content">
         <DetailTabs v-model:activeKey="activeTab">
           <a-tab-pane key="apply" tab="申报信息">
-            <ApplyInfoPanel :key="policy.id" :apply-info="policy.applyInfo" />
+            <PageState
+              :loading="isTabPending('apply')"
+              :error="tabErrorOf('apply')"
+              @retry="loadTab('apply')"
+            >
+              <ApplyInfoPanel
+                v-if="loadedTabs.apply"
+                :key="policy.id"
+                :apply-info="policy.applyInfo"
+              />
+            </PageState>
           </a-tab-pane>
 
           <a-tab-pane key="updates" tab="最新动态">
-            <UpdatesPanel :key="policy.id" :updates="policy.updates" />
+            <PageState
+              :loading="isTabPending('updates')"
+              :error="tabErrorOf('updates')"
+              @retry="loadTab('updates')"
+            >
+              <UpdatesPanel
+                v-if="loadedTabs.updates"
+                :key="policy.id"
+                :updates="policy.updates"
+              />
+            </PageState>
           </a-tab-pane>
 
           <a-tab-pane key="support" tab="支持力度">
-            <SupportPanel :key="policy.id" :list="policy.supportMeasures" />
+            <PageState
+              :loading="isTabPending('support')"
+              :error="tabErrorOf('support')"
+              @retry="loadTab('support')"
+            >
+              <SupportPanel
+                v-if="loadedTabs.support"
+                :key="policy.id"
+                :list="policy.supportMeasures"
+              />
+            </PageState>
           </a-tab-pane>
 
           <a-tab-pane key="publicity" tab="公示名单">
-            <PublicityPanel
-              :key="policy.id"
-              :list="policy.publicity"
-              :region-label="regionLabel"
-            />
+            <PageState
+              :loading="isTabPending('publicity')"
+              :error="tabErrorOf('publicity')"
+              @retry="loadTab('publicity')"
+            >
+              <PublicityPanel
+                v-if="loadedTabs.publicity"
+                :key="policy.id"
+                :list="policy.publicity"
+                :region-label="regionLabel"
+              />
+            </PageState>
           </a-tab-pane>
         </DetailTabs>
       </DetailCard>

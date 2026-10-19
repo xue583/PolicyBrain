@@ -9,12 +9,14 @@ import AppHeader from './components/AppHeader.vue'
 import VipPromoModal from './components/VipPromoModal.vue'
 import { PRIMARY_COLOR } from '@/constants/site'
 import { useAuthStore } from '@/stores/auth'
+import { useRegionSync } from '@/composables/useRegionSync'
 
 dayjs.locale('zh-cn')
 
 const route = useRoute()
 const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
+useRegionSync()
 const VIP_PROMO_DISMISS_KEY = 'pb_vip_promo_dismiss_date'
 
 const promoOpen = ref(false)

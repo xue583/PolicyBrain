@@ -79,13 +79,18 @@ describe('shouldSkipRefresh', () => {
 })
 
 describe('shouldSkipApiPrefix', () => {
-  it('skips /api for /auth and /account routes', () => {
+  it('skips /api for root API routes', () => {
     expect(shouldSkipApiPrefix('/auth/smsCodes')).toBe(true)
     expect(shouldSkipApiPrefix('/auth/sessions')).toBe(true)
     expect(shouldSkipApiPrefix('/auth/tokenRefreshes')).toBe(true)
     expect(shouldSkipApiPrefix('/account/users/me')).toBe(true)
+    expect(shouldSkipApiPrefix('/news')).toBe(true)
+    expect(shouldSkipApiPrefix('/policies/1')).toBe(true)
+    expect(shouldSkipApiPrefix('/enterprises')).toBe(true)
+    expect(shouldSkipApiPrefix('/search/news')).toBe(true)
     expect(shouldSkipApiPrefix('/users/me')).toBe(false)
     expect(shouldSkipApiPrefix('/authenticate')).toBe(false)
+    expect(shouldSkipApiPrefix('/newsletter')).toBe(false)
   })
 })
 

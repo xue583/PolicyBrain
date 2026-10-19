@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { PolicyUserType } from '@/api/auth'
+import { fetchMembershipPlans, fetchMyMembership } from '@/api/membership'
+import { mapMembershipLabel } from '@/api/mapPortal'
 import { useAuthStore } from '@/stores/auth'
 import EnterpriseMemberBoard from './EnterpriseMemberBoard.vue'
 import PersonalMemberBoard from './PersonalMemberBoard.vue'
@@ -19,6 +21,25 @@ const isEnterpriseView = computed(
   () => Number(user.value?.identity) === PolicyUserType.EnterpriseService,
 )
 
+const membershipHint = ref('')
+
+onMounted(() => {
+  if (!auth.isLoggedIn) return
+  void Promise.all([fetchMyMembership(), fetchMembershipPlans()])
+    .then(([mine, plans]) => {
+      const label = mapMembershipLabel(mine)
+      const count = Array.isArray(plans)
+        ? plans.length
+        : Array.isArray((plans as { items?: unknown[] } | null)?.items)
+          ? (plans as { items: unknown[] }).items.length
+          : 0
+      membershipHint.value = count
+        ? `当前会员：${label}，在售套餐 ${count} 个`
+        : `当前会员：${label}`
+    })
+    .catch(() => undefined)
+})
+
 const heroFeatures = [
   { icon: heroPush, label: '政策实时推送' },
   { icon: heroReport, label: '月度数据报告' },
@@ -35,6 +56,7 @@ const heroFeatures = [
       <section class="hero">
         <h1 class="hero-title">尊享<span>会员特权</span>，畅享无限可能!</h1>
         <p class="hero-sub">升级会员，体验更多独家优惠与专属服务</p>
+        <p v-if="membershipHint" class="hero-sub">{{ membershipHint }}</p>
         <ul class="hero-features">
           <li v-for="item in heroFeatures" :key="item.label">
             <img :src="item.icon" alt="" />

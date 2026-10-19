@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ClockCircleOutlined,
   ExportOutlined,
   PaperClipOutlined,
 } from '@ant-design/icons-vue'
-import { getPolicyById } from '../../mock/policyNews'
+import { fetchNewsDetail } from '@/api/news'
+import type { PolicyItem } from '../../mock/policyNews'
+import { toErrorMessage } from '@/utils/apiError'
 import { sanitizeHtml } from '@/utils/sanitize'
 import DetailCard from '@/components/common/DetailCard.vue'
 import DetailPageShell from '@/components/common/DetailPageShell.vue'
@@ -16,8 +18,27 @@ defineOptions({ name: 'PolicyNewsDetail' })
 const route = useRoute()
 
 const policyId = computed(() => Number(route.params.id))
-const policy = computed(() => getPolicyById(policyId.value))
+const policy = ref<PolicyItem | null>(null)
+const loading = ref(false)
+const error = ref('')
 const safeContent = computed(() => sanitizeHtml(policy.value?.content ?? ''))
+
+const load = async () => {
+  const id = policyId.value
+  if (!id) return
+  loading.value = true
+  error.value = ''
+  policy.value = null
+  try {
+    policy.value = await fetchNewsDetail(id)
+  } catch (err) {
+    error.value = toErrorMessage(err, '未找到该政策资讯')
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(policyId, () => void load(), { immediate: true })
 
 const openOriginal = () => {
   const url = policy.value?.originalUrl
@@ -30,7 +51,10 @@ const openOriginal = () => {
     list-label="政策资讯"
     list-route="news"
     detail-label="资讯详情"
-    :empty="policy ? '' : '未找到该政策资讯'"
+    :loading="loading"
+    :error="error"
+    :empty="!loading && !error && !policy ? '未找到该政策资讯' : ''"
+    @retry="load"
   >
     <template v-if="policy">
       <DetailCard

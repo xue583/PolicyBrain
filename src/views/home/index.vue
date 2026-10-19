@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import {
-  RightOutlined,
   PhoneOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
   ArrowRightOutlined,
   CommentOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons-vue'
 import {
   featureCards,
   hotKeywords,
   industryTags,
-  homeNewsList,
   homeFollowList,
+  type HomeNewsItem,
 } from '../../mock/home'
+import { fetchNewsPage } from '@/api/news'
+import { fetchIndustryNames } from '@/api/meta'
+import type { PolicyItem } from '../../mock/policyNews'
+import { useRegionStore } from '@/stores/region'
+import { orderNewsForCity } from '@/utils/homeNews'
 import { Divider } from 'ant-design-vue'
 import { SITE } from '@/constants/site'
 import { navItems } from '@/mock/nav'
@@ -25,7 +31,7 @@ import heroBanner from '../../assets/home/hero-banner.mp4'
 import promoBanner from '../../assets/home/promo-banner.png'
 import iconPolicy from '../../assets/home/icon-policy.png'
 import iconEnterprise from '../../assets/home/icon-enterprise.png'
-import iconRobot from '../../assets/home/robot.png'
+import iconRobot from '../../assets/home/ai@2x.png'
 import iconWorkbench from '../../assets/home/icon-workbench.svg'
 import iconIndustry from '../../assets/home/icon-industry.png'
 import industryBg from '../../assets/home/industry-card-bg.png'
@@ -34,14 +40,20 @@ import featureCardBg from '../../assets/home/feature-card-bg.png'
 defineOptions({ name: 'HomePage' })
 
 const router = useRouter()
+const regionStore = useRegionStore()
+const {
+  city: currentCity,
+  district: currentDistrict,
+  cityLabels,
+} = storeToRefs(regionStore)
 const searchType = ref<'policy' | 'enterprise'>('policy')
 const keyword = ref('')
 const newsTab = ref<'news' | 'follow'>('news')
-const newsLimit = ref(5)
-
-watch(newsTab, () => {
-  newsLimit.value = 5
-})
+const newsLimit = ref(8)
+const newsExpanded = ref(false)
+const newsPanelRef = ref<HTMLElement | null>(null)
+const newsListRef = ref<HTMLElement | null>(null)
+const sidebarRef = ref<HTMLElement | null>(null)
 
 const iconMap: Record<string, string> = {
   policy: iconPolicy,
@@ -50,9 +62,166 @@ const iconMap: Record<string, string> = {
   workbench: iconWorkbench,
 }
 
+const remoteNews = ref<HomeNewsItem[]>([])
+const newsError = ref('')
+const industryTagList = ref<string[]>([...industryTags])
+
+const toHomeNews = (item: PolicyItem): HomeNewsItem => {
+  const tones = ['blue', 'green', 'orange', 'gold'] as const
+  const closed = item.status === 'expired' || item.daysRemaining < 0
+  return {
+    id: item.id,
+    title: item.title,
+    tags: item.tags.map((tag, index) => ({
+      text: tag.text,
+      tone: tones[index % tones.length] ?? 'blue',
+    })),
+    time: item.date,
+    department: item.department,
+    status: closed
+      ? 'closed'
+      : item.daysRemaining > 0
+        ? 'remaining'
+        : 'applying',
+    statusText: closed
+      ? '已截止'
+      : item.daysRemaining > 0
+        ? `仅剩${item.daysRemaining}天`
+        : '正在申报',
+  }
+}
+
 const currentNews = computed(() =>
-  newsTab.value === 'follow' ? homeFollowList : homeNewsList,
+  newsTab.value === 'follow' ? homeFollowList : remoteNews.value,
 )
+
+let newsRequest = 0
+
+const loadNews = async (city: string, district: string) => {
+  const requestId = ++newsRequest
+  try {
+    const page = await fetchNewsPage({
+      pageIndex: 1,
+      pageSize: 20,
+      region: district || city,
+    })
+    if (requestId !== newsRequest) return
+    remoteNews.value = orderNewsForCity(
+      page.items,
+      city,
+      cityLabels.value,
+      district,
+    ).map(toHomeNews)
+    newsError.value = ''
+  } catch {
+    if (requestId !== newsRequest) return
+    remoteNews.value = []
+    newsError.value = '政策资讯加载失败'
+  }
+}
+
+watch(
+  () =>
+    `${currentCity.value}\n${currentDistrict.value}\n${cityLabels.value.join('\n')}`,
+  () => {
+    newsExpanded.value = false
+    void loadNews(currentCity.value, currentDistrict.value)
+  },
+  { immediate: true },
+)
+
+const contentBoxHeight = (el: HTMLElement) => {
+  const style = getComputedStyle(el)
+  const pad =
+    (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0)
+  const border =
+    (parseFloat(style.borderTopWidth) || 0) +
+    (parseFloat(style.borderBottomWidth) || 0)
+  let inner = 0
+  for (const child of el.children) {
+    if (!(child instanceof HTMLElement)) continue
+    const childStyle = getComputedStyle(child)
+    inner +=
+      child.offsetHeight +
+      (parseFloat(childStyle.marginTop) || 0) +
+      (parseFloat(childStyle.marginBottom) || 0)
+  }
+  return inner + pad + border
+}
+
+let resizeObserver: ResizeObserver | undefined
+let fitting = false
+
+const fittedNewsCount = () => {
+  if (newsExpanded.value || newsTab.value !== 'news') return null
+  const panel = newsPanelRef.value
+  const list = newsListRef.value
+  const sidebar = sidebarRef.value
+  if (!panel || !list || !sidebar) return null
+  const industry = sidebar.querySelector('.industry-card')
+  const info = sidebar.querySelector('.info-card')
+  if (!(industry instanceof HTMLElement) || !(info instanceof HTMLElement))
+    return null
+  const items = [...list.querySelectorAll<HTMLElement>('.news-item')]
+  if (!items.length) return null
+  const avg =
+    items.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0) /
+    items.length
+  if (avg < 1) return null
+
+  const sidebarStyle = getComputedStyle(sidebar)
+  const sidebarGap = parseFloat(sidebarStyle.rowGap || sidebarStyle.gap) || 0
+  const target = industry.offsetHeight + sidebarGap + contentBoxHeight(info)
+  const panelStyle = getComputedStyle(panel)
+  const pad =
+    (parseFloat(panelStyle.paddingTop) || 0) +
+    (parseFloat(panelStyle.paddingBottom) || 0)
+  const tabs = panel.querySelector('.news-tabs')
+  const tabsHeight = tabs instanceof HTMLElement ? tabs.offsetHeight : 0
+  const total = currentNews.value.length
+  const roomForMore = Math.max(0, target - pad - tabsHeight - 66)
+  const withButton = Math.max(1, Math.ceil(roomForMore / avg))
+  if (withButton >= total) {
+    const room = Math.max(0, target - pad - tabsHeight)
+    return Math.min(total, Math.max(1, Math.ceil(room / avg)))
+  }
+  return Math.min(total, withButton)
+}
+
+const syncNewsLimit = () => {
+  if (fitting) return
+  const count = fittedNewsCount()
+  if (count == null || count === newsLimit.value) return
+  fitting = true
+  newsLimit.value = count
+  void nextTick(() => {
+    requestAnimationFrame(() => {
+      fitting = false
+      const next = fittedNewsCount()
+      if (next != null && next > newsLimit.value) newsLimit.value = next
+    })
+  })
+}
+
+watch([remoteNews, newsTab], () => {
+  void nextTick(() => syncNewsLimit())
+})
+
+onMounted(() => {
+  void fetchIndustryNames()
+    .then((names) => {
+      if (names.length) industryTagList.value = names
+    })
+    .catch(() => undefined)
+  if (sidebarRef.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => syncNewsLimit())
+    resizeObserver.observe(sidebarRef.value)
+  }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+})
 
 const visibleNews = computed(() => currentNews.value.slice(0, newsLimit.value))
 
@@ -63,6 +232,7 @@ const onSearch = () => {
 }
 
 const loadMore = () => {
+  newsExpanded.value = true
   newsLimit.value = currentNews.value.length
 }
 
@@ -184,7 +354,7 @@ const openBeian = () => {
       </a>
 
       <div class="main-grid">
-        <section class="news-panel">
+        <section ref="newsPanelRef" class="news-panel">
           <div class="news-tabs">
             <button
               type="button"
@@ -204,23 +374,28 @@ const openBeian = () => {
             </button>
           </div>
 
-          <ul v-if="visibleNews.length" class="news-list">
+          <ul
+            v-if="visibleNews.length"
+            ref="newsListRef"
+            class="news-list"
+            :class="{ 'has-more': newsLimit < currentNews.length }"
+          >
             <li
               v-for="item in visibleNews"
               :key="item.id"
               class="news-item"
               @click="goNews(item.id)"
             >
+              <span class="news-rail" aria-hidden="true">
+                <i class="dot" />
+              </span>
               <div class="news-main">
                 <div class="news-head">
-                  <h3 class="news-title">
-                    <i class="dot" />
-                    <span>{{ item.title }}</span>
-                  </h3>
-                  <a class="news-status" :class="item.status" @click.stop>
+                  <h3 class="news-title">{{ item.title }}</h3>
+                  <span class="news-status" :class="item.status">
                     {{ item.statusText }}
-                    <span class="status-arrow"><RightOutlined /></span>
-                  </a>
+                    <InfoCircleOutlined class="status-icon" />
+                  </span>
                 </div>
                 <div class="news-tags">
                   <span
@@ -246,7 +421,7 @@ const openBeian = () => {
             :description="
               newsTab === 'follow'
                 ? '暂无关注动态，登录后可关注政策'
-                : '暂无资讯'
+                : newsError || '暂无资讯'
             "
           />
 
@@ -260,7 +435,7 @@ const openBeian = () => {
           </button>
         </section>
 
-        <aside class="sidebar">
+        <aside ref="sidebarRef" class="sidebar">
           <div
             class="industry-card"
             :style="{ backgroundImage: `url(${industryBg})` }"
@@ -273,7 +448,11 @@ const openBeian = () => {
             <p class="industry-desc">政策资讯已为您关联以下标签</p>
             <p class="industry-desc-sub">覆盖20个一级产业、249个细分标签</p>
             <div class="tag-cloud">
-              <span v-for="tag in industryTags" :key="tag" class="industry-tag">
+              <span
+                v-for="tag in industryTagList"
+                :key="tag"
+                class="industry-tag"
+              >
                 {{ tag }}
               </span>
             </div>
@@ -610,16 +789,15 @@ const openBeian = () => {
   min-width: 0;
 
   h3 {
-    margin: 0 0 12px 20px;
+    margin-bottom: 10px;
     font-family: var(--pb-font-display);
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: bold;
     color: #393939;
     line-height: 1.3;
   }
 
   p {
-    margin: 0 0 0 20px;
     font-size: 16px;
     line-height: 1.7;
     color: #393939;
@@ -656,7 +834,7 @@ const openBeian = () => {
   height: 100%;
   background: var(--pb-card);
   border-radius: var(--pb-radius-lg);
-  padding: 4px 24px 20px;
+  padding: 4px 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
@@ -694,57 +872,113 @@ const openBeian = () => {
 }
 
 .news-list {
+  position: relative;
   list-style: none;
-  margin: 0;
+  margin: 4px 0 0;
   padding: 0;
   flex: 1;
+
+  &.has-more::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 96px;
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0) 0%,
+      var(--pb-card) 78%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
 }
 
 .news-item {
-  padding: 18px 0;
-  border-bottom: 1px solid #f5f5f5;
+  position: relative;
+  padding: 14px 8px 14px 36px;
+  border-radius: 8px;
   cursor: pointer;
 
-  &:last-child {
-    border-bottom: none;
+  &:hover {
+    background: #f3f7ff;
+
+    .news-title {
+      color: var(--pb-primary);
+    }
+
+    .dot {
+      background: #5b96f6;
+      box-shadow: 0 0 0 3px #f3f7ff;
+    }
+  }
+}
+
+.news-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 10px;
+  display: flex;
+  justify-content: center;
+  width: 16px;
+  padding-top: 22px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    border-left: 1px dashed #c5d8f6;
+    transform: translateX(-50%);
   }
 
-  &:hover .news-title span {
-    color: var(--pb-primary);
+  .dot {
+    position: relative;
+    z-index: 1;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #8ebaf8;
+    box-shadow: 0 0 0 3px var(--pb-card);
   }
+}
+
+.news-item:first-child .news-rail::before {
+  top: 26px;
+}
+
+.news-item:last-child .news-rail::before {
+  bottom: auto;
+  height: 26px;
+}
+
+.news-item:only-child .news-rail::before {
+  display: none;
+}
+
+.news-main {
+  min-width: 0;
 }
 
 .news-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 10px;
+  gap: 16px;
+  margin-bottom: 8px;
 }
 
 .news-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   margin: 0;
   min-width: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--pb-title);
+  color: #1f1f1f;
   line-height: 1.5;
-
-  .dot {
-    flex-shrink: 0;
-    width: 6px;
-    height: 6px;
-    margin-top: 9px;
-    border-radius: 50%;
-    background: var(--pb-primary);
-  }
-
-  span {
-    transition: color 0.2s;
-  }
+  transition: color 0.2s;
 }
 
 .news-tags {
@@ -759,28 +993,28 @@ const openBeian = () => {
   align-items: center;
   height: 22px;
   padding: 0 8px;
-  border-radius: 2px;
+  border-radius: 4px;
   font-size: 12px;
   line-height: 22px;
 
   &.tone-blue {
-    color: #1677ff;
-    background: #e6f4ff;
+    color: #3d7eff;
+    background: #e8f2ff;
   }
 
   &.tone-green {
-    color: #389e0d;
-    background: #f6ffed;
+    color: #3aaa6a;
+    background: #e8f8ee;
   }
 
   &.tone-orange {
-    color: #d46b08;
-    background: #fff7e6;
+    color: #e8893a;
+    background: #fff1e4;
   }
 
   &.tone-gold {
-    color: #d48806;
-    background: #fffbe6;
+    color: #e0a020;
+    background: #fff6df;
   }
 
   &.tone-purple {
@@ -807,14 +1041,14 @@ const openBeian = () => {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-top: 2px;
-  font-size: 13px;
+  font-size: 14px;
   white-space: nowrap;
-  line-height: 1;
+  line-height: 1.4;
 
   &.applying {
-    color: var(--pb-primary);
+    color: #2f6bff;
   }
 
   &.remaining {
@@ -825,33 +1059,27 @@ const openBeian = () => {
     color: var(--pb-muted);
   }
 
-  .status-arrow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 1px solid currentColor;
-    font-size: 9px;
-    opacity: 0.85;
+  .status-icon {
+    font-size: 14px;
   }
 }
 
 .load-more {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
-  height: 58px;
-  background: #e4eeff;
+  height: 48px;
+  background: #eaf2ff;
   border-radius: 8px;
   margin-top: 8px;
   padding: 11px;
   border: none;
-  color: var(--pb-primary);
-  font-size: 20px;
+  color: #2f6bff;
+  font-size: 16px;
   cursor: pointer;
   font-family: inherit;
-  font-weight: bold;
+  font-weight: 600;
 
   &:hover {
     background: #bae0ff;
@@ -862,8 +1090,7 @@ const openBeian = () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
-  min-height: 0;
+  align-self: start;
 }
 
 .industry-card {
@@ -929,7 +1156,7 @@ const openBeian = () => {
   background: rgba(255, 255, 255, 0.55);
   border-radius: 4px 4px 4px 4px;
   border: 1px solid #0e5dd8;
-  color: var(--pb-sub);
+  color: #3d3d3d;
   line-height: 30px;
   text-align: center;
   cursor: default;
@@ -960,7 +1187,6 @@ const openBeian = () => {
 }
 
 .info-card {
-  flex: 1;
   background: var(--pb-card);
   border-radius: var(--pb-radius-lg);
   padding: 18px 16px 16px;

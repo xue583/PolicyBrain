@@ -286,7 +286,7 @@ const openBeian = () => {
 .hero-banner {
   display: block;
   width: 100%;
-  height: 474px;
+  // height: 474px;
 }
 
 // 文案叠在通栏背景上，投资项目库与数据导出共用

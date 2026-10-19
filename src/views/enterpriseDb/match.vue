@@ -14,9 +14,12 @@ import { usePagination } from '@/composables/usePagination'
 import { useAuthStore } from '@/stores/auth'
 import { triggerNeedLogin } from '@/utils/auth'
 import { downloadCsv } from '@/utils/downloadCsv'
-import { getEnterpriseDetail } from '../../mock/enterpriseDb'
+import { fetchEnterpriseRaw } from '@/api/enterprises'
+import { fetchEntToPolicy } from '@/api/match'
+import { mapEnterpriseDetail, readIpCounts } from '@/api/mapPortal'
+import { toErrorMessage } from '@/utils/apiError'
+import type { EnterpriseDetail } from '../../mock/enterpriseDb'
 import {
-  buildMatchPolicies,
   matchPolicyStatusText,
   type MatchPolicy,
   type MatchPolicyStatus,
@@ -46,16 +49,48 @@ const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 
 const enterpriseId = computed(() => Number(route.params.id))
-const enterprise = computed(() => getEnterpriseDetail(enterpriseId.value))
+const enterprise = ref<EnterpriseDetail | null>(null)
+const policies = ref<MatchPolicy[]>([])
+const loading = ref(false)
+const error = ref('')
+const ipCounts = ref({ patent: 0, brand: 0, software: 0, work: 0, policy: 0 })
 const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, enterpriseId)
 
 const keywordDraft = ref('')
 const keyword = ref('')
 const followedPolicyIds = ref<number[]>([])
 
-const policies = computed(() =>
-  enterprise.value ? buildMatchPolicies(enterprise.value) : [],
-)
+const load = async () => {
+  const id = enterpriseId.value
+  if (!id) return
+  loading.value = true
+  error.value = ''
+  try {
+    const raw = await fetchEnterpriseRaw(id)
+    ipCounts.value = {
+      ...readIpCounts(raw),
+      policy: 0,
+    }
+    enterprise.value = mapEnterpriseDetail(raw, {
+      policyCount: 0,
+    })
+    if (!isLoggedIn.value) {
+      policies.value = []
+      error.value = '登录后可查看匹配政策'
+      return
+    }
+    const page = await fetchEntToPolicy(id, { pageIndex: 1, pageSize: 200 })
+    policies.value = page.items
+    ipCounts.value = { ...ipCounts.value, policy: page.totalElements }
+    if (enterprise.value) enterprise.value.policyCount = page.totalElements
+  } catch (err) {
+    enterprise.value = null
+    policies.value = []
+    error.value = toErrorMessage(err, '匹配结果加载失败')
+  } finally {
+    loading.value = false
+  }
+}
 
 const filtered = computed(() => {
   const query = keyword.value.trim()
@@ -68,44 +103,29 @@ const { currentPage, pagedList, total, pageSize, resetPage } = usePagination(
   { pageSize: PAGE_SIZE },
 )
 
-watch(enterpriseId, () => {
-  keywordDraft.value = ''
-  keyword.value = ''
-  followedPolicyIds.value = []
-  resetPage()
-})
+watch(
+  [enterpriseId, isLoggedIn],
+  () => {
+    keywordDraft.value = ''
+    keyword.value = ''
+    followedPolicyIds.value = []
+    resetPage()
+    void load()
+  },
+  { immediate: true },
+)
 
 const stats = computed(() => {
-  const current = enterprise.value
-  if (!current) return []
-  if (current.id === 1) {
-    return [
-      { label: '注册商标', value: '60' },
-      { label: '发明专利授权', value: '35' },
-      { label: '实用新型专利授权', value: '7' },
-      { label: '外观设计专利授权', value: '2' },
-      { label: '软件著作权', value: '27' },
-      { label: '作品', value: '3' },
-      { label: '已获政策', value: '70' },
-      { label: '收录公示补贴', value: '314.4420万元', hot: true },
-    ]
-  }
-  const countType = (type: string) =>
-    current.patents.filter((item) => item.patentType === type).length
-  return [
-    { label: '注册商标', value: String(current.trademarks.length) },
-    { label: '发明专利授权', value: String(countType('发明专利')) },
-    { label: '实用新型专利授权', value: String(countType('实用新型')) },
-    { label: '外观设计专利授权', value: String(countType('外观设计')) },
-    { label: '软件著作权', value: String(current.softwareCopyrights.length) },
-    { label: '作品', value: String(current.workCopyrights.length) },
-    { label: '已获政策', value: String(current.policyCount) },
-    {
-      label: '收录公示补贴',
-      value: `${current.publicityAmount.toFixed(4)}万元`,
-      hot: true,
-    },
+  if (!enterprise.value) return []
+  const counts = ipCounts.value
+  const rows: Array<{ label: string; value: string; hot?: boolean }> = [
+    { label: '注册商标', value: String(counts.brand) },
+    { label: '专利', value: String(counts.patent) },
+    { label: '软件著作权', value: String(counts.software) },
+    { label: '作品', value: String(counts.work) },
+    { label: '匹配政策', value: String(counts.policy) },
   ]
+  return rows
 })
 
 const goHome = () => {
@@ -244,7 +264,12 @@ const exportReport = () => {
       </div>
     </section>
 
-    <PageState :empty="enterprise ? '' : '未找到该企业'">
+    <PageState
+      :loading="loading && !enterprise"
+      :error="!enterprise ? error : ''"
+      :empty="!loading && !error && !enterprise ? '未找到该企业' : ''"
+      @retry="load"
+    >
       <section v-if="enterprise" class="result-card">
         <ResultCountBar
           class="result-head"
@@ -254,7 +279,10 @@ const exportReport = () => {
           decorated
         />
 
-        <div v-if="!pagedList.length" class="result-empty">
+        <div v-if="error" class="result-empty">
+          {{ error }}
+        </div>
+        <div v-else-if="!pagedList.length" class="result-empty">
           未找到匹配的政策
         </div>
 

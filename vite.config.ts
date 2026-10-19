@@ -66,14 +66,32 @@ export default defineConfig(({ mode }) => {
             }
           },
         },
-        '/auth': {
-          target: proxyTarget,
-          changeOrigin: true,
-        },
-        '/account': {
-          target: proxyTarget,
-          changeOrigin: true,
-        },
+        ...Object.fromEntries(
+          [
+            '/auth',
+            '/account',
+            '/health',
+            '/system',
+            '/meta',
+            '/invest',
+            '/policies',
+            '/news',
+            '/enterprises',
+            '/search',
+            '/match',
+            '/kb',
+          ].map((prefix) => [
+            prefix,
+            {
+              target: proxyTarget,
+              changeOrigin: true,
+              // 浏览器打开 /news 等前端路由时要落到 SPA，接口请求仍转发后端
+              bypass(req: { headers: { accept?: string }; url?: string }) {
+                if (req.headers.accept?.includes('text/html')) return req.url
+              },
+            },
+          ]),
+        ),
       },
     },
     build: {

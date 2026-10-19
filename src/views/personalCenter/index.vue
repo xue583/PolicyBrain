@@ -8,6 +8,8 @@ import {
   CrownOutlined,
 } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { fetchMyMembership } from '@/api/membership'
+import { mapMembershipLabel } from '@/api/mapPortal'
 import { formatLastLogin, identityLabel, maskPhone } from '@/utils/userDisplay'
 import baseIcon from '@/assets/personalCenter/基础@2x.png'
 import msgIcon from '@/assets/personalCenter/goutong@2x.png'
@@ -101,17 +103,24 @@ const currentMenu = computed(
     menuItems.find((item) => item.key === selectedMenu.value) ?? menuItems[0]!,
 )
 
+const membershipLabel = ref('')
+
 const userInfo = computed(() => {
   const profile = user.value
   const phone = profile?.phone || ''
-  const identity = identityLabel(profile?.identity)
+  const identity = [
+    identityLabel(profile?.identity) || '未认证',
+    membershipLabel.value,
+  ]
+    .filter(Boolean)
+    .join(' · ')
   return {
     phone: maskPhone(phone) || '未绑定手机',
     username: profile?.nickname || phone || '未设置',
     company: profile?.companyName || '未填写',
     lastLogin: formatLastLogin(profile?.lastLoginTime) || '—',
     bindPhone: phone || '未绑定',
-    identity: identity || '未认证',
+    identity,
     avatar: profile?.avatar || '',
   }
 })
@@ -131,6 +140,12 @@ const uploadAvatarOpen = ref(false)
 
 onMounted(() => {
   void auth.loadCurrentUser().catch(() => undefined)
+  if (!auth.isLoggedIn) return
+  void fetchMyMembership()
+    .then((data) => {
+      membershipLabel.value = mapMembershipLabel(data)
+    })
+    .catch(() => undefined)
 })
 </script>
 
@@ -347,8 +362,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 13px;
-  color: #c8956c;
+  font-size: 16px;
+  color: #3e2a0d;
   cursor: pointer;
 
   &:hover {

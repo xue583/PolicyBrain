@@ -8,6 +8,7 @@ defineProps<{
   total: number
   currentPage: number
   pageSize: number
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -62,13 +63,22 @@ const columns: TableColumnType<InvestProject>[] = [
       :columns="columns"
       :data-source="dataSource"
       :pagination="false"
-      :row-key="(row: InvestProject) => row.id"
+      :loading="loading"
+      :row-key="(row: InvestProject) => row.code || row.id"
       size="middle"
       bordered
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'name'">
-          <a class="project-name">{{ record.name }}</a>
+          <a
+            v-if="record.url"
+            class="project-name"
+            :href="record.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ record.name }}</a
+          >
+          <span v-else>{{ record.name }}</span>
         </template>
         <template v-else-if="column.key === 'result'">
           <span class="result" :class="record.result">
@@ -153,6 +163,11 @@ const columns: TableColumnType<InvestProject>[] = [
   line-height: 1.6;
   white-space: normal;
   word-break: break-word;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .result {

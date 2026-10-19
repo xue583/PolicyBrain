@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
-import { useFilteredList } from '@/composables/useFilteredList'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
+import { useServerPage } from '@/composables/useServerPage'
 import { useCollapsedList } from '@/composables/useCollapsedList'
 import { BankOutlined, EyeOutlined } from '@ant-design/icons-vue'
 import FilterRow from '@/components/common/FilterRow.vue'
@@ -11,7 +11,6 @@ import PagedTable from '@/components/common/PagedTable.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import SelectedConditionsBar from '@/components/common/SelectedConditionsBar.vue'
 import {
-  mockPolicyDb,
   policyDbLevels,
   policyDepartments,
   policyGrades,
@@ -19,7 +18,9 @@ import {
   type PolicyDbItem,
 } from '../../mock/policyDb'
 import { infoTypes } from '../../mock/filters'
-import { filterPolicyDb } from '@/utils/filterPolicies'
+import { fetchPolicyPage } from '@/api/policies'
+import { fetchIndustryTree, type IndustryNode } from '@/api/meta'
+import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 
 defineOptions({ name: 'PolicyDb' })
 
@@ -27,12 +28,17 @@ const COLLAPSED_COUNT = 10
 
 const keyword = useRouteKeyword()
 
-const levels = ref<string[]>(['municipal'])
+const levels = ref<string[]>([])
+
+const toIndustryNodes = (names: string[]): IndustryNode[] =>
+  names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
+
+const industryTree = ref<IndustryNode[]>(toIndustryNodes(policyIndustryTags))
 
 const filters = reactive({
   grade: '',
   department: '',
-  industryTag: '',
+  industryTags: [] as string[],
   infoTypes: [] as string[],
 })
 
@@ -74,12 +80,9 @@ const selectedConditions = computed(() => {
       label: `发布单位：${filters.department}`,
     })
   }
-  if (filters.industryTag) {
-    list.push({
-      key: 'industryTag',
-      label: `产业标签：${filters.industryTag}`,
-    })
-  }
+  filters.industryTags.forEach((tag) => {
+    list.push({ key: `industry:${tag}`, label: `产业标签：${tag}` })
+  })
   filters.infoTypes.forEach((value) => {
     const found = infoTypes.find((t) => t.value === value)
     if (found)
@@ -93,60 +96,69 @@ const { showMore: showMoreGrades, visibleList: visibleGrades } =
 const { showMore: showMoreDepartments, visibleList: visibleDepartments } =
   useCollapsedList(policyDepartments, COLLAPSED_COUNT)
 const { showMore: showMoreTags, visibleList: visibleIndustryTags } =
-  useCollapsedList(policyIndustryTags, COLLAPSED_COUNT)
+  useCollapsedList(industryTree, COLLAPSED_COUNT)
 
-const filteredList = computed(() =>
-  filterPolicyDb(mockPolicyDb, {
-    keyword: keyword.value,
-    grade: filters.grade,
-    department: filters.department,
-    industryTag: filters.industryTag,
-    infoTypes: filters.infoTypes,
-    levels: levels.value,
-  }),
+const {
+  currentPage,
+  pageSize,
+  items: pagedList,
+  total,
+  loading,
+  error,
+  reload,
+} = useServerPage(
+  (pageIndex, pageSize) =>
+    fetchPolicyPage({
+      keyword: keyword.value,
+      grade: filters.grade,
+      department: filters.department,
+      industryTag: filters.industryTags.join(','),
+      infoTypes: filters.infoTypes,
+      levels: levels.value,
+      pageIndex,
+      pageSize,
+    }),
+  () =>
+    JSON.stringify({
+      keyword: keyword.value,
+      grade: filters.grade,
+      department: filters.department,
+      industryTag: filters.industryTags.join(','),
+      infoTypes: filters.infoTypes,
+      levels: levels.value,
+    }),
 )
 
-const { currentPage, pageSize, pagedList, total, resetPage } =
-  useFilteredList(filteredList)
-
-const selectFilter = (
-  key: 'grade' | 'department' | 'industryTag',
-  value: string,
-) => {
+const selectFilter = (key: 'grade' | 'department', value: string) => {
   filters[key] = filters[key] === value ? '' : value
 }
 
 const removeCondition = (key: string) => {
-  if (key === 'grade' || key === 'department' || key === 'industryTag') {
+  if (key === 'grade' || key === 'department') {
     filters[key] = ''
+  } else if (key.startsWith('industry:')) {
+    const value = key.slice('industry:'.length)
+    filters.industryTags = filters.industryTags.filter((item) => item !== value)
   } else if (key.startsWith('type:')) {
     const value = key.slice('type:'.length)
     filters.infoTypes = filters.infoTypes.filter((item) => item !== value)
   }
-  resetPage()
 }
 
 const clearConditions = () => {
   filters.grade = ''
   filters.department = ''
-  filters.industryTag = ''
+  filters.industryTags = []
   filters.infoTypes = []
-  resetPage()
 }
 
-watch(
-  [
-    levels,
-    keyword,
-    () => filters.grade,
-    () => filters.department,
-    () => filters.industryTag,
-    () => filters.infoTypes,
-  ],
-  () => {
-    resetPage()
-  },
-)
+onMounted(() => {
+  void fetchIndustryTree()
+    .then((nodes) => {
+      if (nodes.length) industryTree.value = nodes
+    })
+    .catch(() => undefined)
+})
 
 const columns = [
   {
@@ -167,6 +179,7 @@ const columns = [
     key: 'department',
     width: 168,
     align: 'center',
+    ellipsis: { showTitle: false },
   },
   {
     title: '状态',
@@ -227,15 +240,10 @@ const columns = [
             v-model:expanded="showMoreTags"
             collapsible
           >
-            <a
-              v-for="tag in visibleIndustryTags"
-              :key="tag"
-              class="option-link"
-              :class="{ active: filters.industryTag === tag }"
-              @click="selectFilter('industryTag', tag)"
-            >
-              {{ tag }}
-            </a>
+            <IndustryCascadeFilter
+              v-model="filters.industryTags"
+              :options="visibleIndustryTags"
+            />
           </FilterRow>
 
           <div class="filter-row">
@@ -270,9 +278,21 @@ const columns = [
           </div>
 
           <a-config-provider :locale="listLocale">
+            <a-alert
+              v-if="error"
+              type="error"
+              show-icon
+              :message="error"
+              style="margin-bottom: 12px"
+            >
+              <template #action>
+                <a-button size="small" @click="reload">重试</a-button>
+              </template>
+            </a-alert>
             <PagedTable
               v-model:current="currentPage"
               class="policy-table"
+              :loading="loading"
               :with-index="false"
               quick-jumper
               :show-total="(count: number) => `共${count}条`"
@@ -294,7 +314,7 @@ const columns = [
                     </router-link>
                     <div class="name-links">
                       <router-link
-                        v-for="link in rowLinks(record)"
+                        v-for="link in rowLinks(record as PolicyDbItem)"
                         :key="link.label"
                         class="name-link"
                         :to="link.to"
@@ -311,7 +331,9 @@ const columns = [
                   </span>
                 </template>
                 <template v-else-if="column.key === 'department'">
-                  <span class="dept-name">{{ record.department }}</span>
+                  <a-tooltip :title="record.department">
+                    <span class="dept-name">{{ record.department }}</span>
+                  </a-tooltip>
                 </template>
                 <template v-else-if="column.key === 'status'">
                   <span class="status-tag" :class="record.status">
@@ -467,7 +489,11 @@ const columns = [
 }
 
 .dept-name {
+  display: block;
+  overflow: hidden;
   color: #434343;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .views-cell {

@@ -15,7 +15,7 @@ defineProps<{
   products: EnterpriseProduct[]
   industryChains: EnterpriseIndustryChain[]
   basis: string
-  credibility: ProductCredibility
+  credibility?: ProductCredibility | ''
 }>()
 </script>
 
@@ -108,11 +108,11 @@ defineProps<{
       </div>
 
       <div class="product-footer">
-        <p class="basis">
+        <p v-if="basis" class="basis">
           <FileTextOutlined />
           判断依据：{{ basis }}
         </p>
-        <p class="credibility">
+        <p v-if="credibility" class="credibility">
           可信度：<em>{{ credibility }}</em>
         </p>
       </div>

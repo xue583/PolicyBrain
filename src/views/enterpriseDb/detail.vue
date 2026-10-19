@@ -2,7 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { getEnterpriseDetail } from '../../mock/enterpriseDb'
+import { fetchEnterpriseDetail } from '@/api/enterprises'
+import type { EnterpriseDetail } from '../../mock/enterpriseDb'
+import { toErrorMessage } from '@/utils/apiError'
 import QualificationPanel from './QualificationPanel.vue'
 import ContactPanel from './ContactPanel.vue'
 import ProductIndustryPanel from './ProductIndustryPanel.vue'
@@ -27,15 +29,33 @@ const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 
 const enterpriseId = computed(() => Number(route.params.id))
-const enterprise = computed(() => getEnterpriseDetail(enterpriseId.value))
+const enterprise = ref<EnterpriseDetail | null>(null)
+const loading = ref(false)
+const error = ref('')
 
 const activeTab = ref('policies')
 const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, enterpriseId)
+
+const load = async () => {
+  const id = enterpriseId.value
+  if (!id) return
+  loading.value = true
+  error.value = ''
+  enterprise.value = null
+  try {
+    enterprise.value = await fetchEnterpriseDetail(id)
+  } catch (err) {
+    error.value = toErrorMessage(err, '未找到该企业')
+  } finally {
+    loading.value = false
+  }
+}
 
 watch(
   enterpriseId,
   () => {
     activeTab.value = 'policies'
+    void load()
   },
   { immediate: true },
 )
@@ -58,7 +78,10 @@ const onPolicyMatch = () => {
     list-label="企业数据库"
     list-route="enterprise-db"
     :detail-label="enterprise?.name ?? '企业详情'"
-    :empty="enterprise ? '' : '未找到该企业'"
+    :loading="loading"
+    :error="error"
+    :empty="!loading && !error && !enterprise ? '未找到该企业' : ''"
+    @retry="load"
   >
     <template v-if="enterprise">
       <EnterpriseProfileCard

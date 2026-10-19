@@ -1,20 +1,24 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useFilteredList } from '@/composables/useFilteredList'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useCollapsedList } from '@/composables/useCollapsedList'
+import { useServerPage } from '@/composables/useServerPage'
 import FilterRow from '@/components/common/FilterRow.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import {
   enterpriseIndustries,
   enterpriseProvinces,
   enterpriseStatusText,
-  enterpriseTotal,
-  mockEnterprises,
   type EnterpriseItem,
 } from '../../mock/enterpriseDb'
-import { filterEnterprises } from '@/utils/filterPolicies'
+import { fetchEnterprisePage } from '@/api/enterprises'
+import {
+  fetchIndustryTree,
+  fetchProvinceOptions,
+  type IndustryNode,
+} from '@/api/meta'
+import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import industryTagIcon from '../../assets/enterpriseDb/industry-tag.png'
 import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
 
@@ -31,31 +35,60 @@ const filters = reactive({
   industries: [] as string[],
 })
 
+const toIndustryNodes = (names: string[]): IndustryNode[] =>
+  names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
+
+const provinceOptions = ref<string[]>([...enterpriseProvinces])
+const industryTree = ref<IndustryNode[]>(toIndustryNodes(enterpriseIndustries))
+
 const { showMore: showMoreProvinces, visibleList: visibleProvinces } =
-  useCollapsedList(enterpriseProvinces, COLLAPSED_PROVINCE_COUNT, {
+  useCollapsedList(provinceOptions, COLLAPSED_PROVINCE_COUNT, {
     initialExpanded: true,
   })
 
 const { showMore: showMoreIndustries, visibleList: visibleIndustries } =
-  useCollapsedList(enterpriseIndustries, COLLAPSED_INDUSTRY_COUNT)
+  useCollapsedList(industryTree, COLLAPSED_INDUSTRY_COUNT)
 
-const filteredList = computed(() =>
-  filterEnterprises(mockEnterprises, {
-    keyword: keyword.value,
-    province: filters.province,
-    industries: filters.industries,
-  }),
+const {
+  currentPage,
+  pageSize,
+  items: pagedList,
+  total,
+  loading,
+  error,
+  reload,
+} = useServerPage(
+  (pageIndex, pageSize) =>
+    fetchEnterprisePage({
+      keyword: keyword.value,
+      province: filters.province,
+      industries: filters.industries,
+      pageIndex,
+      pageSize,
+    }),
+  () =>
+    JSON.stringify({
+      keyword: keyword.value,
+      province: filters.province,
+      industries: filters.industries,
+    }),
 )
-
-const { currentPage, pageSize, pagedList, total, resetPage } =
-  useFilteredList(filteredList)
 
 const selectProvince = (province: string) => {
   filters.province = filters.province === province ? '' : province
 }
 
-watch([keyword, () => filters.province, () => filters.industries], () => {
-  resetPage()
+onMounted(() => {
+  void fetchProvinceOptions()
+    .then((names) => {
+      if (names.length) provinceOptions.value = names
+    })
+    .catch(() => undefined)
+  void fetchIndustryTree()
+    .then((nodes) => {
+      if (nodes.length) industryTree.value = nodes
+    })
+    .catch(() => undefined)
 })
 
 const locationText = (item: EnterpriseItem) => `${item.province}/${item.city}`
@@ -72,7 +105,7 @@ const goDetail = (id: number) => {
         <ResultCountBar
           class="total-count"
           prefix="共收录"
-          :total="enterpriseTotal"
+          :total="total"
           unit="家企业"
           decorated
         />
@@ -101,78 +134,91 @@ const goDetail = (id: number) => {
         v-model:expanded="showMoreIndustries"
         collapsible
       >
-        <a-checkbox-group
-          v-model:value="filters.industries"
+        <IndustryCascadeFilter
+          v-model="filters.industries"
           :options="visibleIndustries"
         />
       </FilterRow>
 
-      <div v-if="!pagedList.length" class="empty-state">
-        <img :src="emptyIllustration" alt="" class="empty-illustration" />
-        <p>未找到符合条件的企业，请调整筛选后再试</p>
-      </div>
-
-      <div v-else class="enterprise-grid">
-        <article
-          v-for="item in pagedList"
-          :key="item.id"
-          class="ent-item"
-          @click="goDetail(item.id)"
+      <a-spin :spinning="loading">
+        <a-alert
+          v-if="error"
+          type="error"
+          show-icon
+          :message="error"
+          style="margin-bottom: 16px"
         >
-          <div class="ent-head">
-            <div class="ent-title-wrap">
-              <img :src="industryTagIcon" alt="" class="ent-icon" />
-              <router-link
-                class="ent-name"
-                :to="{
-                  name: 'enterprise-db-detail',
-                  params: { id: String(item.id) },
-                }"
-                @click.stop
-              >
-                {{ item.name }}
-              </router-link>
-              <span class="status-tag" :class="item.status">
-                {{ enterpriseStatusText[item.status] }}
-              </span>
-            </div>
-            <span class="ent-location">{{ locationText(item) }}</span>
-          </div>
+          <template #action>
+            <a-button size="small" @click="reload">重试</a-button>
+          </template>
+        </a-alert>
+        <div v-else-if="!pagedList.length" class="empty-state">
+          <img :src="emptyIllustration" alt="" class="empty-illustration" />
+          <p>未找到符合条件的企业，请调整筛选后再试</p>
+        </div>
 
-          <div class="ent-policy-row">
-            <p class="ent-policy">已获政策: {{ item.policyCount }}项</p>
-            <div class="ent-tags">
-              <span
-                v-for="(tag, index) in item.tags"
-                :key="tag"
-                class="ent-tag"
-                :class="index % 2 ? 'blue' : 'orange'"
-              >
-                {{ tag }}
-              </span>
+        <div v-else class="enterprise-grid">
+          <article
+            v-for="item in pagedList"
+            :key="item.id"
+            class="ent-item"
+            @click="goDetail(item.id)"
+          >
+            <div class="ent-head">
+              <div class="ent-title-wrap">
+                <img :src="industryTagIcon" alt="" class="ent-icon" />
+                <router-link
+                  class="ent-name"
+                  :to="{
+                    name: 'enterprise-db-detail',
+                    params: { id: String(item.id) },
+                  }"
+                  @click.stop
+                >
+                  {{ item.name }}
+                </router-link>
+                <span class="status-tag" :class="item.status">
+                  {{ enterpriseStatusText[item.status] }}
+                </span>
+              </div>
+              <span class="ent-location">{{ locationText(item) }}</span>
             </div>
-          </div>
 
-          <div class="ent-meta-row">
-            <p class="ent-meta">
-              <span class="meta-label">注册地址:</span>
-              <span class="meta-value-wrap">
-                <a-tooltip :title="item.address">
-                  <span class="meta-value">{{ item.address }}</span>
-                </a-tooltip>
-              </span>
-            </p>
-            <p class="ent-meta">
-              <span class="meta-label">工商行业:</span>
-              <span class="meta-value-wrap">
-                <a-tooltip :title="item.businessIndustry">
-                  <span class="meta-value">{{ item.businessIndustry }}</span>
-                </a-tooltip>
-              </span>
-            </p>
-          </div>
-        </article>
-      </div>
+            <div class="ent-policy-row">
+              <p class="ent-policy">已获政策: {{ item.policyCount }}项</p>
+              <div class="ent-tags">
+                <span
+                  v-for="(tag, index) in item.tags"
+                  :key="tag"
+                  class="ent-tag"
+                  :class="index % 2 ? 'blue' : 'orange'"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+            </div>
+
+            <div class="ent-meta-row">
+              <p class="ent-meta">
+                <span class="meta-label">注册地址:</span>
+                <span class="meta-value-wrap">
+                  <a-tooltip :title="item.address">
+                    <span class="meta-value">{{ item.address }}</span>
+                  </a-tooltip>
+                </span>
+              </p>
+              <p class="ent-meta">
+                <span class="meta-label">工商行业:</span>
+                <span class="meta-value-wrap">
+                  <a-tooltip :title="item.businessIndustry">
+                    <span class="meta-value">{{ item.businessIndustry }}</span>
+                  </a-tooltip>
+                </span>
+              </p>
+            </div>
+          </article>
+        </div>
+      </a-spin>
 
       <div class="pagination-wrap">
         <a-pagination
@@ -222,12 +268,6 @@ const goDetail = (id: number) => {
   padding-inline: 18px;
   border-radius: 6px;
   font-weight: 500;
-}
-
-:deep(.filter-options .ant-checkbox-group) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
 }
 
 :deep(.filter-options .ant-checkbox-wrapper) {

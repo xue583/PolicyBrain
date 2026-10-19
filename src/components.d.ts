@@ -11,8 +11,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AAlert: typeof import('ant-design-vue/es')['Alert']
     AButton: typeof import('ant-design-vue/es')['Button']
     ACard: typeof import('ant-design-vue/es')['Card']
+    ACheckbox: typeof import('ant-design-vue/es')['Checkbox']
     ACheckboxGroup: typeof import('ant-design-vue/es')['CheckboxGroup']
     AConfigProvider: typeof import('ant-design-vue/es')['ConfigProvider']
     ADescriptions: typeof import('ant-design-vue/es')['Descriptions']
@@ -54,6 +56,7 @@ declare module 'vue' {
     EmptyState: typeof import('./components/common/EmptyState.vue')['default']
     FilterRow: typeof import('./components/common/FilterRow.vue')['default']
     IconFont: typeof import('./components/common/IconFont.vue')['default']
+    IndustryCascadeFilter: typeof import('./components/common/IndustryCascadeFilter.vue')['default']
     LoginForm: typeof import('./components/login/LoginForm.vue')['default']
     LoginModal: typeof import('./components/LoginModal.vue')['default']
     PagedTable: typeof import('./components/common/PagedTable.vue')['default']
@@ -61,6 +64,7 @@ declare module 'vue' {
     PaginationBar: typeof import('./components/common/PaginationBar.vue')['default']
     PanelTabs: typeof import('./components/common/PanelTabs.vue')['default']
     PhoneCodeFields: typeof import('./components/login/PhoneCodeFields.vue')['default']
+    RegionCascadeFilter: typeof import('./components/common/RegionCascadeFilter.vue')['default']
     RegisterStepAccount: typeof import('./components/login/RegisterStepAccount.vue')['default']
     RegisterStepAuth: typeof import('./components/login/RegisterStepAuth.vue')['default']
     RegisterStepIdentity: typeof import('./components/login/RegisterStepIdentity.vue')['default']

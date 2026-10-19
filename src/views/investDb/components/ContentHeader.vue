@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { investTypeTabs, type InvestProjectType } from '../../../mock/investDb'
+import { computed } from 'vue'
+import { investTypeTabs } from '../../../mock/investDb'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
 
-defineProps<{
+const props = defineProps<{
   totalCount: number
   regionLabel: string
   keyword: string
-  activeType: InvestProjectType
-  counts: Record<InvestProjectType, number>
+  activeType: string
+  counts: Record<string, number>
+  tabs?: Array<{ key: string; label: string }>
 }>()
+
+const tabs = computed(
+  () =>
+    props.tabs ??
+    investTypeTabs.map((item) => ({ key: item.key, label: item.label })),
+)
 
 defineEmits<{
   'update:keyword': [value: string]
-  'update:activeType': [value: InvestProjectType]
+  'update:activeType': [value: string]
 }>()
 </script>
 
@@ -46,7 +54,7 @@ defineEmits<{
 
     <a-radio-group :value="activeType" class="type-filter">
       <a-radio-button
-        v-for="tab in investTypeTabs"
+        v-for="tab in tabs"
         :key="tab.key"
         :value="tab.key"
         @click="$emit('update:activeType', tab.key)"

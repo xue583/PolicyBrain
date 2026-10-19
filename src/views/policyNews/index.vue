@@ -1,46 +1,61 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useFilteredList } from '@/composables/useFilteredList'
+import { storeToRefs } from 'pinia'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useCollapsedList } from '@/composables/useCollapsedList'
+import { useServerPage } from '@/composables/useServerPage'
 import {
   DownOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
 } from '@ant-design/icons-vue'
 import {
-  regions,
-  industries,
+  industries as fallbackIndustries,
   policyLevels,
-  infoTypes,
-  mockPolicies,
+  infoTypes as fallbackInfoTypes,
   type PolicyItem,
 } from '../../mock/policyNews'
-import { filterPolicyNews } from '@/utils/filterPolicies'
+import { fetchNewsPage } from '@/api/news'
+import {
+  fetchIndustryTree,
+  fetchInfoTypeOptions,
+  type IndustryNode,
+} from '@/api/meta'
+import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
+import { useRegionStore } from '@/stores/region'
+import { clearRegionSelection } from '@/utils/regionActions'
+import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 
 defineOptions({ name: 'PolicyNews' })
 
 const router = useRouter()
 
 const keyword = useRouteKeyword()
+const region = useRegionStore()
+const { selectedLabel: regionLabel } = storeToRefs(region)
 
 const filters = reactive({
-  region: '' as string,
   industries: [] as string[],
   levels: [] as string[],
   infoTypes: [] as string[],
 })
 
-const { showMore: showMoreRegions, visibleList: visibleRegions } =
-  useCollapsedList(regions, 12)
+const toIndustryNodes = (names: string[]): IndustryNode[] =>
+  names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
+
+const industryTree = ref<IndustryNode[]>(toIndustryNodes(fallbackIndustries))
+const infoTypes = ref<Array<{ label: string; value: string }>>(
+  fallbackInfoTypes.map((item) => ({ ...item })),
+)
+
 const { showMore: showMoreIndustries, visibleList: visibleIndustries } =
-  useCollapsedList(industries, 5)
+  useCollapsedList(industryTree, 8)
 
 const selectedConditions = computed(() => {
   const list: { key: string; label: string }[] = []
-  if (filters.region) {
-    list.push({ key: 'region', label: `省市地区：${filters.region}` })
+  if (regionLabel.value) {
+    list.push({ key: 'region', label: `省市地区：${regionLabel.value}` })
   }
   filters.industries.forEach((item) => {
     list.push({ key: `industry:${item}`, label: `行业分类：${item}` })
@@ -51,33 +66,45 @@ const selectedConditions = computed(() => {
       list.push({ key: `level:${value}`, label: `政策级别：${found.label}` })
   })
   filters.infoTypes.forEach((value) => {
-    const found = infoTypes.find((t) => t.value === value)
+    const found = infoTypes.value.find((t) => t.value === value)
     if (found)
       list.push({ key: `type:${value}`, label: `资讯类型：${found.label}` })
   })
   return list
 })
 
-const filteredList = computed(() =>
-  filterPolicyNews(mockPolicies, {
-    keyword: keyword.value,
-    region: filters.region,
-    industries: filters.industries,
-    levels: filters.levels,
-    infoTypes: filters.infoTypes,
-  }),
+const {
+  currentPage,
+  pageSize,
+  items: pagedList,
+  total,
+  loading,
+  error,
+  reload,
+} = useServerPage(
+  (pageIndex, pageSize) =>
+    fetchNewsPage({
+      keyword: keyword.value,
+      region: regionLabel.value,
+      industries: filters.industries,
+      levels: filters.levels,
+      infoTypes: filters.infoTypes,
+      pageIndex,
+      pageSize,
+    }),
+  () =>
+    JSON.stringify({
+      keyword: keyword.value,
+      region: regionLabel.value,
+      industries: filters.industries,
+      levels: filters.levels,
+      infoTypes: filters.infoTypes,
+    }),
 )
-
-const { currentPage, pageSize, pagedList, total, resetPage } =
-  useFilteredList(filteredList)
-
-const selectRegion = (region: string) => {
-  filters.region = filters.region === region ? '' : region
-}
 
 const removeCondition = (key: string) => {
   if (key === 'region') {
-    filters.region = ''
+    clearRegionSelection()
   } else if (key.startsWith('industry:')) {
     const value = key.slice('industry:'.length)
     filters.industries = filters.industries.filter((i) => i !== value)
@@ -88,33 +115,27 @@ const removeCondition = (key: string) => {
     const value = key.slice('type:'.length)
     filters.infoTypes = filters.infoTypes.filter((i) => i !== value)
   }
-  resetPage()
 }
 
 const clearConditions = () => {
-  filters.region = ''
+  clearRegionSelection()
   filters.industries = []
   filters.levels = []
   filters.infoTypes = []
-  resetPage()
 }
 
-watch(
-  [
-    keyword,
-    () => filters.region,
-    () => filters.industries,
-    () => filters.levels,
-    () => filters.infoTypes,
-  ],
-  () => {
-    resetPage()
-  },
-)
-
-const onFilterChange = () => {
-  // resetPage 由 watch 自动触发
-}
+onMounted(() => {
+  void fetchIndustryTree()
+    .then((nodes) => {
+      if (nodes.length) industryTree.value = nodes
+    })
+    .catch(() => undefined)
+  void fetchInfoTypeOptions()
+    .then((options) => {
+      if (options.length) infoTypes.value = options
+    })
+    .catch(() => undefined)
+})
 
 const openDetail = (item: PolicyItem) => {
   void router.push({ name: 'news-detail', params: { id: String(item.id) } })
@@ -127,32 +148,14 @@ const openDetail = (item: PolicyItem) => {
       <!-- Filters -->
       <div class="filter-panel">
         <a-card class="pb-card-lg">
-          <div class="filter-row">
-            <span class="filter-label">省市地区：</span>
-            <div class="filter-options">
-              <a
-                v-for="region in visibleRegions"
-                :key="region"
-                class="region-link"
-                :class="{ active: filters.region === region }"
-                @click="selectRegion(region)"
-              >
-                {{ region }}
-              </a>
-              <a class="more-link" @click="showMoreRegions = !showMoreRegions">
-                {{ showMoreRegions ? '收起' : '更多' }}
-                <DownOutlined :class="{ rotated: showMoreRegions }" />
-              </a>
-            </div>
-          </div>
+          <RegionCascadeFilter label="省市地区：" :collapsed-count="12" />
 
           <div class="filter-row">
             <span class="filter-label">行业分类：</span>
             <div class="filter-options">
-              <a-checkbox-group
-                v-model:value="filters.industries"
+              <IndustryCascadeFilter
+                v-model="filters.industries"
                 :options="visibleIndustries"
-                @change="onFilterChange"
               />
               <a
                 class="more-link"
@@ -170,7 +173,6 @@ const openDetail = (item: PolicyItem) => {
               <a-checkbox-group
                 v-model:value="filters.levels"
                 :options="policyLevels"
-                @change="onFilterChange"
               />
             </div>
           </div>
@@ -181,7 +183,6 @@ const openDetail = (item: PolicyItem) => {
               <a-checkbox-group
                 v-model:value="filters.infoTypes"
                 :options="infoTypes"
-                @change="onFilterChange"
               />
             </div>
           </div>
@@ -219,70 +220,88 @@ const openDetail = (item: PolicyItem) => {
       <!-- Tips -->
       <div class="result-bar">共找到 {{ total }} 条政策资讯</div>
 
+      <a-alert
+        v-if="error"
+        class="list-alert"
+        type="error"
+        show-icon
+        :message="error"
+      >
+        <template #action>
+          <a-button size="small" @click="reload">重试</a-button>
+        </template>
+      </a-alert>
+
       <!-- List -->
-      <div class="list-section">
-        <div class="policy-cards">
-          <div
-            v-for="item in pagedList"
-            :key="item.id"
-            class="policy-card"
-            @click="openDetail(item)"
-          >
-            <span
-              class="status-badge"
-              :class="item.status === 'expired' ? 'expired' : 'applying'"
+      <a-spin :spinning="loading">
+        <div class="list-section">
+          <a-empty
+            v-if="!loading && !pagedList.length"
+            description="暂无政策资讯"
+          />
+          <div v-else class="policy-cards">
+            <div
+              v-for="item in pagedList"
+              :key="item.id"
+              class="policy-card"
+              @click="openDetail(item)"
             >
-              {{ item.status === 'expired' ? '已过期' : '申报中' }}
-            </span>
-
-            <div class="item-head">
-              <a class="item-title">{{ item.title }}</a>
-            </div>
-
-            <div class="item-tags">
-              <template v-for="(tag, index) in item.tags" :key="tag.text">
-                <a-tag :color="tag.color">{{ tag.text }}</a-tag>
-                <a-tag v-if="index === 0" color="processing">{{
-                  item.department
-                }}</a-tag>
-              </template>
-            </div>
-
-            <p class="item-desc">{{ item.description }}</p>
-
-            <div class="item-meta">
-              <span>发布日期：{{ item.date }}</span>
-              <span>发文机构：{{ item.department }}</span>
-            </div>
-
-            <a-divider class="tabs-divider" />
-
-            <div class="item-remain">
-              <ClockCircleOutlined />
               <span
-                class="remain-text"
-                :class="{ danger: item.daysRemaining <= 0 }"
+                class="status-badge"
+                :class="item.status === 'expired' ? 'expired' : 'applying'"
               >
-                剩余天数：{{ item.daysRemaining }}天
+                {{ item.status === 'expired' ? '已过期' : '申报中' }}
               </span>
-              <span>｜</span>
-              <span class="date-range"
-                >{{ item.date }} 至 {{ item.endDate }}</span
-              >
+
+              <div class="item-head">
+                <a class="item-title">{{ item.title }}</a>
+              </div>
+
+              <div class="item-tags">
+                <template v-for="(tag, index) in item.tags" :key="tag.text">
+                  <a-tag :color="tag.color">{{ tag.text }}</a-tag>
+                  <a-tag v-if="index === 0" color="processing">{{
+                    item.department
+                  }}</a-tag>
+                </template>
+              </div>
+
+              <p class="item-desc">{{ item.description }}</p>
+
+              <div class="item-meta">
+                <span>发布日期：{{ item.date }}</span>
+                <span>发文机构：{{ item.department }}</span>
+              </div>
+
+              <a-divider class="tabs-divider" />
+
+              <div class="item-remain">
+                <ClockCircleOutlined />
+                <span
+                  class="remain-text"
+                  :class="{ danger: item.daysRemaining <= 0 }"
+                >
+                  剩余天数：{{ item.daysRemaining }}天
+                </span>
+                <span>｜</span>
+                <span class="date-range"
+                  >{{ item.date }} 至 {{ item.endDate }}</span
+                >
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="pagination-wrap">
-          <a-pagination
-            v-model:current="currentPage"
-            :total="total"
-            :page-size="pageSize"
-            show-quick-jumper
-            :show-total="(t: number) => `共 ${t} 条`"
-          />
+          <div class="pagination-wrap">
+            <a-pagination
+              v-model:current="currentPage"
+              :total="total"
+              :page-size="pageSize"
+              show-quick-jumper
+              :show-total="(t: number) => `共 ${t} 条`"
+            />
+          </div>
         </div>
-      </div>
+      </a-spin>
     </div>
   </PageState>
 </template>
@@ -300,16 +319,6 @@ const openDetail = (item: PolicyItem) => {
 
 .filter-options :global(.ant-checkbox-wrapper) {
   font-size: 16px;
-}
-
-.region-link {
-  color: #262626;
-  line-height: 32px;
-
-  &.active,
-  &:hover {
-    color: var(--pb-primary);
-  }
 }
 
 .tabs-divider {

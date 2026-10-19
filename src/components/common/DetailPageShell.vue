@@ -16,7 +16,11 @@ const props = defineProps<{
   detailLabel: string
   /** 数据为空时的占位文案 */
   empty: string
+  loading?: boolean
+  error?: string
 }>()
+
+defineEmits<{ retry: [] }>()
 
 const router = useRouter()
 
@@ -38,7 +42,12 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
 <template>
   <div class="detail-page">
     <BreadcrumbNav :items="breadcrumbItems" @back="goList" />
-    <PageState :empty="empty">
+    <PageState
+      :loading="loading"
+      :error="error"
+      :empty="empty"
+      @retry="$emit('retry')"
+    >
       <slot />
     </PageState>
   </div>

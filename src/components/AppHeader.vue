@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
   DownOutlined,
   EnvironmentOutlined,
   BellFilled,
+  RightOutlined,
 } from '@ant-design/icons-vue'
-import { cities, navItems } from '@/mock/nav'
+import { navItems } from '@/mock/nav'
+import { loadRegionOptions, type CityOption } from '@/api/meta'
+import { selectRegionCity, selectRegionProvince } from '@/utils/regionActions'
 import { useAuthStore } from '@/stores/auth'
+import { useRegionStore } from '@/stores/region'
 import { onNeedLogin } from '@/utils/auth'
 import logoImg from '@/assets/logo-full.png'
 import logoLightImg from '@/assets/logo-light.png'
@@ -23,14 +27,22 @@ defineOptions({ name: 'AppHeader' })
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const regionStore = useRegionStore()
 const { isLoggedIn } = storeToRefs(auth)
+const { areaLabel } = storeToRefs(regionStore)
 
-const currentCity = ref('郑州市')
+const provinceOptions = ref<CityOption[]>([])
+const cityOptions = ref<CityOption[]>([])
+const regionOpen = ref(false)
+const activeProvinceId = ref<number | null>(null)
+const activeCityId = ref<number | null>(null)
+const cityLoading = ref(false)
 const loginOpen = ref(false)
 const scrolled = ref(false)
 
 const activeNav = computed(() => (route.meta.navKey as string) || 'home')
 const isHome = computed(() => route.name === 'home')
+const isMembership = computed(() => route.name === 'membership')
 const isImmersive = computed(() => Boolean(route.meta.immersiveHeader))
 const overlayHeader = computed(() => isImmersive.value && !scrolled.value)
 const headerLogo = computed(() =>
@@ -48,9 +60,65 @@ const onScroll = () => {
   })
 }
 
-const onCitySelect = ({ key }: { key: string | number }) => {
-  currentCity.value = String(key)
+const showCities = async (province: CityOption) => {
+  activeProvinceId.value = province.id
+  activeCityId.value = null
+  cityLoading.value = true
+  cityOptions.value = []
+  try {
+    const list = await loadRegionOptions(province.id)
+    if (activeProvinceId.value === province.id) cityOptions.value = list
+  } catch {
+    if (activeProvinceId.value === province.id) cityOptions.value = []
+  } finally {
+    if (activeProvinceId.value === province.id) cityLoading.value = false
+  }
 }
+
+const selectProvince = (province: CityOption) => {
+  void showCities(province)
+  void selectRegionProvince(province)
+}
+
+const selectCity = (city: CityOption) => {
+  const province =
+    provinceOptions.value.find((item) => item.id === activeProvinceId.value) ??
+    provinceOptions.value.find((item) => item.id === regionStore.provinceId)
+  if (!province) return
+  selectRegionCity(province, city)
+  regionOpen.value = false
+}
+
+/** 打开面板时把当前选择回填到省/市两列 */
+const syncColumnsWithSelection = async () => {
+  let provinces = provinceOptions.value
+  if (!provinces.length) {
+    try {
+      provinces = await loadRegionOptions()
+    } catch {
+      provinces = []
+    }
+    provinceOptions.value = provinces
+  }
+  const currentProvince =
+    provinces.find((item) => item.id === regionStore.provinceId) ??
+    provinces.find((item) => item.label === regionStore.province)
+  if (!currentProvince) {
+    activeProvinceId.value = null
+    activeCityId.value = null
+    cityOptions.value = []
+    return
+  }
+  await showCities(currentProvince)
+  const currentCity =
+    cityOptions.value.find((item) => item.id === regionStore.cityId) ??
+    cityOptions.value.find((item) => item.label === regionStore.city)
+  activeCityId.value = currentCity?.id ?? null
+}
+
+watch(regionOpen, (open) => {
+  if (open) void syncColumnsWithSelection()
+})
 
 const onNavClick = ({ key }: { key: string | number }) => {
   const name = String(key)
@@ -86,6 +154,11 @@ onMounted(() => {
     loginOpen.value = true
   })
   void auth.hydrateUser()
+  void loadRegionOptions()
+    .then((provinces) => {
+      provinceOptions.value = provinces
+    })
+    .catch(() => undefined)
 })
 
 onUnmounted(() => {
@@ -102,6 +175,7 @@ onUnmounted(() => {
       'is-scrolled': scrolled,
       'is-solid': !isHome && !isImmersive,
       'is-immersive': overlayHeader,
+      'is-membership': isMembership,
     }"
   >
     <div class="header-inner">
@@ -114,18 +188,68 @@ onUnmounted(() => {
           />
         </div>
 
-        <a-dropdown>
+        <a-dropdown
+          v-model:open="regionOpen"
+          :trigger="['click']"
+          placement="bottomLeft"
+        >
           <a class="city-select" @click.prevent>
             <EnvironmentOutlined class="city-pin" />
-            <span>{{ currentCity }}</span>
+            <span class="city-label">{{ areaLabel }}</span>
             <DownOutlined class="city-arrow" />
           </a>
           <template #overlay>
-            <a-menu :selected-keys="[currentCity]" @click="onCitySelect">
-              <a-menu-item v-for="city in cities" :key="city">{{
-                city
-              }}</a-menu-item>
-            </a-menu>
+            <div class="city-cascader" @mousedown.stop>
+              <ul class="city-cascader-col">
+                <li
+                  v-if="!provinceOptions.length"
+                  class="city-cascader-item is-muted"
+                >
+                  加载中...
+                </li>
+                <li
+                  v-for="province in provinceOptions"
+                  :key="province.id"
+                  class="city-cascader-item"
+                  :class="{
+                    'is-active': province.id === activeProvinceId,
+                    'is-selected':
+                      province.id === regionStore.provinceId &&
+                      !regionStore.cityId,
+                  }"
+                  @mouseenter="showCities(province)"
+                  @click.stop="selectProvince(province)"
+                >
+                  <span>{{ province.label }}</span>
+                  <RightOutlined class="cascader-arrow" />
+                </li>
+              </ul>
+              <ul v-if="activeProvinceId" class="city-cascader-col">
+                <li v-if="cityLoading" class="city-cascader-item is-muted">
+                  加载中...
+                </li>
+                <li
+                  v-else-if="!cityOptions.length"
+                  class="city-cascader-item is-muted"
+                >
+                  暂无城市
+                </li>
+                <template v-else>
+                  <li
+                    v-for="city in cityOptions"
+                    :key="city.id"
+                    class="city-cascader-item"
+                    :class="{
+                      'is-active': city.id === activeCityId,
+                      'is-selected': city.id === regionStore.cityId,
+                    }"
+                    @click.stop="selectCity(city)"
+                  >
+                    <span>{{ city.label }}</span>
+                  </li>
+                </template>
+              </ul>
+            </div>
           </template>
         </a-dropdown>
       </div>
@@ -143,16 +267,16 @@ onUnmounted(() => {
           <img :src="robotImg" alt="" class="ai-icon" />
           <span class="ai-link-text">AI政策大脑</span>
         </a>
+        <a class="mobile-link">
+          <img :src="mobileImg" alt="" class="mobile-icon" />
+          <span>移动端</span>
+        </a>
         <a
           class="vip-link"
           :style="{ backgroundImage: `url(${vipEntryImg})` }"
           @click.prevent="goMembership"
         >
           开通会员
-        </a>
-        <a class="mobile-link">
-          <img :src="mobileImg" alt="" class="mobile-icon" />
-          <span>移动端</span>
         </a>
         <a class="mobile-link">
           <BellFilled />
@@ -183,6 +307,11 @@ onUnmounted(() => {
   transition:
     background-color 0.25s ease,
     box-shadow 0.25s ease;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.61) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
 
   &.is-scrolled,
   &.is-solid {
@@ -262,10 +391,14 @@ onUnmounted(() => {
 
   img {
     display: block;
-    height: 53px;
-    width: auto;
+    height: 60px;
+    width: 120px;
     object-fit: contain;
   }
+}
+
+.app-header.is-membership .logo img {
+  height: 37px;
 }
 
 .city-select {
@@ -275,11 +408,19 @@ onUnmounted(() => {
   color: #666;
   font-size: 13px;
   white-space: nowrap;
-  width: 122px;
+  width: auto;
+  min-width: 122px;
+  max-width: 210px;
   height: 32px;
   background: rgba(226, 237, 255, 0.67);
-  border-radius: 174px 174px 174px 174px;
-  padding-left: 17px;
+  border-radius: 174px;
+  padding: 0 14px 0 17px;
+
+  .city-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .city-pin {
     color: var(--pb-primary);
@@ -287,8 +428,70 @@ onUnmounted(() => {
   }
 
   .city-arrow {
+    flex-shrink: 0;
     font-size: 10px;
     color: #999;
+  }
+}
+
+.city-cascader {
+  display: flex;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.city-cascader-col {
+  min-width: 148px;
+  max-height: 320px;
+  margin: 0;
+  padding: 6px 0;
+  overflow: auto;
+  list-style: none;
+
+  & + & {
+    border-left: 1px solid #f0f0f0;
+  }
+}
+
+.city-cascader-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+  padding: 0 12px;
+  color: #343434;
+  font-size: 13px;
+  line-height: 32px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover,
+  &.is-active {
+    background: #f5f8ff;
+    color: var(--pb-primary);
+  }
+
+  &.is-selected {
+    color: var(--pb-primary);
+    font-weight: 600;
+  }
+
+  &.is-muted {
+    color: #999;
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+      color: #999;
+    }
+  }
+
+  .cascader-arrow {
+    flex-shrink: 0;
+    font-size: 10px;
+    color: #bfbfbf;
   }
 }
 
@@ -351,8 +554,8 @@ onUnmounted(() => {
   }
 
   .ai-icon {
-    width: 45px;
-    height: 42px;
+    width: 24px;
+    height: 22px;
     object-fit: contain;
   }
 
@@ -361,9 +564,8 @@ onUnmounted(() => {
   }
 
   .ai-link-text {
-    height: 23px;
     font-weight: 500;
-    font-size: 24px;
+    font-size: 16px;
     font-style: italic;
     text-transform: none;
     background: linear-gradient(0deg, #2151a2 0%, #2fabe0 100%);
@@ -378,17 +580,17 @@ onUnmounted(() => {
     align-items: center;
     justify-content: flex-end;
     flex-shrink: 0;
-    width: 103px;
-    height: 38px;
+    width: 112px;
+    height: 39px;
     padding: 0 14px 0 38px;
     background-repeat: no-repeat;
     background-position: center;
     background-size: 100% 100%;
-    color: #c9a24c;
-    font-size: 13px;
+    color: #3e2a0d;
+    font-size: 16px;
     font-weight: 500;
-    letter-spacing: 0.03em;
-    line-height: 1;
+    letter-spacing: -0.1em;
+    line-height: 39px;
     white-space: nowrap;
     text-decoration: none;
     text-shadow: 0 1px 0 rgba(255, 248, 230, 0.65);

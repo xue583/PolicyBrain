@@ -1,77 +1,101 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { EnvironmentOutlined } from '@ant-design/icons-vue'
-import {
-  investEnterpriseTotal,
-  investRegions,
-  mockInvestProjects,
-  type InvestProjectType,
-} from '../../mock/investDb'
-import { useFilteredList } from '@/composables/useFilteredList'
+import { fetchInvestProjects, fetchInvestRegions } from '@/api/invest'
+import type { InvestCategory } from '@/api/invest'
+import type { InvestRegion } from '../../mock/investDb'
+import { useServerPage } from '@/composables/useServerPage'
+import { toErrorMessage } from '@/utils/apiError'
 import ContentHeader from './components/ContentHeader.vue'
 import ProjectTable from './components/ProjectTable.vue'
 
 defineOptions({ name: 'InvestDb' })
 
+const regions = ref<InvestRegion[]>([])
+const regionError = ref('')
+const categories = ref<InvestCategory[]>([])
 const selectedRegionKeys = ref<string[]>(['henan'])
 const selectedRegion = computed(() => selectedRegionKeys.value[0] ?? 'henan')
-const activeType = ref<InvestProjectType>('all')
+const activeType = ref('all')
 const keyword = ref('')
+const appliedKeyword = ref('')
+
+let keywordTimer = 0
+watch(keyword, (value) => {
+  window.clearTimeout(keywordTimer)
+  keywordTimer = window.setTimeout(() => {
+    appliedKeyword.value = value.trim()
+  }, 300)
+})
 
 const regionLabel = computed(
   () =>
-    investRegions.find((item) => item.key === selectedRegion.value)?.label ??
+    regions.value.find((item) => item.key === selectedRegion.value)?.label ??
     '',
 )
 
-const regionProjects = computed(() => {
-  if (selectedRegion.value === 'national') return mockInvestProjects
-  return mockInvestProjects.filter(
-    (item) => item.region === selectedRegion.value,
-  )
+watch(selectedRegion, () => {
+  activeType.value = 'all'
+  categories.value = []
 })
 
+const typeTabs = computed(() => [
+  { key: 'all', label: '全部' },
+  ...categories.value.map((item) => ({ key: item.name, label: item.name })),
+])
+
+const {
+  currentPage,
+  pageSize,
+  items: pagedList,
+  total,
+  loading,
+  error,
+  reload,
+} = useServerPage(
+  async (pageIndex, pageSize) => {
+    const result = await fetchInvestProjects({
+      province: selectedRegion.value,
+      category: activeType.value === 'all' ? undefined : activeType.value,
+      search: appliedKeyword.value,
+      pageIndex,
+      pageSize,
+    })
+    if (result.categories.length) categories.value = result.categories
+    return result.page
+  },
+  () =>
+    JSON.stringify({
+      region: selectedRegion.value,
+      category: activeType.value,
+      search: appliedKeyword.value,
+    }),
+  8,
+)
+
 const typeCounts = computed(() => {
-  const counts: Record<InvestProjectType, number> = {
-    all: regionProjects.value.length,
-    'filing-public': 0,
-    'approval-pre': 0,
-    'approval-announce': 0,
-    'review-pre': 0,
-    'review-announce': 0,
-    energy: 0,
-  }
-  for (const item of regionProjects.value) {
-    counts[item.type] += 1
-  }
+  const regionCount =
+    regions.value.find((item) => item.key === selectedRegion.value)?.count ??
+    total.value
+  const counts: Record<string, number> = { all: regionCount }
+  for (const item of categories.value) counts[item.name] = item.count
   return counts
 })
 
-const filteredList = computed(() => {
-  let list = regionProjects.value
-  if (activeType.value !== 'all') {
-    list = list.filter((item) => item.type === activeType.value)
-  }
-  const kw = keyword.value.trim()
-  if (kw) {
-    list = list.filter(
-      (item) =>
-        item.name.includes(kw) ||
-        item.code.includes(kw) ||
-        item.recordUnit.includes(kw) ||
-        item.approvalUnit.includes(kw),
-    )
-  }
-  return list
-})
-
-const { currentPage, pageSize, pagedList, total, resetPage } = useFilteredList(
-  filteredList,
-  { pageSize: 8 },
-)
-
-watch([selectedRegion, activeType, keyword], () => {
-  resetPage()
+onMounted(() => {
+  void fetchInvestRegions()
+    .then((list) => {
+      regions.value = list
+      if (
+        list.length &&
+        !list.some((item) => item.key === selectedRegion.value)
+      ) {
+        selectedRegionKeys.value = [list[0]!.key]
+      }
+    })
+    .catch((err: unknown) => {
+      regionError.value = toErrorMessage(err, '地区加载失败')
+    })
 })
 </script>
 
@@ -89,7 +113,7 @@ watch([selectedRegion, activeType, keyword], () => {
             mode="inline"
             class="region-menu"
           >
-            <a-menu-item v-for="item in investRegions" :key="item.key">
+            <a-menu-item v-for="item in regions" :key="item.key">
               <div class="region-item">
                 <span>{{ item.label }}</span>
                 <span class="region-count">{{ item.count }}</span>
@@ -100,15 +124,30 @@ watch([selectedRegion, activeType, keyword], () => {
       </a-layout-sider>
 
       <a-layout-content class="invest-content">
+        <a-alert
+          v-if="regionError || error"
+          type="error"
+          show-icon
+          :message="regionError || error"
+          style="margin-bottom: 12px"
+        >
+          <template #action>
+            <a-button size="small" @click="reload">重试</a-button>
+          </template>
+        </a-alert>
         <ContentHeader
-          :total-count="investEnterpriseTotal"
+          :total-count="
+            regions.find((item) => item.key === selectedRegion)?.count ?? total
+          "
           :region-label="regionLabel"
           v-model:keyword="keyword"
           v-model:active-type="activeType"
           :counts="typeCounts"
+          :tabs="typeTabs"
         />
 
         <ProjectTable
+          :loading="loading"
           :data-source="pagedList"
           :total="total"
           v-model:current-page="currentPage"

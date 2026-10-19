@@ -30,6 +30,8 @@ export interface InvestProject {
   recordUnit: string
   region: string
   type: Exclude<InvestProjectType, 'all'>
+  /** 项目详情外链，仅 http(s) */
+  url: string
 }
 
 export const investRegions: InvestRegion[] = [
@@ -59,7 +61,9 @@ const areaCode: Record<string, string> = {
   jiangsu: '320102',
 }
 
-const seeds: Array<Omit<InvestProject, 'id' | 'code'> & { seq: number }> = [
+const seeds: Array<
+  Omit<InvestProject, 'id' | 'code' | 'url'> & { seq: number }
+> = [
   {
     seq: 1,
     region: 'henan',
@@ -312,6 +316,7 @@ export const mockInvestProjects: InvestProject[] = seeds.map((item, index) => ({
   recordUnit: item.recordUnit,
   region: item.region,
   type: item.type,
+  url: '',
 }))
 
 import { ENTERPRISE_TOTAL } from './constants'
