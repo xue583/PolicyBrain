@@ -26,7 +26,9 @@ import { Divider } from 'ant-design-vue'
 import { SITE } from '@/constants/site'
 import { navItems } from '@/mock/nav'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import heroDecorSm from '../../assets/home/hero-decor-sm.png'
+import emptyNews from '../../assets/home/empty-news.png'
 import heroBanner from '../../assets/home/hero-banner.mp4'
 import promoBanner from '../../assets/home/promo-banner.png'
 import iconPolicy from '../../assets/home/icon-policy.png'
@@ -415,10 +417,12 @@ const openBeian = () => {
             </li>
           </ul>
 
-          <a-empty
+          <EmptyState
             v-else
-            class="follow-empty"
-            :description="
+            class="news-empty"
+            :image="emptyNews"
+            :image-width="202"
+            :text="
               newsTab === 'follow'
                 ? '暂无关注动态，登录后可关注政策'
                 : newsError || '暂无资讯'
@@ -869,6 +873,12 @@ const openBeian = () => {
       border-radius: 1px 1px 0 0;
     }
   }
+}
+
+.news-empty {
+  --empty-padding: 72px 0 48px;
+  --empty-gap: 16px;
+  --empty-text-size: 16px;
 }
 
 .news-list {
