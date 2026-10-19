@@ -101,6 +101,12 @@ const heroByPage: Record<
     searchPlaceholder: '搜索项目名称、代码或单位',
     hideSearch: true,
   },
+  api: {
+    slogan: '开放互联，生态赋能。',
+    description:
+      '支持省、市、区县三级筛选，支持20000页内跳转，深分页最多追赶100页',
+    searchPlaceholder: '搜索接口名称或编码',
+  },
   export: {
     slogan: '数据资产，一键下载',
     description:

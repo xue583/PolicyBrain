@@ -303,7 +303,7 @@ onUnmounted(() => {
 
   :deep(.ant-menu-item) {
     padding-inline: 14px;
-    color: #333;
+    color: #343434;
     font-weight: 400;
 
     &::after {

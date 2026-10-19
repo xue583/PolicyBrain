@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import {
   FileTextOutlined,
   TeamOutlined,
@@ -10,6 +10,7 @@ import {
 import advertisementImg from '@/assets/api/advertisement.png'
 import openImg from '@/assets/api/open.png'
 import notOpenImg from '@/assets/api/notOpen.png'
+import { useRouteKeyword } from '@/composables/useRouteKeyword'
 
 defineOptions({ name: 'ComingSoon' })
 
@@ -23,6 +24,7 @@ interface ApiItem {
 }
 
 const selectedKeys = ref<string[]>(['政策接口'])
+const keyword = useRouteKeyword()
 
 interface ApiSubGroup {
   name: string
@@ -36,6 +38,25 @@ interface ApiMainCategory {
   groups: ApiSubGroup[]
 }
 
+const fileReturn = '发布单位、发布科室、文件等级、联系方式、发布时间、标题'
+const fileDesc =
+  '根据区域查询政策文件，包含：发布单位、发布科室、原文链接、联系方式等'
+
+const makeItem = (
+  id: number,
+  name: string,
+  isOpen: boolean,
+  description = fileDesc,
+  returnData = fileReturn,
+): ApiItem => ({
+  id,
+  name,
+  description,
+  code: '100011',
+  returnData,
+  isOpen,
+})
+
 const apiMainCategory = ref<ApiMainCategory>({
   name: '政策接口',
   count: 9,
@@ -44,111 +65,37 @@ const apiMainCategory = ref<ApiMainCategory>({
       name: '政策文件',
       count: 3,
       items: [
-        {
-          id: 1,
-          name: '查询政策文件列表',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: true,
-        },
-        {
-          id: 2,
-          name: '查询政策文件列表',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: true,
-        },
-        {
-          id: 3,
-          name: '查询政策文件列表',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: false,
-        },
+        makeItem(1, '查询政策文件列表', true),
+        makeItem(2, '查询政策文件列表', true),
+        makeItem(3, '查询政策文件列表', false),
       ],
     },
     {
-      name: '政策资讯',
-      count: 3,
-      items: [
-        {
-          id: 4,
-          name: '查询政策资讯',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: true,
-        },
-        {
-          id: 5,
-          name: '查询政策资讯',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: true,
-        },
-        {
-          id: 6,
-          name: '查询政策资讯',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: false,
-        },
-      ],
-    },
-    {
-      name: '政策资讯',
-      count: 3,
-      items: [
-        {
-          id: 7,
-          name: '查询政策资讯列表',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: true,
-        },
-        {
-          id: 8,
-          name: '查询政策资讯列表',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: true,
-        },
-        {
-          id: 9,
-          name: '查询政策资讯列表',
-          description:
-            '针对区域政策的综合信息，包含：发布单位、发布地区、政策文号、发文标题、发文正文等信息。',
-          code: '908001',
-          returnData:
-            '发布单位、发布地区、政策文号、发文标题、发文正文、标签、发文时间',
-          isOpen: true,
-        },
-      ],
+      name: '政策数据',
+      count: 9,
+      items: Array.from({ length: 9 }, (_, index) =>
+        makeItem(index + 4, '查询政策资讯', true),
+      ),
     },
   ],
+})
+
+const visibleCategory = computed(() => {
+  const kw = keyword.value.trim()
+  if (!kw) return apiMainCategory.value
+  const groups = apiMainCategory.value.groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => item.name.includes(kw) || item.code.includes(kw),
+      ),
+    }))
+    .filter((group) => group.items.length > 0)
+  return {
+    ...apiMainCategory.value,
+    count: groups.reduce((sum, group) => sum + group.items.length, 0),
+    groups,
+  }
 })
 
 const menuItems = [
@@ -162,7 +109,7 @@ const menuItems = [
     icon: FileTextOutlined,
   },
 ]
-const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
+const totalApiCount = 45
 </script>
 
 <template>
@@ -198,38 +145,39 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
       <!-- Right Content Card -->
       <div class="content-card">
         <h2 class="main-title">
-          {{ apiMainCategory.name }}
-          <span class="main-count">({{ apiMainCategory.count }}个)</span>
+          {{ visibleCategory.name }}（{{ visibleCategory.count }}个）
         </h2>
 
+        <p v-if="!visibleCategory.groups.length" class="empty-tip">
+          未找到相关接口
+        </p>
+
         <div
-          v-for="group in apiMainCategory.groups"
+          v-for="group in visibleCategory.groups"
           :key="group.name"
           class="api-group"
         >
           <h3 class="group-title">
             {{ group.name }}
-            <span class="group-count">{{ group.count }}</span>
+            <span class="group-count">{{ group.items.length }}</span>
           </h3>
 
           <div v-for="item in group.items" :key="item.id" class="api-card">
-            <div class="card-icon">
-              <FolderOpenFilled />
+            <img
+              :src="item.isOpen ? openImg : notOpenImg"
+              :alt="item.isOpen ? '开放' : '未开放'"
+              class="status-badge"
+            />
+            <div class="card-title-row">
+              <div class="card-icon">
+                <FolderOpenFilled />
+              </div>
+              <h4 class="card-title">{{ item.name }}</h4>
             </div>
-            <div class="card-body">
-              <div class="card-header">
-                <h4 class="card-title">{{ item.name }}</h4>
-                <img
-                  :src="item.isOpen ? openImg : notOpenImg"
-                  :alt="item.isOpen ? '开放' : '未开放'"
-                  class="status-badge"
-                />
-              </div>
-              <p class="card-desc">{{ item.description }}</p>
-              <div class="card-meta-container">
-                <div class="card-meta">接口编号：{{ item.code }}</div>
-                <div class="card-meta">返回数据：{{ item.returnData }}</div>
-              </div>
+            <p class="card-desc">{{ item.description }}</p>
+            <div class="card-meta-container">
+              <div class="card-meta">接口编号：{{ item.code }}</div>
+              <div class="card-meta">返回结果：{{ item.returnData }}</div>
             </div>
           </div>
         </div>
@@ -241,21 +189,22 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 <style scoped lang="scss">
 .api-page {
   display: flex;
-  gap: var(--pb-gap);
-  margin-top: 50px;
+  gap: 16px;
+  margin-top: -200px;
   align-items: flex-start;
 }
 
 .sidebar-container {
   display: flex;
   flex-direction: column;
-  gap: var(--pb-gap);
-  align-items: center;
+  flex-shrink: 0;
+  gap: 16px;
+  width: 260px;
 }
 
 /* Sidebar Card */
 .sidebar-card {
-  width: 340px;
+  width: 260px;
   flex-shrink: 0;
   background: #fff;
   border-radius: var(--pb-radius-lg);
@@ -315,12 +264,12 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 
 .menu-text {
   flex: 1;
-  font-size: 18px;
+  font-size: 14px;
   color: #333333;
 }
 
 .menu-count {
-  font-size: 18px;
+  font-size: 14px;
   color: var(--pb-muted);
 }
 
@@ -330,8 +279,8 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
   overflow: hidden;
 
   img {
-    width: 340px;
-    height: 240px;
+    width: 260px;
+    height: auto;
     display: block;
   }
 }
@@ -343,33 +292,23 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
   background: #fff;
   border-radius: var(--pb-radius-lg);
   box-shadow: var(--pb-shadow-card);
-  padding: 28px 32px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
+  padding: 20px 24px 28px;
 }
 
-/* 隐藏滚动条但保留滚动功能 */
-.content-card::-webkit-scrollbar {
-  display: none;
-}
-
-.content-card {
-  scrollbar-width: none; /* Firefox */
+.empty-tip {
+  margin: 24px 0 0;
+  color: var(--pb-muted);
 }
 
 .main-title {
-  font-size: 20px;
+  display: inline-block;
+  margin: 0 0 20px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #1677ff;
+  font-size: 16px;
   font-weight: 600;
   color: var(--pb-title);
-  margin: 0 0 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--pb-line);
-
-  .main-count {
-    color: var(--pb-muted);
-    font-weight: 400;
-    margin-left: 4px;
-  }
+  line-height: 1.4;
 }
 
 .api-group {
@@ -396,76 +335,70 @@ const totalApiCount = menuItems.reduce((sum, item) => sum + item.count, 0)
 }
 
 .api-card {
-  display: flex;
-  padding: 24px;
-  border: 1px solid var(--pb-line);
-  border-radius: 12px;
+  position: relative;
+  padding: 16px 20px 18px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
   margin-bottom: 16px;
-  transition: all 0.3s;
-
-  &:hover {
-    border-color: #d9d9d9;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
+  background: #fff;
 
   &:last-child {
     margin-bottom: 0;
   }
 }
 
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-right: 72px;
+}
+
 .card-icon {
-  width: 56px;
-  height: 56px;
-  background: #0e5dd8;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  background: #1677ff;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   flex-shrink: 0;
-  margin-right: 20px;
-  font-size: 28px;
-}
-
-.card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  font-size: 18px;
 }
 
 .card-title {
-  font-size: 22px;
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
   color: var(--pb-title);
-  margin: 0;
 }
 
 .status-badge {
-  height: 22px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 26px;
 }
 
 .card-desc {
-  font-size: 16px;
-  color: var(--pb-sub);
-  margin-bottom: 10px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #8c8c8c;
   line-height: 1.6;
 }
 
 .card-meta-container {
-  background-color: #e2edff;
-  padding: 10px 20px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  padding: 10px 16px;
 
   .card-meta {
-    font-size: 16px;
-    color: var(--pb-text);
+    font-size: 13px;
+    color: #595959;
     margin-bottom: 4px;
-    line-height: 1.8;
+    line-height: 1.7;
 
     &:last-child {
       margin-bottom: 0;

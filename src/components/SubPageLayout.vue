@@ -13,7 +13,7 @@ import enterpriseDbBg from '@/assets/enterpriseDb/banner@2x.png'
 import matchBanner from '@/assets/enterpriseDb/match/banner.png'
 import exportBanner from '@/assets/export/banner@2x.png'
 import investDb from '@/assets/investDb/banner@2x.png'
-import apiBg from '@/assets/api/banner.png'
+import apiBg from '@/assets/api/banner@2x.png'
 
 defineOptions({ name: 'SubPageLayout' })
 
@@ -38,11 +38,15 @@ const showPageBg = computed(
   () =>
     (isPolicyMatch.value || !hideHero.value) &&
     pageKey.value !== 'export' &&
-    pageKey.value !== 'invest-db',
+    pageKey.value !== 'invest-db' &&
+    pageKey.value !== 'api',
 )
-const isFullBanner = computed(() => pageKey.value === 'export')
-const isInvestDb = computed(() => pageKey.value === 'invest-db')
-const isApiBg = computed(() => pageKey.value === 'api')
+const isOverlayBanner = computed(
+  () =>
+    pageKey.value === 'export' ||
+    pageKey.value === 'invest-db' ||
+    pageKey.value === 'api',
+)
 const isEnterpriseDb = computed(() => pageKey.value === 'enterprise-db')
 const isPersonalCenter = computed(() => pageKey.value === 'personal-center')
 const { keyword, applyKeyword } = useSyncedSearchQuery({
@@ -62,28 +66,22 @@ const openBeian = () => {
     <div
       v-if="showPageBg"
       class="page-bg"
-      :class="{ 'api-bg': isApiBg, 'enterprise-bg': isEnterpriseDb }"
+      :class="{ 'enterprise-bg': isEnterpriseDb }"
       :style="{ backgroundImage: `url(${currentHeroBg})` }"
     />
 
     <section
       v-if="!hideHero"
       class="hero"
-      :class="{ 'full-banner': isFullBanner }"
+      :class="{ 'overlay-banner': isOverlayBanner }"
     >
       <img
-        v-if="isFullBanner"
+        v-if="isOverlayBanner"
         class="hero-banner"
         :src="currentHeroBg"
-        alt="数据导出"
+        alt=""
       />
-      <img
-        v-else-if="isInvestDb"
-        class="hero-banner"
-        :src="currentHeroBg"
-        alt="投资项目库"
-      />
-      <div v-else class="hero-inner" :class="{ 'no-search': hero.hideSearch }">
+      <div class="hero-inner" :class="{ 'no-search': hero.hideSearch }">
         <div class="hero-copy">
           <p class="hero-slogan">{{ hero.slogan }}</p>
           <h1>{{ hero.title }}</h1>
@@ -228,10 +226,6 @@ const openBeian = () => {
   }
 }
 
-.api-bg {
-  height: 474px;
-}
-
 .personal-center-bg {
   background: linear-gradient(180deg, rgba(215, 231, 250) 0%, #fff 100%);
 }
@@ -287,16 +281,22 @@ const openBeian = () => {
   z-index: 1;
   width: 100%;
   background: transparent;
-
-  &.full-banner {
-    line-height: 0;
-  }
 }
 
 .hero-banner {
   display: block;
   width: 100%;
-  height: auto;
+  height: 474px;
+}
+
+// 文案叠在通栏背景上，投资项目库与数据导出共用
+.overlay-banner {
+  .hero-inner {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+  }
 }
 
 .hero-inner {
@@ -323,14 +323,14 @@ const openBeian = () => {
 
   .hero-slogan {
     margin: 0 0 8px;
-    font-size: 36px;
+    font-size: 30px;
     color: #3d5a80;
     letter-spacing: 1px;
   }
 
   h1 {
     margin: 0 0 15px;
-    font-size: 64px;
+    font-size: 48px;
     font-weight: 700;
     color: var(--pb-primary);
     line-height: 1.2;

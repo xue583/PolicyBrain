@@ -123,7 +123,7 @@ watch([selectedRegion, activeType, keyword], () => {
 .invest-db {
   background: transparent;
   gap: 28px;
-  margin-top: -130px;
+  margin-top: -189px;
 }
 
 .region-sider {
