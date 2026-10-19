@@ -7,8 +7,17 @@ defineOptions({ name: 'VipPromoModal' })
 
 const open = defineModel<boolean>('open', { default: false })
 
+const emit = defineEmits<{
+  dismissToday: []
+}>()
+
 const close = () => {
   open.value = false
+}
+
+const dismissToday = () => {
+  emit('dismissToday')
+  close()
 }
 
 const explore = () => {
@@ -83,6 +92,13 @@ onUnmounted(() => {
                   >会员专属开放大数据智能政策服务体系</span
                 >
               </p>
+              <button
+                type="button"
+                class="vip-promo-dismiss"
+                @click="dismissToday"
+              >
+                今日不再展示
+              </button>
             </div>
           </div>
 
@@ -282,6 +298,29 @@ onUnmounted(() => {
   }
 }
 
+.vip-promo-dismiss {
+  position: relative;
+  z-index: 2;
+  margin-top: 10px;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  color: #8a97ad;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover,
+  &:focus-visible {
+    color: #1677ff;
+    outline: none;
+  }
+}
+
 @media (max-width: 576px) {
   .vip-promo-overlay {
     padding: 56px 48px 24px 32px;
@@ -325,6 +364,11 @@ onUnmounted(() => {
     min-width: 156px;
     height: 40px;
     font-size: 14px;
+  }
+
+  .vip-promo-dismiss {
+    margin-top: 8px;
+    font-size: 12px;
   }
 
   .vip-promo-body {

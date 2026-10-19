@@ -10,6 +10,7 @@ import logoLightImg from '@/assets/logo-light.png'
 import heroBg from '@/assets/hero-bg.png'
 import policyDbBg from '@/assets/policy-db-bg.png'
 import enterpriseDbBg from '@/assets/enterpriseDb/banner@2x.png'
+import matchBanner from '@/assets/enterpriseDb/match/banner.png'
 import exportBanner from '@/assets/export/banner@2x.png'
 import investDb from '@/assets/investDb/banner@2x.png'
 import apiBg from '@/assets/api/banner.png'
@@ -20,6 +21,7 @@ const route = useRoute()
 
 const pageKey = computed(() => (route.meta.navKey as string) || '')
 const hideHero = computed(() => Boolean(route.meta.hideHero))
+const fillContent = computed(() => Boolean(route.meta.fillContent))
 const hero = computed(() => getSubPageHero(pageKey.value))
 const heroBgByPage: Record<string, string> = {
   'policy-db': policyDbBg,
@@ -28,7 +30,16 @@ const heroBgByPage: Record<string, string> = {
   api: apiBg,
   export: exportBanner,
 }
-const currentHeroBg = computed(() => heroBgByPage[pageKey.value] ?? heroBg)
+const isPolicyMatch = computed(() => route.name === 'enterprise-db-match')
+const currentHeroBg = computed(() =>
+  isPolicyMatch.value ? matchBanner : (heroBgByPage[pageKey.value] ?? heroBg),
+)
+const showPageBg = computed(
+  () =>
+    (isPolicyMatch.value || !hideHero.value) &&
+    pageKey.value !== 'export' &&
+    pageKey.value !== 'invest-db',
+)
 const isFullBanner = computed(() => pageKey.value === 'export')
 const isInvestDb = computed(() => pageKey.value === 'invest-db')
 const isApiBg = computed(() => pageKey.value === 'api')
@@ -44,9 +55,12 @@ const openBeian = () => {
 </script>
 
 <template>
-  <div class="sub-page" :class="{ 'personal-center-bg': isPersonalCenter }">
+  <div
+    class="sub-page"
+    :class="{ 'personal-center-bg': isPersonalCenter, 'is-fill': fillContent }"
+  >
     <div
-      v-if="!hideHero && !isFullBanner && !isInvestDb"
+      v-if="showPageBg"
       class="page-bg"
       :class="{ 'api-bg': isApiBg, 'enterprise-bg': isEnterpriseDb }"
       :style="{ backgroundImage: `url(${currentHeroBg})` }"
@@ -99,7 +113,10 @@ const openBeian = () => {
       </div>
     </section>
 
-    <div class="page-content" :class="{ 'is-detail': hideHero }">
+    <div
+      class="page-content"
+      :class="{ 'is-detail': hideHero, 'is-fill': fillContent }"
+    >
       <router-view />
       <!-- <a-card class="content-card" :bordered="false">
         <router-view />
@@ -113,7 +130,7 @@ const openBeian = () => {
             <img :src="logoLightImg" alt="政策大脑 POLICY BRAIN" />
           </div>
           <div class="footer-nav">
-            <a>
+            <router-link to="/about">
               <svg
                 class="footer-nav-icon"
                 viewBox="0 0 24 24"
@@ -124,8 +141,8 @@ const openBeian = () => {
                 <path d="M2.8 17.6h1.6" />
               </svg>
               <span>关于我们</span>
-            </a>
-            <a>
+            </router-link>
+            <router-link to="/about/member">
               <svg
                 class="footer-nav-icon"
                 viewBox="0 0 24 24"
@@ -136,8 +153,8 @@ const openBeian = () => {
                 <circle cx="12" cy="12.2" r="1.1" />
               </svg>
               <span>会员协议</span>
-            </a>
-            <a>
+            </router-link>
+            <router-link to="/about/agreement">
               <svg
                 class="footer-nav-icon"
                 viewBox="0 0 24 24"
@@ -148,8 +165,8 @@ const openBeian = () => {
                 <path d="M5.4 20h13.2" />
               </svg>
               <span>用户协议</span>
-            </a>
-            <a>
+            </router-link>
+            <router-link to="/about/privacy">
               <svg
                 class="footer-nav-icon"
                 viewBox="0 0 24 24"
@@ -162,7 +179,7 @@ const openBeian = () => {
                 <path d="M13.4 20.4l5-5" />
               </svg>
               <span>隐私政策</span>
-            </a>
+            </router-link>
           </div>
         </div>
 
@@ -186,6 +203,7 @@ const openBeian = () => {
         </div>
 
         <div class="footer-bottom" @click="openBeian">
+          <!-- 版权所有:河南政策大脑数字科技有限公司 &nbsp; &nbsp; &nbsp; -->
           Copyright © 2026 {{ SITE.name }} {{ SITE.englishName }} {{ SITE.icp }}
         </div>
       </div>
@@ -196,9 +214,18 @@ const openBeian = () => {
 <style scoped lang="scss">
 .sub-page {
   position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   min-height: calc(100vh - 64px);
   overflow-x: hidden;
   background: var(--pb-bg);
+
+  &.is-fill {
+    height: calc(100vh - 64px);
+    max-height: calc(100vh - 64px);
+    overflow: hidden;
+  }
 }
 
 .api-bg {
@@ -343,15 +370,23 @@ const openBeian = () => {
 .page-content {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
   padding: 16px 0 40px;
-  min-height: 600px;
   background: transparent;
 
   &.is-detail {
     padding-top: 24px;
+  }
+
+  &.is-fill {
+    min-height: 0;
+    padding-bottom: 16px;
+    overflow: hidden;
   }
 }
 
@@ -377,6 +412,7 @@ const openBeian = () => {
 .page-footer {
   position: relative;
   z-index: 1;
+  flex-shrink: 0;
   background: #1f2a37;
   color: rgba(255, 255, 255, 0.75);
   padding: 40px 0 0;
@@ -411,6 +447,7 @@ const openBeian = () => {
     gap: 6px;
     font-size: 14px;
     color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
     cursor: pointer;
 
     &:hover {

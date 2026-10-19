@@ -1,0 +1,737 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { SearchOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import BreadcrumbNav from '@/components/BreadcrumbNav.vue'
+import type { BreadcrumbItem } from '@/components/BreadcrumbNav.vue'
+import PageState from '@/components/PageState.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
+import ResultCountBar from '@/components/common/ResultCountBar.vue'
+import { useFollowable } from '@/composables/useFollowable'
+import { usePagination } from '@/composables/usePagination'
+import { useAuthStore } from '@/stores/auth'
+import { triggerNeedLogin } from '@/utils/auth'
+import { downloadCsv } from '@/utils/downloadCsv'
+import { getEnterpriseDetail } from '../../mock/enterpriseDb'
+import {
+  buildMatchPolicies,
+  matchPolicyStatusText,
+  type MatchPolicy,
+  type MatchPolicyStatus,
+} from '../../mock/enterpriseDb/matchPolicies'
+import buildingIcon from '../../assets/enterpriseDb/match/icon-building.png'
+import exportImg from '../../assets/enterpriseDb/match/btn-export.png'
+import tagIcon from '../../assets/enterpriseDb/match/icon-tag.png'
+import matchIcon from '../../assets/enterpriseDb/match/icon-match.png'
+import publisherIcon from '../../assets/enterpriseDb/match/icon-publisher.png'
+import starIcon from '../../assets/enterpriseDb/match/icon-star.png'
+import amountIcon from '../../assets/enterpriseDb/match/icon-amount.png'
+
+defineOptions({ name: 'EnterprisePolicyMatch' })
+
+const FOLLOW_KEY = 'pb_followed_enterprise_db'
+const PAGE_SIZE = 8
+
+const statusColor: Record<MatchPolicyStatus, string> = {
+  expired: 'error',
+  idle: 'default',
+  public: 'processing',
+}
+
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const { isLoggedIn } = storeToRefs(auth)
+
+const enterpriseId = computed(() => Number(route.params.id))
+const enterprise = computed(() => getEnterpriseDetail(enterpriseId.value))
+const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, enterpriseId)
+
+const keywordDraft = ref('')
+const keyword = ref('')
+const followedPolicyIds = ref<number[]>([])
+
+const policies = computed(() =>
+  enterprise.value ? buildMatchPolicies(enterprise.value) : [],
+)
+
+const filtered = computed(() => {
+  const query = keyword.value.trim()
+  if (!query) return policies.value
+  return policies.value.filter((item) => item.name.includes(query))
+})
+
+const { currentPage, pagedList, total, pageSize, resetPage } = usePagination(
+  filtered,
+  { pageSize: PAGE_SIZE },
+)
+
+watch(enterpriseId, () => {
+  keywordDraft.value = ''
+  keyword.value = ''
+  followedPolicyIds.value = []
+  resetPage()
+})
+
+const stats = computed(() => {
+  const current = enterprise.value
+  if (!current) return []
+  if (current.id === 1) {
+    return [
+      { label: '注册商标', value: '60' },
+      { label: '发明专利授权', value: '35' },
+      { label: '实用新型专利授权', value: '7' },
+      { label: '外观设计专利授权', value: '2' },
+      { label: '软件著作权', value: '27' },
+      { label: '作品', value: '3' },
+      { label: '已获政策', value: '70' },
+      { label: '收录公示补贴', value: '314.4420万元', hot: true },
+    ]
+  }
+  const countType = (type: string) =>
+    current.patents.filter((item) => item.patentType === type).length
+  return [
+    { label: '注册商标', value: String(current.trademarks.length) },
+    { label: '发明专利授权', value: String(countType('发明专利')) },
+    { label: '实用新型专利授权', value: String(countType('实用新型')) },
+    { label: '外观设计专利授权', value: String(countType('外观设计')) },
+    { label: '软件著作权', value: String(current.softwareCopyrights.length) },
+    { label: '作品', value: String(current.workCopyrights.length) },
+    { label: '已获政策', value: String(current.policyCount) },
+    {
+      label: '收录公示补贴',
+      value: `${current.publicityAmount.toFixed(4)}万元`,
+      hot: true,
+    },
+  ]
+})
+
+const goHome = () => {
+  void router.push({ name: 'home' })
+}
+
+const goList = () => {
+  void router.push({ name: 'enterprise-db' })
+}
+
+const goDetail = () => {
+  if (!enterprise.value) {
+    goList()
+    return
+  }
+  void router.push({
+    name: 'enterprise-db-detail',
+    params: { id: String(enterprise.value.id) },
+  })
+}
+
+const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
+  const items: BreadcrumbItem[] = [
+    { label: '首页', onClick: goHome },
+    { label: '企业数据库', onClick: goList },
+  ]
+  if (enterprise.value) {
+    items.push({ label: enterprise.value.name, onClick: goDetail })
+  }
+  items.push({ label: '匹配政策' })
+  return items
+})
+
+const applySearch = () => {
+  keyword.value = keywordDraft.value.trim()
+  resetPage()
+}
+
+const isPolicyFollowed = (id: number) => followedPolicyIds.value.includes(id)
+
+const togglePolicyFollow = (item: MatchPolicy) => {
+  if (!isLoggedIn.value) {
+    triggerNeedLogin()
+    return
+  }
+  followedPolicyIds.value = isPolicyFollowed(item.id)
+    ? followedPolicyIds.value.filter((id) => id !== item.id)
+    : [...followedPolicyIds.value, item.id]
+}
+
+const exportReport = () => {
+  const current = enterprise.value
+  if (!current) return
+  if (!filtered.value.length) {
+    message.warning('暂无可导出的匹配政策')
+    return
+  }
+  downloadCsv(`${current.name}-匹配政策.csv`, [
+    [
+      '政策名称',
+      '政策等级',
+      '匹配度',
+      '发布单位',
+      '政策状态',
+      '最高金额(万元)',
+    ],
+    ...filtered.value.map((item) => [
+      item.name,
+      item.grade,
+      String(item.score),
+      item.department,
+      matchPolicyStatusText[item.status],
+      item.maxAmount == null ? '' : String(item.maxAmount),
+    ]),
+  ])
+  message.success('报告已导出')
+}
+</script>
+
+<template>
+  <div class="match-page">
+    <section class="hero-stage">
+      <div class="hero-inner">
+        <BreadcrumbNav :items="breadcrumbItems" @back="goDetail" />
+        <template v-if="enterprise">
+          <div class="hero-copy">
+            <div class="hero-heading">
+              <h1>企业找政策（匹配政策）</h1>
+              <p>
+                目前已有22条国家级政策、397条省级政策、809条市级政策加入匹配
+              </p>
+            </div>
+            <form class="search-box" @submit.prevent="applySearch">
+              <input
+                v-model="keywordDraft"
+                type="search"
+                aria-label="搜索政策"
+                autocomplete="off"
+              />
+              <button type="submit" class="search-btn">
+                <SearchOutlined />
+                搜索
+              </button>
+            </form>
+          </div>
+
+          <article class="company-card">
+            <div class="company-top">
+              <h2>
+                <img :src="buildingIcon" alt="" />
+                {{ enterprise.name }}
+              </h2>
+              <div class="company-actions">
+                <button type="button" class="export-btn" @click="exportReport">
+                  <img :src="exportImg" alt="导出报告" />
+                </button>
+                <button
+                  type="button"
+                  class="follow-chip"
+                  :class="{ on: followed }"
+                  @click="toggleFollow"
+                >
+                  {{ followed ? '已关注' : '+ 关注' }}
+                </button>
+              </div>
+            </div>
+            <div class="stats">
+              <span v-for="item in stats" :key="item.label">
+                {{ item.label }}：<em :class="{ hot: item.hot }">{{
+                  item.value
+                }}</em>
+              </span>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <PageState :empty="enterprise ? '' : '未找到该企业'">
+      <section v-if="enterprise" class="result-card">
+        <ResultCountBar
+          class="result-head"
+          prefix="共查到"
+          :total="total"
+          unit="条记录"
+          decorated
+        />
+
+        <div v-if="!pagedList.length" class="result-empty">
+          未找到匹配的政策
+        </div>
+
+        <article
+          v-for="item in pagedList"
+          :key="item.id"
+          class="policy-row"
+          :class="{ highlight: item.highlight }"
+        >
+          <div class="policy-main">
+            <h3>
+              {{ item.name }}
+              <span v-if="item.badge" class="badge" :class="item.badge.tone">
+                {{ item.badge.text }}
+              </span>
+            </h3>
+            <div class="meta">
+              <span class="meta-item">
+                <img :src="tagIcon" alt="" />
+                政策等级：{{ item.grade }}
+              </span>
+              <span class="meta-item">
+                <img :src="matchIcon" alt="" />
+                匹配度：
+                <img class="star" :src="starIcon" alt="" />
+                <em>{{ item.score }}分</em>
+              </span>
+              <span class="meta-item">
+                <img :src="publisherIcon" alt="" />
+                <span class="dept-text">发布单位：{{ item.department }}</span>
+              </span>
+              <span class="meta-item">
+                <img :src="tagIcon" alt="" />
+                政策状态：
+                <a-tag class="status-tag" :color="statusColor[item.status]">
+                  {{ matchPolicyStatusText[item.status] }}
+                </a-tag>
+              </span>
+            </div>
+            <p v-if="item.incubatorNote" class="incubator">
+              <span>孵化器项</span> | {{ item.incubatorNote }}
+            </p>
+          </div>
+
+          <div class="policy-side">
+            <button
+              type="button"
+              class="follow-chip"
+              :class="{ on: isPolicyFollowed(item.id) }"
+              @click="togglePolicyFollow(item)"
+            >
+              {{ isPolicyFollowed(item.id) ? '已关注' : '+ 关注' }}
+            </button>
+            <div v-if="item.maxAmount != null" class="amount">
+              <div class="amount-main">
+                <img :src="amountIcon" alt="" />
+                <span>最高金额：</span>
+                <strong>{{ item.maxAmount }}</strong>
+                <span>万元</span>
+              </div>
+              <p
+                v-for="line in item.amountLines"
+                :key="line"
+                class="amount-line"
+              >
+                {{ line }}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <PaginationBar
+          v-if="total > pageSize"
+          v-model:current="currentPage"
+          :total="total"
+          :page-size="pageSize"
+        />
+      </section>
+    </PageState>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.match-page {
+  min-height: 480px;
+  // 抵消详情内容区顶部留白，标题贴着页头下的页面背景
+  margin-top: -24px;
+}
+
+.hero-stage {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  padding: 24px 0 22px;
+}
+
+.hero-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--pb-primary);
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #8c8c8c;
+  }
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  width: 722px;
+  max-width: 100%;
+  height: 50px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(22, 119, 255, 0.12);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: #262626;
+
+    &::-webkit-search-cancel-button {
+      appearance: none;
+    }
+  }
+}
+
+.search-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--pb-primary);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--pb-primary-hover);
+  }
+}
+
+.company-card {
+  margin-top: 22px;
+  padding: 16px 22px 14px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(31, 56, 88, 0.06);
+}
+
+.company-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f1f1f;
+
+    img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
+    }
+  }
+}
+
+.company-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.export-btn {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+
+  img {
+    display: block;
+    height: 36px;
+    width: auto;
+  }
+}
+
+.follow-chip {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--pb-primary);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--pb-primary);
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: #e6f4ff;
+  }
+
+  &.on {
+    background: var(--pb-primary);
+    color: #fff;
+  }
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 14px;
+  padding-top: 12px;
+  font-size: 16px;
+  color: #8c8c8c;
+  background: #f4f7fc;
+  padding: 13px 23px;
+
+  em {
+    font-style: normal;
+    font-weight: 600;
+    color: #434343;
+
+    &.hot {
+      color: #ff7a1a;
+    }
+  }
+}
+
+.result-card {
+  margin-top: 16px;
+  padding: 18px 8px 8px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: var(--pb-shadow-card);
+  overflow: hidden;
+}
+
+.result-head {
+  display: inline-flex;
+  margin: 0 16px 10px;
+  --rc-color: #343434;
+  font-size: 18px;
+}
+
+.result-empty {
+  padding: 48px 16px;
+  color: #8c8c8c;
+  text-align: center;
+}
+
+.policy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px;
+  border-top: 1px solid #f2f2f2;
+  margin-top: 10px;
+
+  &.highlight {
+    background: linear-gradient(
+      270deg,
+      #ffece3 0%,
+      rgba(255, 246, 237, 0) 100%
+    );
+  }
+}
+
+.policy-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.policy-main h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #1f1f1f;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 2px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+
+  &.blue {
+    background: #1677ff;
+  }
+
+  &.green {
+    background: #21b36a;
+  }
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.meta-item {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: #8c8c8c;
+  font-size: 14px;
+  white-space: nowrap;
+
+  img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+
+  em {
+    font-style: normal;
+    font-weight: 600;
+    color: #ff8c1a;
+  }
+}
+
+.star {
+  width: 12px;
+  height: 12px;
+  margin: 0 1px;
+}
+
+.dept-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-tag {
+  margin-inline-end: 0;
+  line-height: 18px;
+}
+
+.incubator {
+  margin: 8px 0 0;
+  color: #8c8c8c;
+  font-size: 14px;
+  line-height: 1.6;
+  background: linear-gradient(90deg, #ecf3ff 0%, rgba(236, 243, 255, 0) 100%);
+  padding: 4px;
+
+  span {
+    margin-right: 8px;
+    color: var(--pb-primary);
+    font-weight: bold;
+  }
+}
+
+.policy-side {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 18px;
+}
+
+.amount {
+  min-width: 240px;
+  text-align: right;
+}
+
+.amount-main {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: #ff7a1a;
+  font-size: 14px;
+
+  img {
+    width: 18px;
+    height: 18px;
+  }
+
+  strong {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+}
+
+.amount-line {
+  margin: 2px 0 0;
+  color: #8c8c8c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.result-card :deep(.pb-pagination) {
+  padding: 8px 16px 16px;
+}
+
+@include below-lg {
+  .hero-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .search-box,
+  .company-top,
+  .policy-row {
+    width: 100%;
+  }
+
+  .company-top,
+  .policy-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .policy-side,
+  .amount-main {
+    justify-content: flex-start;
+  }
+
+  .amount {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .meta {
+    flex-wrap: wrap;
+  }
+}
+</style>

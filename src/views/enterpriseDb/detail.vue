@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { message } from 'ant-design-vue'
 import { getEnterpriseDetail } from '../../mock/enterpriseDb'
 import QualificationPanel from './QualificationPanel.vue'
 import ContactPanel from './ContactPanel.vue'
@@ -23,6 +22,7 @@ defineOptions({ name: 'EnterpriseDbDetail' })
 const FOLLOW_KEY = 'pb_followed_enterprise_db'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 
@@ -45,7 +45,11 @@ const onPolicyMatch = () => {
     triggerNeedLogin()
     return
   }
-  message.info('政策匹配功能即将上线')
+  const href = router.resolve({
+    name: 'enterprise-db-match',
+    params: { id: String(enterpriseId.value) },
+  }).href
+  window.open(href, '_blank', 'noopener,noreferrer')
 }
 </script>
 

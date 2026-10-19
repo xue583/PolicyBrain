@@ -64,6 +64,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '企业数据库' },
       },
       {
+        path: ':id(\\d+)/match',
+        name: 'enterprise-db-match',
+        component: () => import('@/views/enterpriseDb/match.vue'),
+        meta: { hideHero: true, title: '企业找政策（匹配政策）' },
+      },
+      {
         path: ':id(\\d+)',
         name: 'enterprise-db-detail',
         component: () => import('@/views/enterpriseDb/detail.vue'),
@@ -134,6 +140,32 @@ const routes: RouteRecordRaw[] = [
     name: 'membership',
     component: () => import('@/views/membership/index.vue'),
     meta: { title: '开通会员', immersiveHeader: true, navKey: 'membership' },
+  },
+  {
+    path: '/about',
+    component: SubPageLayout,
+    meta: { navKey: 'about', hideHero: true, fillContent: true },
+    children: [
+      {
+        path: ':section?',
+        name: 'about',
+        component: () => import('@/views/about/index.vue'),
+        meta: { hideHero: true, title: '关于我们' },
+      },
+    ],
+  },
+  {
+    path: '/handbook',
+    component: SubPageLayout,
+    meta: { navKey: 'handbook', hideHero: true, fillContent: true },
+    children: [
+      {
+        path: ':chapterId(\\d+)?/:sectionId(\\d+)?',
+        name: 'handbook',
+        component: () => import('@/views/handbook/index.vue'),
+        meta: { hideHero: true, title: '用户手册' },
+      },
+    ],
   },
   {
     path: '/:pathMatch(.*)*',

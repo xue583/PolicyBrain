@@ -23,13 +23,20 @@ const policyId = computed(() => Number(route.params.id))
 const policy = computed(() => getPolicyDbDetail(policyId.value))
 const regionLabel = computed(() => `河南省 ${policy.value?.city ?? '郑州市'}`)
 
+const POLICY_TABS = ['apply', 'updates', 'support', 'publicity'] as const
+
+const resolveTab = (value: unknown) => {
+  const tab = String(value ?? '')
+  return (POLICY_TABS as readonly string[]).includes(tab) ? tab : 'apply'
+}
+
 const activeTab = ref('apply')
 const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, policyId)
 
 watch(
-  policyId,
+  [policyId, () => route.query.tab],
   () => {
-    activeTab.value = 'apply'
+    activeTab.value = resolveTab(route.query.tab)
   },
   { immediate: true },
 )

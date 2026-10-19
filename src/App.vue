@@ -15,10 +15,37 @@ dayjs.locale('zh-cn')
 const route = useRoute()
 const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
+const VIP_PROMO_DISMISS_KEY = 'pb_vip_promo_dismiss_date'
+
 const promoOpen = ref(false)
 
+const isPromoDismissedToday = () => {
+  try {
+    return (
+      localStorage.getItem(VIP_PROMO_DISMISS_KEY) ===
+      dayjs().format('YYYY-MM-DD')
+    )
+  } catch {
+    return false
+  }
+}
+
+const dismissPromoToday = () => {
+  try {
+    localStorage.setItem(VIP_PROMO_DISMISS_KEY, dayjs().format('YYYY-MM-DD'))
+  } catch {
+    // 存储不可用时仍关闭本次弹窗
+  }
+}
+
 onMounted(() => {
-  if (!isLoggedIn.value && route.name !== 'membership') promoOpen.value = true
+  if (
+    !isLoggedIn.value &&
+    route.name !== 'membership' &&
+    !isPromoDismissedToday()
+  ) {
+    promoOpen.value = true
+  }
 })
 
 watch(isLoggedIn, (loggedIn) => {
@@ -61,13 +88,18 @@ watch(
     <a-layout class="app-shell">
       <AppHeader />
       <router-view />
-      <VipPromoModal v-model:open="promoOpen" />
+      <VipPromoModal
+        v-model:open="promoOpen"
+        @dismiss-today="dismissPromoToday"
+      />
     </a-layout>
   </a-config-provider>
 </template>
 
 <style>
 .app-shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background: var(--pb-bg);
 }

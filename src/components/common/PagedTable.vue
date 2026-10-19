@@ -95,6 +95,7 @@ const passthroughSlotNames = computed(() =>
         v-model:current="current"
         :total="total"
         :page-size="pageSize"
+        :show-size-changer="false"
         :show-quick-jumper="quickJumper"
         :show-total="showTotal"
       />

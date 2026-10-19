@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { useFilteredList } from '@/composables/useFilteredList'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useCollapsedList } from '@/composables/useCollapsedList'
@@ -38,6 +40,28 @@ const statusText: Record<PolicyDbItem['status'], string> = {
   idle: '暂无动态',
   expired: '疑似过期',
 }
+
+const listLocale = {
+  ...zhCN,
+  Pagination: { ...zhCN.Pagination, jump_to: '前往' },
+}
+
+const detailTo = (id: number, tab: string): RouteLocationRaw => ({
+  name: 'policy-db-detail',
+  params: { id: String(id) },
+  query: { tab },
+})
+
+const rowLinks = (record: PolicyDbItem) => [
+  { label: '申报信息', to: detailTo(record.id, 'apply') },
+  { label: '政策资讯', to: { name: 'news' } satisfies RouteLocationRaw },
+  { label: '支持力度', to: detailTo(record.id, 'support') },
+  { label: '公示名单', to: detailTo(record.id, 'publicity') },
+  {
+    label: '业务线索',
+    to: { name: 'enterprise-db' } satisfies RouteLocationRaw,
+  },
+]
 
 const selectedConditions = computed(() => {
   const list: { key: string; label: string }[] = []
@@ -126,31 +150,37 @@ watch(
 
 const columns = [
   {
-    title: '政策名称/支持产业',
+    title: '政策名称',
     dataIndex: 'name',
     key: 'name',
-    ellipsis: true,
   },
   {
-    title: '支持力度',
-    dataIndex: 'support',
-    key: 'support',
-    ellipsis: true,
+    title: '政策等级',
+    dataIndex: 'grade',
+    key: 'grade',
+    width: 148,
+    align: 'center',
   },
   {
-    title: '发布部门',
+    title: '发布单位',
     dataIndex: 'department',
     key: 'department',
-  },
-  {
-    title: '浏览量',
-    dataIndex: 'views',
-    key: 'views',
+    width: 168,
+    align: 'center',
   },
   {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
+    width: 128,
+    align: 'center',
+  },
+  {
+    title: '浏览量',
+    dataIndex: 'views',
+    key: 'views',
+    width: 112,
+    align: 'center',
   },
 ]
 </script>
@@ -239,56 +269,64 @@ const columns = [
             </div>
           </div>
 
-          <PagedTable
-            v-model:current="currentPage"
-            class="policy-table"
-            :with-index="false"
-            quick-jumper
-            :total="total"
-            :page-size="pageSize"
-            :columns="columns"
-            :data-source="pagedList"
-            :row-key="(row: PolicyDbItem) => row.id"
-          >
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'name'">
-                <router-link
-                  class="policy-name"
-                  :to="{
-                    name: 'policy-db-detail',
-                    params: { id: String(record.id) },
-                  }"
-                >
-                  {{ record.name }}
-                </router-link>
-              </template>
-              <template v-else-if="column.key === 'support'">
-                <span
-                  :class="record.support ? 'support-text' : 'support-empty'"
-                >
-                  {{ record.support || '—' }}
-                </span>
-              </template>
-              <template v-else-if="column.key === 'department'">
-                <div class="dept-cell">
-                  <BankOutlined class="dept-icon" />
-                  <span class="dept-city">{{ record.city }}</span>
+          <a-config-provider :locale="listLocale">
+            <PagedTable
+              v-model:current="currentPage"
+              class="policy-table"
+              :with-index="false"
+              quick-jumper
+              :show-total="(count: number) => `共${count}条`"
+              :scroll="{ x: 860 }"
+              :total="total"
+              :page-size="pageSize"
+              :columns="columns"
+              :data-source="pagedList"
+              :row-key="(row: PolicyDbItem) => row.id"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'name'">
+                  <div class="name-cell">
+                    <router-link
+                      class="policy-name"
+                      :to="detailTo(record.id, 'apply')"
+                    >
+                      {{ record.name }}
+                    </router-link>
+                    <div class="name-links">
+                      <router-link
+                        v-for="link in rowLinks(record)"
+                        :key="link.label"
+                        class="name-link"
+                        :to="link.to"
+                      >
+                        {{ link.label }}
+                      </router-link>
+                    </div>
+                  </div>
+                </template>
+                <template v-else-if="column.key === 'grade'">
+                  <span class="grade-badge">
+                    <BankOutlined />
+                    {{ record.grade }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'department'">
                   <span class="dept-name">{{ record.department }}</span>
-                </div>
+                </template>
+                <template v-else-if="column.key === 'status'">
+                  <span class="status-tag" :class="record.status">
+                    {{ statusText[record.status as PolicyDbItem['status']] }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'views'">
+                  <span class="views-cell">
+                    <EyeOutlined />
+                    {{ record.views }}
+                  </span>
+                </template>
               </template>
-              <template v-else-if="column.key === 'views'">
-                <span class="views-cell">
-                  <EyeOutlined />
-                  {{ record.views }}
-                </span>
-              </template>
-              <template v-else-if="column.key === 'status'">
-                <span class="status-tag" :class="record.status">
-                  {{ statusText[record.status as PolicyDbItem['status']] }}
-                </span>
-              </template>
-            </template>
-          </PagedTable>
+            </PagedTable>
+          </a-config-provider>
         </div>
       </a-card>
     </div>
@@ -338,46 +376,98 @@ const columns = [
 }
 
 .policy-table {
-  --db-table-font-size: 16px;
-  --db-table-cell-padding: 22px;
-}
+  --db-table-font-size: 15px;
+  --db-table-cell-padding: 16px 18px;
 
-.policy-name {
-  color: var(--pb-primary);
-  font-weight: 500;
+  :deep(.db-table) {
+    border-color: #e6edf5;
+    border-radius: 8px;
+  }
 
-  &:hover {
-    color: #4096ff;
+  :deep(.ant-table-thead > tr > th) {
+    background: #eaf4ff;
+    color: #3b82f6;
+    font-weight: 600;
+    text-align: center !important;
+    border-bottom-color: #e6edf5;
+    border-inline-end: none !important;
+  }
+
+  :deep(.ant-table-tbody > tr > td) {
+    border-bottom-color: #f0f0f0;
+    border-inline-end: none !important;
+  }
+
+  :deep(.ant-table-tbody > tr:last-child > td) {
+    border-bottom: none;
+  }
+
+  :deep(.ant-pagination) {
+    align-items: center;
+  }
+
+  :deep(.ant-pagination-total-text) {
+    margin-inline-end: 8px;
+    color: #262626;
+    font-weight: 600;
   }
 }
 
-.support-text {
-  color: #595959;
-}
-
-.support-empty {
-  color: #bfbfbf;
-}
-
-.dept-cell {
+.name-cell {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
-  color: #595959;
+  min-width: 0;
 }
 
-.dept-icon {
+.policy-name {
+  color: #262626;
+  font-weight: 500;
+  line-height: 22px;
+
+  &:hover {
+    color: var(--pb-primary);
+  }
+}
+
+.name-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.name-link {
+  color: var(--pb-primary);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--pb-primary-hover);
+  }
+}
+
+.grade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: #e8f3ff;
   color: var(--pb-primary);
   font-size: 14px;
-}
+  line-height: 22px;
+  white-space: nowrap;
 
-.dept-city {
-  color: var(--pb-primary);
+  .anticon {
+    font-size: 13px;
+  }
 }
 
 .dept-name {
-  color: #595959;
+  color: #434343;
 }
 
 .views-cell {
@@ -400,12 +490,12 @@ const columns = [
   white-space: nowrap;
 
   &.idle {
-    color: #d48806;
+    color: #fa8c16;
     background: #fff7e6;
   }
 
   &.expired {
-    color: #cf1322;
+    color: #ff4d4f;
     background: #fff1f0;
   }
 }
