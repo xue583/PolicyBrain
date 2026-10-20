@@ -85,7 +85,9 @@ const {
   (pageIndex, pageSize) =>
     fetchNewsPage({
       keyword: keyword.value,
-      region: regionLabel.value,
+      provinceId: region.provinceId,
+      cityId: region.cityId,
+      districtId: region.districtId,
       industries: filters.industries,
       levels: filters.levels,
       infoTypes: filters.infoTypes,
@@ -95,7 +97,9 @@ const {
   () =>
     JSON.stringify({
       keyword: keyword.value,
-      region: regionLabel.value,
+      provinceId: region.provinceId,
+      cityId: region.cityId,
+      districtId: region.districtId,
       industries: filters.industries,
       levels: filters.levels,
       infoTypes: filters.infoTypes,
@@ -348,7 +352,7 @@ const openDetail = (item: PolicyItem) => {
 
 .policy-card {
   position: relative;
-  padding: 20px 24px 18px;
+  padding: 20px;
   background: #fff;
   border: 1px solid #f0f0f0;
   border-radius: 16px;
@@ -408,7 +412,8 @@ const openDetail = (item: PolicyItem) => {
   margin-bottom: 10px;
 
   :deep(.ant-tag) {
-    margin-inline-end: 8px;
+    margin-inline-end: 10px;
+    font-size: 14px;
   }
 }
 
@@ -439,7 +444,7 @@ const openDetail = (item: PolicyItem) => {
   align-items: center;
   gap: 8px;
   color: #8c8c8c;
-  font-size: 20px;
+  font-size: 14px;
   margin-top: 10px;
 
   .anticon {

@@ -127,9 +127,33 @@
     border-radius: 12px;
   }
 
-  .ant-table-container {
+  &.ant-table-wrapper .ant-table-container {
     overflow: hidden;
     border: none;
+    border-start-start-radius: 11px;
+    border-start-end-radius: 11px;
+  }
+
+  &.ant-table-wrapper .ant-table-container > .ant-table-content > table {
+    border-radius: 11px 11px 0 0;
+  }
+
+  &.ant-table-wrapper
+    .ant-table-container
+    table
+    > thead
+    > tr:first-child
+    > :first-child {
+    border-start-start-radius: 10px;
+  }
+
+  &.ant-table-wrapper
+    .ant-table-container
+    table
+    > thead
+    > tr:first-child
+    > :last-child {
+    border-start-end-radius: 10px;
   }
 
   .ant-table-thead > tr > th {

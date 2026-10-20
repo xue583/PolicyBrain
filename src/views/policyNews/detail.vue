@@ -220,6 +220,7 @@ const openOriginal = () => {
   color: #262626;
   font-size: 16px;
   line-height: 1.9;
+  padding: 20px;
 
   :deep(p) {
     margin: 0 0 16px;

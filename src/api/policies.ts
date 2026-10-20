@@ -1,5 +1,10 @@
 import { request } from '@/utils/request'
-import { asPage, compactParams, type PageQuery } from '@/api/paging'
+import {
+  asPage,
+  compactParams,
+  type PageQuery,
+  type RegionIdQuery,
+} from '@/api/paging'
 import {
   mapPolicyApplyInfo,
   mapPolicyCard,
@@ -57,11 +62,17 @@ export const fetchPolicyApplyInfo = async (id: number) => {
   return mapPolicyApplyInfo(data)
 }
 
-const fetchSubPage = async (url: string, query: PageQuery = {}) => {
+const fetchSubPage = async (
+  url: string,
+  query: PageQuery & RegionIdQuery = {},
+) => {
   const data = await request({
     url,
     method: 'get',
     params: compactParams({
+      provinceId: query.provinceId,
+      cityId: query.cityId,
+      districtId: query.districtId,
       pageIndex: query.pageIndex ?? 1,
       pageSize: query.pageSize ?? 100,
     }),
@@ -70,8 +81,15 @@ const fetchSubPage = async (url: string, query: PageQuery = {}) => {
   return asPage<unknown>(data)
 }
 
-export const fetchPolicySupports = async (id: number) => {
-  const page = await fetchSubPage(`/policies/${id}/support-measures`)
+export const fetchPolicySupports = async (
+  id: number,
+  region: RegionIdQuery = {},
+) => {
+  const page = await fetchSubPage(`/policies/${id}/support-measures`, {
+    ...region,
+    pageIndex: 1,
+    pageSize: 100,
+  })
   return page.items.map(mapSupportMeasure)
 }
 

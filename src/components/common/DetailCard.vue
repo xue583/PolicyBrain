@@ -30,18 +30,23 @@ withDefaults(
   box-shadow: var(--pb-shadow-card);
 
   :deep(.ant-card-body) {
-    padding: 28px 36px;
+    padding: 20px;
     margin-top: 22px;
   }
 
   &.header-card {
-    margin-bottom: 16px;
+    margin-bottom: 21px;
     /* 渐变背景由使用方通过 --detail-header-bg 注入 */
     background: var(--detail-header-bg, none);
   }
 
   &.content-card {
     overflow: hidden;
+
+    :deep(.ant-card-body) {
+      padding: 0px;
+      margin-top: 0px;
+    }
   }
 
   &.is-flush :deep(.ant-card-body) {

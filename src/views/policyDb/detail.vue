@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useRegionStore } from '@/stores/region'
 import { EyeOutlined, HeartFilled } from '@ant-design/icons-vue'
 import followHeartIcon from '../../assets/icon-follow-heart.png'
 import {
@@ -27,6 +29,8 @@ defineOptions({ name: 'PolicyDbDetail' })
 const FOLLOW_KEY = 'pb_followed_policy_db'
 
 const route = useRoute()
+const regionStore = useRegionStore()
+const { provinceId, cityId, districtId } = storeToRefs(regionStore)
 
 const policyId = computed(() => Number(route.params.id))
 const policy = ref<PolicyDbDetail | null>(null)
@@ -126,7 +130,11 @@ const loadTab = async (tab: PolicyTab) => {
       if (seq !== tabSeq) return
       current.updates = updates
     } else if (tab === 'support') {
-      const supportMeasures = await fetchPolicySupports(id)
+      const supportMeasures = await fetchPolicySupports(id, {
+        provinceId: provinceId.value,
+        cityId: cityId.value,
+        districtId: districtId.value,
+      })
       if (seq !== tabSeq) return
       current.supportMeasures = supportMeasures
     } else {
@@ -152,6 +160,12 @@ const tabErrorOf = (tab: PolicyTab) =>
 const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, policyId)
 
 watch(policyId, () => void load(), { immediate: true })
+
+watch([provinceId, cityId, districtId], () => {
+  if (!policy.value) return
+  loadedTabs.value.support = false
+  if (activeTab.value === 'support') void loadTab('support')
+})
 
 watch(
   () => route.query.tab,
@@ -181,12 +195,7 @@ watch(activeTab, (tab) => {
       <DetailCard
         variant="header"
         style="
-          --detail-header-bg: linear-gradient(
-            180deg,
-            #d7e8ff 0%,
-            #eaf3ff 55%,
-            #f7fbff 100%
-          );
+          --detail-header-bg: linear-gradient(180deg, #dbe9ff 0%, #ffffff 50%);
         "
       >
         <div class="summary">

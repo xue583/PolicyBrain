@@ -268,13 +268,13 @@ const columns = [
         <div class="db-panel">
           <div class="toolbar">
             <ResultCountBar :total="total" unit="项政策" />
-            <div class="level-filter">
+            <!-- <div class="level-filter">
               <span class="level-label">政策级别:</span>
               <a-checkbox-group
                 v-model:value="levels"
                 :options="policyDbLevels"
               />
-            </div>
+            </div> -->
           </div>
 
           <a-config-provider :locale="listLocale">
@@ -397,9 +397,55 @@ const columns = [
   white-space: nowrap;
 }
 
+.policy-db
+  :deep(.db-table.ant-table-wrapper .ant-table .ant-table-thead > tr > th),
+.policy-db
+  :deep(.db-table.ant-table-wrapper .ant-table .ant-table-tbody > tr > td) {
+  padding: 11px 20px;
+}
+
+.policy-db :deep(.db-table.ant-table-wrapper .ant-table-container) {
+  border-start-start-radius: 11px;
+  border-start-end-radius: 11px;
+}
+
+.policy-db
+  :deep(
+    .db-table.ant-table-wrapper
+      .ant-table-container
+      > .ant-table-content
+      > table
+  ) {
+  border-radius: 11px 11px 0 0;
+}
+
+.policy-db
+  :deep(
+    .db-table.ant-table-wrapper
+      .ant-table-container
+      table
+      > thead
+      > tr:first-child
+      > :first-child
+  ) {
+  border-start-start-radius: 10px;
+}
+
+.policy-db
+  :deep(
+    .db-table.ant-table-wrapper
+      .ant-table-container
+      table
+      > thead
+      > tr:first-child
+      > :last-child
+  ) {
+  border-start-end-radius: 10px;
+}
+
 .policy-table {
   --db-table-font-size: 15px;
-  --db-table-cell-padding: 16px 18px;
+  --db-table-cell-padding: 11px 20px;
 
   :deep(.db-table) {
     border-color: #e6edf5;

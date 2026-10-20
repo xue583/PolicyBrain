@@ -44,6 +44,9 @@ defineOptions({ name: 'HomePage' })
 const router = useRouter()
 const regionStore = useRegionStore()
 const {
+  provinceId,
+  cityId,
+  districtId,
   city: currentCity,
   district: currentDistrict,
   cityLabels,
@@ -99,13 +102,17 @@ const currentNews = computed(() =>
 
 let newsRequest = 0
 
-const loadNews = async (city: string, district: string) => {
+const loadNews = async () => {
   const requestId = ++newsRequest
+  const city = currentCity.value
+  const district = currentDistrict.value
   try {
     const page = await fetchNewsPage({
       pageIndex: 1,
       pageSize: 20,
-      region: district || city,
+      provinceId: provinceId.value,
+      cityId: cityId.value,
+      districtId: districtId.value,
     })
     if (requestId !== newsRequest) return
     remoteNews.value = orderNewsForCity(
@@ -124,10 +131,10 @@ const loadNews = async (city: string, district: string) => {
 
 watch(
   () =>
-    `${currentCity.value}\n${currentDistrict.value}\n${cityLabels.value.join('\n')}`,
+    `${provinceId.value}\n${cityId.value}\n${districtId.value}\n${cityLabels.value.join('\n')}`,
   () => {
     newsExpanded.value = false
-    void loadNews(currentCity.value, currentDistrict.value)
+    void loadNews()
   },
   { immediate: true },
 )

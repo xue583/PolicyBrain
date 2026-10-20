@@ -15,7 +15,8 @@ import {
 import { fetchEnterprisePage } from '@/api/enterprises'
 import {
   fetchIndustryTree,
-  fetchProvinceOptions,
+  loadRegionOptions,
+  type CityOption,
   type IndustryNode,
 } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
@@ -31,14 +32,16 @@ const router = useRouter()
 const keyword = useRouteKeyword()
 
 const filters = reactive({
-  province: '',
+  provinceId: null as number | null,
   industries: [] as string[],
 })
 
 const toIndustryNodes = (names: string[]): IndustryNode[] =>
   names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
 
-const provinceOptions = ref<string[]>([...enterpriseProvinces])
+const provinceOptions = ref<CityOption[]>(
+  enterpriseProvinces.map((label, index) => ({ id: -(index + 1), label })),
+)
 const industryTree = ref<IndustryNode[]>(toIndustryNodes(enterpriseIndustries))
 
 const { showMore: showMoreProvinces, visibleList: visibleProvinces } =
@@ -61,7 +64,10 @@ const {
   (pageIndex, pageSize) =>
     fetchEnterprisePage({
       keyword: keyword.value,
-      province: filters.province,
+      provinceId:
+        filters.provinceId != null && filters.provinceId > 0
+          ? filters.provinceId
+          : undefined,
       industries: filters.industries,
       pageIndex,
       pageSize,
@@ -69,19 +75,26 @@ const {
   () =>
     JSON.stringify({
       keyword: keyword.value,
-      province: filters.province,
+      provinceId: filters.provinceId,
       industries: filters.industries,
     }),
 )
 
-const selectProvince = (province: string) => {
-  filters.province = filters.province === province ? '' : province
+const selectProvince = (province: CityOption) => {
+  filters.provinceId = filters.provinceId === province.id ? null : province.id
 }
 
 onMounted(() => {
-  void fetchProvinceOptions()
-    .then((names) => {
-      if (names.length) provinceOptions.value = names
+  void loadRegionOptions()
+    .then((options) => {
+      if (!options.length) return
+      const current = provinceOptions.value.find(
+        (item) => item.id === filters.provinceId,
+      )
+      provinceOptions.value = options
+      if (!current || current.id > 0) return
+      filters.provinceId =
+        options.find((item) => item.label === current.label)?.id ?? null
     })
     .catch(() => undefined)
   void fetchIndustryTree()
@@ -119,12 +132,12 @@ const goDetail = (id: number) => {
       >
         <a
           v-for="province in visibleProvinces"
-          :key="province"
+          :key="province.id"
           class="option-link"
-          :class="{ active: filters.province === province }"
+          :class="{ active: filters.provinceId === province.id }"
           @click="selectProvince(province)"
         >
-          {{ province }}
+          {{ province.label }}
         </a>
       </FilterRow>
 

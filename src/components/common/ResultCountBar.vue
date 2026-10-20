@@ -9,7 +9,7 @@ withDefaults(
     /** 左侧主色竖条装饰 */
     decorated?: boolean
   }>(),
-  { prefix: '共找到', unit: '', decorated: false },
+  { prefix: '共找到', unit: '', decorated: true },
 )
 </script>
 

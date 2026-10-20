@@ -4,6 +4,7 @@ import {
   compactParams,
   type PageData,
   type PageQuery,
+  type RegionIdQuery,
 } from '@/api/paging'
 import {
   mapContact,
@@ -19,11 +20,11 @@ import {
   type EnterpriseExtras,
 } from '@/api/mapPortal'
 
-export type EnterpriseQuery = PageQuery & {
-  keyword?: string
-  province?: string
-  industries?: string[]
-}
+export type EnterpriseQuery = PageQuery &
+  RegionIdQuery & {
+    keyword?: string
+    industries?: string[]
+  }
 
 export const fetchEnterprisePage = async (query: EnterpriseQuery) => {
   const keyword = query.keyword?.trim()
@@ -31,9 +32,11 @@ export const fetchEnterprisePage = async (query: EnterpriseQuery) => {
     url: keyword ? '/search/enterprises' : '/enterprises',
     method: 'get',
     params: compactParams({
-      q: keyword,
       keyword,
-      province: query.province,
+      ...(keyword ? { q: keyword } : {}),
+      provinceId: query.provinceId,
+      cityId: query.cityId,
+      districtId: query.districtId,
       industries: query.industries,
       pageIndex: query.pageIndex,
       pageSize: query.pageSize,

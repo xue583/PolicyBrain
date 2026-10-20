@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { FileTextOutlined } from '@ant-design/icons-vue'
+import exportIcon from '../../assets/policyDb/export-icon@2x.png'
 import {
   policyDbYears,
   publicityAddresses,
@@ -16,6 +16,7 @@ import { useCollapsedList } from '@/composables/useCollapsedList'
 import { downloadCsv } from '@/utils/downloadCsv'
 import FilterRow from '@/components/common/FilterRow.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
+import PanelTabs from '@/components/common/PanelTabs.vue'
 import SearchRow from '@/components/common/SearchRow.vue'
 import titleStyleBg from '../../assets/home/title-style.png'
 
@@ -102,7 +103,13 @@ watch(
   },
 )
 
+const categoryTabs = publicityCategories.map((item) => ({
+  key: item.value,
+  label: item.label,
+}))
+
 const selectCategory = (value: PolicyDbPublicityCategory) => {
+  if (category.value === value) return
   category.value = value
   resetPage()
 }
@@ -164,20 +171,15 @@ const columns = [
 <template>
   <div class="publicity-panel">
     <div class="category-row">
-      <div class="category-links">
-        <a
-          v-for="item in publicityCategories"
-          :key="item.value"
-          :class="{ active: category === item.value }"
-          @click="selectCategory(item.value)"
-        >
-          {{ item.label }}
-        </a>
-      </div>
-      <a-button class="export-btn" @click="exportList">
-        <template #icon><FileTextOutlined /></template>
-        导出
-      </a-button>
+      <PanelTabs
+        :active-key="category"
+        :tabs="categoryTabs"
+        @update:active-key="selectCategory"
+      />
+      <button type="button" class="export-btn" @click="exportList">
+        <img :src="exportIcon" alt="" />
+        <span>导出</span>
+      </button>
     </div>
 
     <div class="filter-box">
@@ -268,42 +270,66 @@ const columns = [
 
 .category-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
-}
+  border-bottom: 1px solid #f0f0f0;
 
-.category-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  min-width: 0;
+  :deep(.panel-tabs.is-underline) {
+    gap: 28px;
+    min-width: 0;
+    border-bottom: none;
+  }
 
-  a {
+  :deep(.panel-tab) {
+    padding: 4px 0 12px;
+    font-size: 16px;
+    font-weight: 400;
     color: #262626;
-    font-size: 15px;
-    line-height: 32px;
-    cursor: pointer;
 
-    &.active,
     &:hover {
       color: var(--pb-primary);
     }
+
+    &.active {
+      font-weight: 600;
+    }
+  }
+
+  :deep(.panel-tabs.is-underline .panel-tab.active)::after {
+    height: 2px;
+    border-radius: 1px;
   }
 }
 
 .export-btn {
+  display: inline-flex;
   flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 111px;
+  height: 32px;
+  margin-bottom: 8px;
+  padding: 0 12px 0 40px;
+  border: none;
+  background: url('../../assets/policyDb/export-frame@2x.png') center / 100%
+    100% no-repeat;
   color: #fff;
-  background: #c1963c;
-  border-color: #c1963c;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+
+  img {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
 
   &:hover,
-  &:focus {
-    color: #fff;
-    background: #d4a84a;
-    border-color: #d4a84a;
+  &:focus-visible {
+    filter: brightness(1.06);
   }
 }
 
@@ -348,8 +374,19 @@ const columns = [
 
 @media (max-width: 768px) {
   .category-row {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
+    border-bottom: none;
+
+    :deep(.panel-tabs.is-underline) {
+      border-bottom: 1px solid #f0f0f0;
+    }
+  }
+
+  .export-btn {
+    align-self: flex-end;
+    margin-top: 12px;
+    margin-bottom: 0;
   }
 
   :deep(.filter-label) {

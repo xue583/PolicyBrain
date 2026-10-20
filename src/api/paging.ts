@@ -10,6 +10,13 @@ export type PageQuery = {
   pageSize?: number
 }
 
+/** 列表省市区筛选，对应 ProvinceId / CityId / DistrictId（ms_site_region） */
+export type RegionIdQuery = {
+  provinceId?: number | null
+  cityId?: number | null
+  districtId?: number | null
+}
+
 const asRecord = (value: unknown): Record<string, unknown> => {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
