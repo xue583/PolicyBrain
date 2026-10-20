@@ -40,6 +40,7 @@ const regionLabel = computed(() => policy.value?.city || '—')
 
 const EMPTY_APPLY_INFO: PolicyDbApplyInfo = {
   fields: '',
+  applyHtml: '',
   conditions: [],
   regulationNote: '',
   regulationClauses: [],

@@ -1,30 +1,43 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { PaperClipOutlined } from '@ant-design/icons-vue'
 import type { PolicyDbApplyInfo } from '../../mock/policyDb'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 defineOptions({ name: 'PolicyDbApplyInfoPanel' })
 
-defineProps<{
+const props = defineProps<{
   applyInfo: PolicyDbApplyInfo
 }>()
 
 const CLAUSE_MARKS = ['一', '二', '三', '四', '五', '六', '七', '八'] as const
+
+// Admin 原文为富文本；消毒后 v-html，避免页面露出 <p>/<span> 标签字面量
+const safeFields = computed(() => sanitizeHtml(props.applyInfo.fields))
+const safeApplyHtml = computed(() => sanitizeHtml(props.applyInfo.applyHtml))
 </script>
 
 <template>
   <div class="apply-info">
     <section class="apply-section">
       <h2 class="apply-title">支持领域</h2>
-      <p class="apply-text">{{ applyInfo.fields }}</p>
+      <!-- eslint-disable-next-line vue/no-v-html -- HTML 已通过 DOMPurify 消毒 -->
+      <div v-if="safeFields" class="apply-html" v-html="safeFields" />
+      <p v-else class="apply-text">—</p>
     </section>
 
     <section class="apply-section">
       <h2 class="apply-title">申报条件</h2>
-      <ol class="apply-conditions">
-        <li v-for="(item, index) in applyInfo.conditions" :key="index">
-          {{ index + 1 }}．{{ item }}
-        </li>
-      </ol>
+      <!-- eslint-disable-next-line vue/no-v-html -- HTML 已通过 DOMPurify 消毒 -->
+      <div v-if="safeApplyHtml" class="apply-html" v-html="safeApplyHtml" />
+      <template v-else>
+        <ol v-if="applyInfo.conditions.length" class="apply-conditions">
+          <li v-for="(item, index) in applyInfo.conditions" :key="index">
+            {{ index + 1 }}．{{ item }}
+          </li>
+        </ol>
+        <p v-else class="apply-text">—</p>
+      </template>
       <p v-if="applyInfo.regulationNote" class="apply-note">
         {{ applyInfo.regulationNote }}
       </p>
@@ -37,7 +50,7 @@ const CLAUSE_MARKS = ['一', '二', '三', '四', '五', '六', '七', '八'] as
 
     <section class="apply-section">
       <h2 class="apply-title">依据文件</h2>
-      <div class="basis-files">
+      <div v-if="applyInfo.files.length" class="basis-files">
         <a
           v-for="file in applyInfo.files"
           :key="file.name"
@@ -50,6 +63,7 @@ const CLAUSE_MARKS = ['一', '二', '三', '四', '五', '六', '七', '八'] as
           <span>{{ file.name }}</span>
         </a>
       </div>
+      <p v-else class="apply-text">—</p>
     </section>
   </div>
 </template>
@@ -95,6 +109,37 @@ const CLAUSE_MARKS = ['一', '二', '三', '四', '五', '六', '七', '八'] as
   font-size: 15px;
   line-height: 1.9;
   text-align: justify;
+}
+
+.apply-html {
+  color: #434343;
+  font-size: 15px;
+  line-height: 1.9;
+  text-align: justify;
+  word-break: break-word;
+
+  :deep(p) {
+    margin: 0 0 12px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  :deep(a) {
+    color: var(--pb-primary);
+    word-break: break-all;
+
+    &:hover {
+      color: #4096ff;
+    }
+  }
+
+  :deep(ul),
+  :deep(ol) {
+    margin: 0 0 12px;
+    padding-left: 1.5em;
+  }
 }
 
 .apply-conditions,

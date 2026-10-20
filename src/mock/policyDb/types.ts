@@ -68,7 +68,13 @@ export interface PolicyDbApplyFile {
 }
 
 export interface PolicyDbApplyInfo {
+  /** 支持领域；可能为 Admin 富文本 HTML */
   fields: string
+  /**
+   * 申报条件富文本；有值时优先于 conditions 列表渲染（WebApi 原文照录 HTML）。
+   */
+  applyHtml: string
+  /** 申报条件纯文本条目（mock / 无 HTML 时） */
   conditions: string[]
   regulationNote: string
   regulationClauses: string[]

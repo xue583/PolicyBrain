@@ -206,16 +206,13 @@ export const mapPolicyCard = (raw: unknown): PolicyDbItem => {
 
 export const mapPolicyApplyInfo = (raw: unknown): PolicyDbApplyInfo => {
   const record = asRecord(raw)
+  // WebApi 申报条件/支持领域为 Admin 原文照录（多为 HTML）；整段消毒渲染，禁止按分号拆条露标签
   const condition = pickString(record, ['applyCondition'])
   const files = Array.isArray(record.basisFiles) ? record.basisFiles : []
   return {
     fields: pickString(record, ['supportField']),
-    conditions: condition
-      ? condition
-          .split(/\n+|；|;/)
-          .map((item) => item.trim())
-          .filter(Boolean)
-      : [],
+    applyHtml: condition,
+    conditions: [],
     regulationNote: '',
     regulationClauses: [],
     files: files.map((file) => {
