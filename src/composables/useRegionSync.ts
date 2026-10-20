@@ -1,4 +1,5 @@
 import { onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { fetchUserContext, updateUserContext } from '@/api/account'
@@ -30,6 +31,8 @@ export const useRegionSync = () => {
   const router = useRouter()
   const region = useRegionStore()
   const auth = useAuthStore()
+  // Pinia store 上直接读 computed 会自动解包成 boolean；watch/响应式需 storeToRefs
+  const { isLoggedIn } = storeToRefs(auth)
 
   const storeIds = (): RegionIds => ({
     provinceId: region.provinceId,
@@ -45,7 +48,7 @@ export const useRegionSync = () => {
     const key = regionIdsKey(ids)
     if (key === persistKey) return
     persistKey = key
-    if (!auth.isLoggedIn.value || ids.provinceId == null) return
+    if (!isLoggedIn.value || ids.provinceId == null) return
     void updateUserContext({
       provinceId: ids.provinceId,
       cityId: ids.cityId,
@@ -136,7 +139,7 @@ export const useRegionSync = () => {
 
   /** 登录用户没有路由地区时，用账号里保存的地区恢复 */
   const restoreFromUserContext = async () => {
-    if (region.provinceId != null || !auth.isLoggedIn.value) return
+    if (region.provinceId != null || !isLoggedIn.value) return
     const context = await fetchUserContext().catch(() => null)
     if (!context || region.provinceId != null) return
 
@@ -210,7 +213,7 @@ export const useRegionSync = () => {
   )
 
   // 登录后恢复账号里保存的地区
-  watch(auth.isLoggedIn, (loggedIn) => {
+  watch(isLoggedIn, (loggedIn) => {
     if (loggedIn) void restoreFromUserContext()
   })
 

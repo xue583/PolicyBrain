@@ -94,29 +94,9 @@ export default defineConfig(({ mode }) => {
         ),
       },
     },
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks(id: string) {
-            const match = id.match(
-              /[\\/]node_modules[\\/](@[^\\/]+[\\/][^\\/]+|[^\\/]+)/,
-            )
-            if (!match) return undefined
-            const pkg = match[1]!
-            if (pkg === 'ant-design-vue' || pkg === '@ant-design/icons-vue') {
-              return 'ant-design-vue'
-            }
-            if (
-              ['vue', 'vue-router', 'pinia', 'axios'].includes(pkg) ||
-              pkg.startsWith('@vue/')
-            ) {
-              return 'vendor'
-            }
-            return undefined
-          },
-        },
-      },
-    },
+    // 勿对 vue / ant-design-vue 做跨 chunk 硬拆：Vite 8(rolldown) 下易出现
+    // 「e is not a function」白屏（vendor 与 ant-design-vue 循环/绑定错乱）
+    build: {},
     test: {
       environment: 'jsdom',
       globals: false,

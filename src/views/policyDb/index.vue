@@ -11,7 +11,6 @@ import PagedTable from '@/components/common/PagedTable.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import SelectedConditionsBar from '@/components/common/SelectedConditionsBar.vue'
 import {
-  policyDbLevels,
   policyDepartments,
   policyGrades,
   policyIndustryTags,
