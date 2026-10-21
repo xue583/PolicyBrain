@@ -18,7 +18,7 @@ import { fetchEnterprisePage } from '@/api/enterprises'
 import { fetchIndustryTree, type IndustryNode } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import industryTagIcon from '../../assets/enterpriseDb/industry-tag.png'
-import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
+import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'EnterpriseDb' })
 
@@ -126,7 +126,7 @@ const goDetail = (id: number) => {
           </template>
         </a-alert>
         <div v-else-if="!pagedList.length" class="empty-state">
-          <img :src="emptyIllustration" alt="" class="empty-illustration" />
+          <img :src="emptyNews" alt="" class="empty-illustration" />
           <p>未找到符合条件的企业，请调整筛选后再试</p>
         </div>
 
@@ -306,7 +306,7 @@ const goDetail = (id: number) => {
   font-size: 15px;
 
   .empty-illustration {
-    width: 220px;
+    width: 202px;
     height: auto;
     margin-bottom: 16px;
   }

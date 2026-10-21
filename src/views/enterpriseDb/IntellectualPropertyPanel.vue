@@ -10,6 +10,7 @@ import type {
 import EmptyState from '@/components/common/EmptyState.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
+import emptyNews from '@/assets/home/empty-news.png'
 import ipPatentBg from '../../assets/enterpriseDb/container-291.png'
 import ipTrademarkBg from '../../assets/enterpriseDb/container-293.png'
 import ipSoftwareBg from '../../assets/enterpriseDb/container-294.png'
@@ -171,9 +172,9 @@ const workColumns = [
   <EmptyState
     v-if="!ipTotal"
     class="tab-empty"
-    :image="ipPatentBg"
+    :image="emptyNews"
     text="暂无知识产权信息"
-    :image-width="420"
+    :image-width="202"
   />
   <template v-else>
     <div v-if="showSummary" class="ip-summary">

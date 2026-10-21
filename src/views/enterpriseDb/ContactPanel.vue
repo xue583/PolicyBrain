@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import { triggerNeedLogin } from '@/utils/auth'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
-import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
+import emptyNews from '@/assets/home/empty-news.png'
 import vipLockBg from '../../assets/enterpriseDb/container-279.png'
 import phoneIcon from '../../assets/enterpriseDb/phone.png'
 import linkIcon from '../../assets/enterpriseDb/container.png'
@@ -49,9 +49,9 @@ const onUnlock = () => {
     <EmptyState
       v-else-if="!contacts.length"
       class="tab-empty"
-      :image="emptyIllustration"
+      :image="emptyNews"
       text="暂无联系方式"
-      :image-width="420"
+      :image-width="202"
     />
 
     <div v-else class="contact-body">

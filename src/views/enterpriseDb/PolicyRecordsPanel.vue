@@ -4,7 +4,7 @@ import type { EnterprisePolicyRecord } from '../../mock/enterpriseDb'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
-import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
+import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'EnterprisePolicyRecordsPanel' })
 
@@ -47,11 +47,7 @@ const columns = [
     :row-key="(row: EnterprisePolicyRecord) => row.id"
   >
     <template #emptyText>
-      <EmptyState
-        class="records-empty"
-        :image="emptyIllustration"
-        :image-width="280"
-      />
+      <EmptyState class="records-empty" :image="emptyNews" :image-width="202" />
     </template>
     <template #bodyCell="{ column, record }">
       <template v-if="column.key === 'name'">

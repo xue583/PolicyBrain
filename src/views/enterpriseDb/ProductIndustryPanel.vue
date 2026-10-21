@@ -7,7 +7,7 @@ import type {
 } from '../../mock/enterpriseDb'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
-import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
+import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'EnterpriseProductIndustryPanel' })
 
@@ -24,9 +24,9 @@ defineProps<{
     <template v-if="!products.length">
       <EmptyState
         class="tab-empty"
-        :image="emptyIllustration"
+        :image="emptyNews"
         text="暂无产品/产业信息"
-        :image-width="420"
+        :image-width="202"
       />
     </template>
 

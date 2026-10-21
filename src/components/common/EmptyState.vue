@@ -25,6 +25,8 @@ withDefaults(
   align-items: center;
   gap: var(--empty-gap, 20px);
   padding: var(--empty-padding, 40px 0 48px);
+  background: white;
+  border-radius: 20px;
 
   img {
     height: auto;

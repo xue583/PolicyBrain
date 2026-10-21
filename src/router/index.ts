@@ -114,6 +114,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/comingSoon/index.vue'),
         meta: { title: 'API接口目录' },
       },
+      {
+        path: ':id(\\d+)',
+        name: 'api-detail',
+        component: () => import('@/views/api/detail.vue'),
+        meta: { hideHero: true, title: '接口详情' },
+      },
     ],
   },
   {

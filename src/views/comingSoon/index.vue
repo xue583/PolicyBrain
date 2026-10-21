@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   FileTextOutlined,
   TeamOutlined,
@@ -11,79 +12,18 @@ import advertisementImg from '@/assets/api/advertisement.png'
 import openImg from '@/assets/api/open.png'
 import notOpenImg from '@/assets/api/notOpen.png'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
+import { apiMainCategory } from '@/views/api/catalog'
 
 defineOptions({ name: 'ComingSoon' })
 
-interface ApiItem {
-  id: number
-  name: string
-  description: string
-  code: string
-  returnData: string
-  isOpen: boolean
-}
-
+const router = useRouter()
 const selectedKeys = ref<string[]>(['政策接口'])
 const keyword = useRouteKeyword()
 
-interface ApiSubGroup {
-  name: string
-  count: number
-  items: ApiItem[]
-}
-
-interface ApiMainCategory {
-  name: string
-  count: number
-  groups: ApiSubGroup[]
-}
-
-const fileReturn = '发布单位、发布科室、文件等级、联系方式、发布时间、标题'
-const fileDesc =
-  '根据区域查询政策文件，包含：发布单位、发布科室、原文链接、联系方式等'
-
-const makeItem = (
-  id: number,
-  name: string,
-  isOpen: boolean,
-  description = fileDesc,
-  returnData = fileReturn,
-): ApiItem => ({
-  id,
-  name,
-  description,
-  code: '100011',
-  returnData,
-  isOpen,
-})
-
-const apiMainCategory = ref<ApiMainCategory>({
-  name: '政策接口',
-  count: 9,
-  groups: [
-    {
-      name: '政策文件',
-      count: 3,
-      items: [
-        makeItem(1, '查询政策文件列表', true),
-        makeItem(2, '查询政策文件列表', true),
-        makeItem(3, '查询政策文件列表', false),
-      ],
-    },
-    {
-      name: '政策数据',
-      count: 9,
-      items: Array.from({ length: 9 }, (_, index) =>
-        makeItem(index + 4, '查询政策资讯', true),
-      ),
-    },
-  ],
-})
-
 const visibleCategory = computed(() => {
   const kw = keyword.value.trim()
-  if (!kw) return apiMainCategory.value
-  const groups = apiMainCategory.value.groups
+  if (!kw) return apiMainCategory
+  const groups = apiMainCategory.groups
     .map((group) => ({
       ...group,
       items: group.items.filter(
@@ -92,7 +32,7 @@ const visibleCategory = computed(() => {
     }))
     .filter((group) => group.items.length > 0)
   return {
-    ...apiMainCategory.value,
+    ...apiMainCategory,
     count: groups.reduce((sum, group) => sum + group.items.length, 0),
     groups,
   }
@@ -110,6 +50,10 @@ const menuItems = [
   },
 ]
 const totalApiCount = 45
+
+const openDetail = (id: number) => {
+  void router.push({ name: 'api-detail', params: { id: String(id) } })
+}
 </script>
 
 <template>
@@ -162,7 +106,12 @@ const totalApiCount = 45
             <span class="group-count">{{ group.items.length }}</span>
           </h3>
 
-          <div v-for="item in group.items" :key="item.id" class="api-card">
+          <div
+            v-for="item in group.items"
+            :key="item.id"
+            class="api-card"
+            @click="openDetail(item.id)"
+          >
             <img
               :src="item.isOpen ? openImg : notOpenImg"
               :alt="item.isOpen ? '开放' : '未开放'"
@@ -190,7 +139,7 @@ const totalApiCount = 45
 .api-page {
   display: flex;
   gap: 16px;
-  margin-top: -200px;
+  margin-top: -120px;
   align-items: flex-start;
 }
 
@@ -337,6 +286,15 @@ const totalApiCount = 45
   border-radius: 8px;
   margin-bottom: 16px;
   background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+
+  &:hover {
+    border-color: #91caff;
+    box-shadow: 0 2px 8px rgba(22, 119, 255, 0.08);
+  }
 
   &:last-child {
     margin-bottom: 0;

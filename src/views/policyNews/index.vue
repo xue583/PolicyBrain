@@ -26,6 +26,8 @@ import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue
 import { useRegionStore } from '@/stores/region'
 import { clearRegionSelection } from '@/utils/regionActions'
 import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'PolicyNews' })
 
@@ -239,9 +241,12 @@ const openDetail = (item: PolicyItem) => {
       <!-- List -->
       <a-spin :spinning="loading">
         <div class="list-section">
-          <a-empty
+          <EmptyState
             v-if="!loading && !pagedList.length"
-            description="暂无政策资讯"
+            class="news-empty"
+            :image="emptyNews"
+            :image-width="202"
+            text="暂无政策资讯"
           />
           <div v-else class="policy-cards">
             <div
@@ -331,17 +336,36 @@ const openDetail = (item: PolicyItem) => {
 }
 
 .result-bar {
+  position: relative;
   padding-left: 12px;
   margin-bottom: 16px;
   font-size: 18px;
   color: #343434;
-  border-left: 3px solid var(--pb-primary);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    height: 18px;
+    background: var(--pb-primary);
+  }
 }
 
 .list-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.news-empty {
+  --empty-padding: 72px 0 48px;
+  --empty-gap: 16px;
+  --empty-text-size: 16px;
+  --empty-text-weight: 400;
+  --empty-text-color: #8c8c8c;
 }
 
 .policy-cards {

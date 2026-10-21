@@ -32,8 +32,20 @@ withDefaults(
   }
 
   &.decorated {
+    position: relative;
+    display: inline-block;
     padding-left: 12px;
-    border-left: 3px solid var(--pb-primary);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 4px;
+      bottom: 0;
+      left: 0;
+      width: 3px;
+      height: 16px;
+      background: var(--pb-primary);
+    }
   }
 }
 </style>

@@ -18,7 +18,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import FilterRow from '@/components/common/FilterRow.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import SearchRow from '@/components/common/SearchRow.vue'
-import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
+import emptyNews from '@/assets/home/empty-news.png'
 import exportIcon from '../../assets/enterpriseDb/export.png'
 import tipsIcon from '../../assets/enterpriseDb/tips.png'
 
@@ -283,11 +283,7 @@ const exportList = () => {
       :row-key="(row: { id: number }) => row.id"
     >
       <template #emptyText>
-        <EmptyState
-          class="qual-empty"
-          :image="emptyIllustration"
-          :image-width="280"
-        />
+        <EmptyState class="qual-empty" :image="emptyNews" :image-width="202" />
       </template>
     </PagedTable>
   </div>
