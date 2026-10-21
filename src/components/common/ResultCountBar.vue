@@ -39,12 +39,12 @@ withDefaults(
     &::before {
       content: '';
       position: absolute;
-      top: 1px;
-      bottom: 0;
+      top: 50%;
       left: 0;
       width: 3px;
       height: 16px;
       background: var(--pb-primary);
+      transform: translateY(-50%);
     }
   }
 }

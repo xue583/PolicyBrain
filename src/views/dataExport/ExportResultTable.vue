@@ -141,18 +141,18 @@ const emit = defineEmits<{
   min-width: 28px;
   height: 22px;
   padding: 0 8px;
-  border-radius: 11px;
+  border-radius: 4px;
   font-size: 13px;
   font-weight: 600;
 
   &.high {
-    color: #389e0d;
-    background: #f6ffed;
+    color: #03703f;
+    background: #e9faf2;
   }
 
   &.low {
-    color: #d4380d;
-    background: #fff2e8;
+    color: #ef1f25;
+    background: #fcf0f0;
   }
 }
 </style>

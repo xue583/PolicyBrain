@@ -12,7 +12,7 @@ import { triggerNeedLogin } from '@/utils/auth'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
 import emptyNews from '@/assets/home/empty-news.png'
-import vipLockBg from '../../assets/enterpriseDb/container-279.png'
+import vipLockBg from '../../assets/enterpriseDb/vip-upgrade@2x.png'
 import phoneIcon from '../../assets/enterpriseDb/phone.png'
 import linkIcon from '../../assets/enterpriseDb/container.png'
 
@@ -41,8 +41,7 @@ const onUnlock = () => {
 
     <div v-if="locked" class="contact-lock">
       <button type="button" class="vip-lock" @click="onUnlock">
-        <img :src="vipLockBg" alt="" class="vip-lock-bg" />
-        <span class="vip-lock-copy"> 升级VIP，即可解锁全部会员 </span>
+        <img :src="vipLockBg" alt="升级VIP，即可解锁全部会员" />
       </button>
     </div>
 
@@ -114,43 +113,19 @@ const onUnlock = () => {
 }
 
 .vip-lock {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: min(520px, 100%);
-  height: 68px;
-  padding: 0 28px 0 56px;
+  display: block;
+  padding: 0;
   border: none;
   background: transparent;
+  line-height: 0;
   cursor: pointer;
-}
 
-.vip-lock-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  pointer-events: none;
-}
-
-.vip-lock-copy {
-  position: relative;
-  z-index: 1;
-  left: 95px;
-  color: #f0d48a;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.vip-lock-icon {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  filter: brightness(0) saturate(100%) invert(86%) sepia(28%) saturate(668%)
-    hue-rotate(352deg) brightness(99%) contrast(92%);
+  img {
+    display: block;
+    width: 346px;
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 .tab-empty {
@@ -292,14 +267,6 @@ const onUnlock = () => {
   .contact-body,
   .person-grid {
     grid-template-columns: 1fr;
-  }
-
-  .vip-lock {
-    padding-left: 40px;
-  }
-
-  .vip-lock-copy {
-    font-size: 14px;
   }
 }
 </style>

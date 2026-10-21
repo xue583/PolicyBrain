@@ -304,7 +304,7 @@ const onBatchUploaded = (name: string) => {
   display: flex;
   flex-direction: column;
   gap: var(--pb-gap);
-  margin-top: -180px;
+  margin-top: -120px;
 }
 
 .filter-card,
@@ -409,7 +409,7 @@ const onBatchUploaded = (name: string) => {
 }
 
 .export-count {
-  --rc-font-size: 14px;
+  --rc-font-size: 16px;
   --rc-em-margin: 4px;
 }
 

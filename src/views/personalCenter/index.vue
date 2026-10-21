@@ -8,8 +8,6 @@ import {
   CrownOutlined,
 } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { fetchMyMembership } from '@/api/membership'
-import { mapMembershipLabel } from '@/api/mapPortal'
 import { formatLastLogin, identityLabel, maskPhone } from '@/utils/userDisplay'
 import baseIcon from '@/assets/personalCenter/基础@2x.png'
 import msgIcon from '@/assets/personalCenter/goutong@2x.png'
@@ -103,24 +101,16 @@ const currentMenu = computed(
     menuItems.find((item) => item.key === selectedMenu.value) ?? menuItems[0]!,
 )
 
-const membershipLabel = ref('')
-
 const userInfo = computed(() => {
   const profile = user.value
   const phone = profile?.phone || ''
-  const identity = [
-    identityLabel(profile?.identity) || '未认证',
-    membershipLabel.value,
-  ]
-    .filter(Boolean)
-    .join(' · ')
   return {
     phone: maskPhone(phone) || '未绑定手机',
     username: profile?.nickname || phone || '未设置',
     company: profile?.companyName || '未填写',
     lastLogin: formatLastLogin(profile?.lastLoginTime) || '-',
     bindPhone: phone || '未绑定',
-    identity,
+    identity: identityLabel(profile?.identity) || '未认证',
     avatar: profile?.avatar || '',
   }
 })
@@ -140,12 +130,6 @@ const uploadAvatarOpen = ref(false)
 
 onMounted(() => {
   void auth.loadCurrentUser().catch(() => undefined)
-  if (!auth.isLoggedIn) return
-  void fetchMyMembership()
-    .then((data) => {
-      membershipLabel.value = mapMembershipLabel(data)
-    })
-    .catch(() => undefined)
 })
 </script>
 
@@ -153,39 +137,41 @@ onMounted(() => {
   <div class="personal-center">
     <!-- Left Sidebar -->
     <div class="sidebar">
-      <!-- User Info Card -->
-      <div class="user-card">
-        <div class="avatar">
-          <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="用户头像" />
-          <img v-else :src="userLevel" alt="用户头像" />
+      <div class="sidebar-card">
+        <div class="user-card">
+          <div class="avatar">
+            <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="用户头像" />
+            <UserOutlined v-else />
+          </div>
+          <div class="user-meta">
+            <div class="user-phone">{{ userInfo.phone }}</div>
+            <div
+              class="user-badge"
+              :style="{ backgroundImage: `url(${userLevel})` }"
+            >
+              <span>{{ userInfo.identity }}</span>
+            </div>
+          </div>
+          <div class="vip-link" @click="goMembership">
+            <CrownOutlined />
+            <span>开通会员，享受专享</span>
+          </div>
         </div>
-        <div class="user-phone">{{ userInfo.phone }}</div>
-        <div
-          class="user-badge"
-          :style="{ backgroundImage: `url(${userLevel})` }"
-        >
-          <span>{{ userInfo.identity }}</span>
-        </div>
-        <div class="vip-link" @click="goMembership">
-          <CrownOutlined />
-          <span>开通会员，享受专享</span>
-        </div>
-      </div>
 
-      <!-- Menu -->
-      <div class="sidebar-menu">
-        <div
-          v-for="item in menuItems"
-          :key="item.key"
-          class="menu-item"
-          :class="{ active: selectedMenu === item.key }"
-          @click="onMenuClick(item.key)"
-        >
-          <span
-            class="menu-icon"
-            :style="{ '--menu-icon': `url(${item.icon})` }"
-          />
-          <span class="menu-text">{{ item.label }}</span>
+        <div class="sidebar-menu">
+          <div
+            v-for="item in menuItems"
+            :key="item.key"
+            class="menu-item"
+            :class="{ active: selectedMenu === item.key }"
+            @click="onMenuClick(item.key)"
+          >
+            <span
+              class="menu-icon"
+              :style="{ '--menu-icon': `url(${item.icon})` }"
+            />
+            <span class="menu-text">{{ item.label }}</span>
+          </div>
         </div>
       </div>
 
@@ -301,20 +287,27 @@ onMounted(() => {
   gap: 16px;
 }
 
-.user-card {
+.sidebar-card {
   background: #fff;
   border-radius: var(--pb-radius-lg);
-  padding: 32px 24px 24px;
-  text-align: center;
   box-shadow: var(--pb-shadow-card);
+  overflow: hidden;
+}
+
+.user-card {
+  background: linear-gradient(180deg, #e7f4ff 0%, #f7fbff 58%, #fff 100%);
+  padding: 24px 20px 16px;
+  text-align: center;
 }
 
 .avatar {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 16px;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
   border-radius: 50%;
-  background: #f0f0f0;
+  background: #e6eef5;
+  color: #9aabba;
+  font-size: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -327,21 +320,30 @@ onMounted(() => {
   }
 }
 
+.user-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 .user-phone {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--pb-title);
-  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1a1a1a;
+  letter-spacing: 0.02em;
 }
 
 .user-badge {
   display: inline-grid;
-  grid-template-columns: 38% 1fr;
+  grid-template-columns: 36% 1fr;
   align-items: center;
+  flex-shrink: 0;
   box-sizing: border-box;
-  min-width: 88px;
-  height: 25px;
-  margin-bottom: 12px;
+  width: 92px;
+  height: 26px;
   padding-right: 6px;
   background-repeat: no-repeat;
   background-position: center;
@@ -358,31 +360,29 @@ onMounted(() => {
 }
 
 .vip-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 16px;
-  color: #3e2a0d;
+  gap: 4px;
+  font-size: 14px;
+  color: #d4a24c;
   cursor: pointer;
 
   &:hover {
-    color: #b07848;
+    color: #b8862e;
   }
 }
 
 .sidebar-menu {
-  background: #fff;
-  border-radius: var(--pb-radius-lg);
-  padding: 12px 0;
-  box-shadow: var(--pb-shadow-card);
+  padding: 6px 0 8px;
+  border-top: 1px solid #eef2f6;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 24px;
+  padding: 14px 20px;
   cursor: pointer;
   transition: all 0.3s;
 
@@ -442,7 +442,7 @@ onMounted(() => {
   min-width: 0;
   background: #fff;
   border-radius: var(--pb-radius-lg);
-  padding: 32px;
+  padding: 20px;
   box-shadow: var(--pb-shadow-card);
 }
 
@@ -500,7 +500,7 @@ onMounted(() => {
 .profile-card {
   display: flex;
   gap: 40px;
-  padding: 24px;
+  padding: 20px;
   background: #fafafa;
   border-radius: 12px;
 }
