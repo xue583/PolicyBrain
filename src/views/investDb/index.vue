@@ -113,18 +113,16 @@ const typeCounts = computed(() => {
         </template>
       </a-alert>
 
-      <a-card :bordered="false" class="invest-card">
-        <ContentHeader
-          :total-count="collectedTotal || allCount || total"
-          :keyword="keyword"
-          :active-type="activeType"
-          :counts="typeCounts"
-          :tabs="typeTabs"
-          @update:keyword="keyword = $event"
-          @update:active-type="activeType = $event"
-          @search="applyKeyword"
-        />
-
+      <ContentHeader
+        :total-count="collectedTotal || allCount || total"
+        :keyword="keyword"
+        :active-type="activeType"
+        :counts="typeCounts"
+        :tabs="typeTabs"
+        @update:keyword="keyword = $event"
+        @update:active-type="activeType = $event"
+        @search="applyKeyword"
+      >
         <ProjectTable
           :loading="loading"
           :data-source="pagedList"
@@ -132,7 +130,7 @@ const typeCounts = computed(() => {
           v-model:current-page="currentPage"
           :page-size="pageSize"
         />
-      </a-card>
+      </ContentHeader>
     </div>
   </PageState>
 </template>
@@ -141,21 +139,7 @@ const typeCounts = computed(() => {
 .invest-db {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   margin-top: -140px;
-}
-
-.invest-card {
-  border-radius: 12px;
-  box-shadow: var(--pb-shadow-card);
-  --filter-row-border: none;
-  --filter-label-width: 84px;
-  --filter-font-size: 14px;
-  --filter-options-gap: 2px 22px;
-  --filter-row-padding: 6px 0;
-
-  :deep(.ant-card-body) {
-    padding: 20px 24px 12px;
-  }
 }
 </style>

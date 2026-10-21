@@ -3,7 +3,6 @@
   gap: 12px;
   font-size: var(--filter-font-size, 16px);
   padding: var(--filter-row-padding, 10px 0);
-  border-bottom: var(--filter-row-border, 1px dashed #f0f0f0);
 
   &:last-child {
     border-bottom: none;

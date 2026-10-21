@@ -55,67 +55,101 @@ const submitSearch = () => {
 
 <template>
   <div class="content-header">
-    <div class="toolbar">
-      <ResultCountBar
-        class="invest-count"
-        prefix="共收录"
-        :total="totalCount"
-        unit="家企业"
-        decorated
-      />
-      <div class="project-search">
-        <a-input
-          :value="keyword"
-          allow-clear
-          :placeholder="placeholder"
-          @update:value="onKeyword"
-          @press-enter="submitSearch"
-        >
-          <template #prefix>
-            <SearchOutlined class="search-icon" />
-          </template>
-        </a-input>
-        <a-button type="primary" @click="submitSearch">
-          <span>搜索</span>
-        </a-button>
+    <section class="search-panel">
+      <div class="toolbar">
+        <ResultCountBar
+          class="invest-count"
+          prefix="共收录"
+          :total="totalCount"
+          unit="家企业"
+          decorated
+        />
+        <div class="project-search">
+          <a-input
+            :value="keyword"
+            allow-clear
+            :placeholder="placeholder"
+            @update:value="onKeyword"
+            @press-enter="submitSearch"
+          >
+            <template #prefix>
+              <SearchOutlined class="search-icon" />
+            </template>
+          </a-input>
+          <a-button type="primary" @click="submitSearch">
+            <span>搜索</span>
+          </a-button>
+        </div>
       </div>
-    </div>
 
-    <RegionCascadeFilter
-      label="选择省市："
-      :collapsed-count="14"
-      initial-expanded
-    />
+      <RegionCascadeFilter
+        label="选择省市："
+        :collapsed-count="14"
+        initial-expanded
+      />
 
-    <SelectedConditionsBar
-      :conditions="selectedConditions"
-      @remove="clearRegionSelection"
-      @clear="clearRegionSelection"
-    />
+      <SelectedConditionsBar
+        :conditions="selectedConditions"
+        @remove="clearRegionSelection"
+        @clear="clearRegionSelection"
+      />
+    </section>
 
-    <div class="type-tabs" role="tablist">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        type="button"
-        class="type-tab"
-        :class="{ active: activeType === tab.key }"
-        @click="emit('update:activeType', tab.key)"
-      >
-        {{ tab.label }} {{ counts[tab.key] ?? 0 }}
-      </button>
-    </div>
+    <section class="content-panel">
+      <div class="type-tabs" role="tablist">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          type="button"
+          role="tab"
+          class="type-tab"
+          :class="{ active: activeType === tab.key }"
+          :aria-selected="activeType === tab.key"
+          @click="emit('update:activeType', tab.key)"
+        >
+          <span class="type-tab-label">{{ tab.label }}</span>
+          <span class="type-tab-count">{{ counts[tab.key] ?? 0 }}</span>
+        </button>
+      </div>
+
+      <slot />
+    </section>
   </div>
 </template>
 
 <style scoped lang="scss">
+.content-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-panel,
+.content-panel {
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--pb-shadow-card);
+}
+
+.search-panel {
+  padding: 16px 24px 8px;
+  --filter-row-border: none;
+  --filter-label-width: 84px;
+  --filter-font-size: 14px;
+  --filter-options-gap: 2px 22px;
+  --filter-row-padding: 6px 0;
+}
+
+.content-panel {
+  padding: 16px 24px 12px;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   min-height: 40px;
-  margin-bottom: 8px;
 }
 
 .invest-count {
@@ -160,10 +194,11 @@ const submitSearch = () => {
   cursor: pointer;
 }
 
+:deep(.region-filter),
 :deep(.selected-section) {
-  margin-top: 2px;
-  padding-top: 2px;
-  border-top: none;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #f0f0f0;
 }
 
 :deep(.condition-tag) {
@@ -184,55 +219,52 @@ const submitSearch = () => {
 .type-tabs {
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
-  margin: 8px 0 16px;
-  padding: 4px;
-  background: #f4f8fc;
-  border: 1px solid #e7eef6;
-  border-radius: 8px;
+  gap: 8px;
+  margin: 0 0 16px;
 }
 
 .type-tab {
-  position: relative;
-  flex: 0 0 auto;
-  padding: 8px 22px;
-  border: 0;
-  background: transparent;
-  color: #595959;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #e6eef6;
+  border-radius: 6px;
+  background: #f7fafc;
+  color: #434343;
   font-size: 14px;
   line-height: 22px;
   white-space: nowrap;
   cursor: pointer;
 
-  & + &::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    bottom: 10px;
-    left: 0;
-    width: 1px;
-    background: #dce6f0;
-  }
-
   &:hover:not(.active) {
     color: var(--pb-primary);
+    border-color: #b7d6ff;
+    background: #f3f8ff;
+
+    .type-tab-count {
+      color: var(--pb-primary);
+    }
   }
 
   &.active {
     color: var(--pb-primary);
     font-weight: 600;
     background: #fff;
-    border-radius: 6px;
-    box-shadow: 0 1px 2px rgba(22, 119, 255, 0.06);
+    border-color: var(--pb-primary);
+    box-shadow: 0 1px 2px rgba(22, 119, 255, 0.08);
 
-    &::before {
-      display: none;
+    .type-tab-count {
+      color: var(--pb-primary);
     }
   }
+}
 
-  &.active + &::before {
-    display: none;
-  }
+.type-tab-count {
+  color: #8c8c8c;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 @include below-lg {

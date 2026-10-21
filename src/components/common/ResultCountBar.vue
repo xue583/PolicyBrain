@@ -39,7 +39,7 @@ withDefaults(
     &::before {
       content: '';
       position: absolute;
-      top: 4px;
+      top: 1px;
       bottom: 0;
       left: 0;
       width: 3px;
