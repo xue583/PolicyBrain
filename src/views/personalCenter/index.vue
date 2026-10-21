@@ -284,12 +284,12 @@ onMounted(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  // gap: 16px;
 }
 
 .sidebar-card {
   background: #fff;
-  border-radius: var(--pb-radius-lg);
+  border-radius: 20px 20px 0 0;
   box-shadow: var(--pb-shadow-card);
   overflow: hidden;
 }
@@ -426,7 +426,6 @@ onMounted(() => {
 }
 
 .vip-ad {
-  border-radius: var(--pb-radius-lg);
   overflow: hidden;
   box-shadow: var(--pb-shadow-card);
 

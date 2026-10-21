@@ -140,6 +140,6 @@ const typeCounts = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-top: -140px;
+  margin-top: -173px;
 }
 </style>
