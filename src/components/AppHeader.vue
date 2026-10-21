@@ -318,6 +318,10 @@ onUnmounted(() => {
     background: #fff !important;
   }
 
+  &.is-membership:not(.is-scrolled) {
+    background: transparent;
+  }
+
   &.is-scrolled {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   }
