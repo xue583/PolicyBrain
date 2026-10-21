@@ -122,7 +122,7 @@ export const mapNewsItem = (raw: unknown): PolicyItem => {
     description: pickString(record, ['summary', 'description']),
     date: published,
     endDate: deadline,
-    department: pickString(record, ['issuingAuthority', 'department'], '—'),
+    department: pickString(record, ['issuingAuthority', 'department'], '-'),
     daysRemaining: Number.isFinite(days) ? days : 0,
     region: pickString(record, ['region', 'regionPath']),
     industry: pickString(record, ['industry']),
@@ -193,8 +193,8 @@ export const mapPolicyCard = (raw: unknown): PolicyDbItem => {
     id: pickNumber(record, ['id']),
     name: pickString(record, ['name', 'title']),
     support: pickString(record, ['supportField', 'supportIntensity']),
-    city: pickString(record, ['regionPath', 'city'], '—'),
-    department: pickString(record, ['department', 'issuingAuthority'], '—'),
+    city: pickString(record, ['regionPath', 'city'], '-'),
+    department: pickString(record, ['department', 'issuingAuthority'], '-'),
     views: pickNumber(record, ['views', 'viewCount']),
     status: policyStatus(record),
     level,
@@ -232,7 +232,7 @@ export const mapSupportMeasure = (
   const record = asRecord(raw)
   return {
     id: pickNumber(record, ['id'], index + 1),
-    grade: pickString(record, ['grade', 'policyLevel'], '—'),
+    grade: pickString(record, ['grade', 'policyLevel'], '-'),
     condition: pickString(record, ['condition']),
     amount: pickString(record, ['amount']),
     document: pickString(record, ['document', 'title']),
@@ -250,7 +250,7 @@ export const mapPolicyUpdate = (raw: unknown): PolicyDbUpdate => {
     grade:
       pickString(record, ['grade']) ||
       levelLabel(mapPolicyLevel(pick(record, ['policyLevel']))),
-    department: pickString(record, ['issuingAuthority', 'department'], '—'),
+    department: pickString(record, ['issuingAuthority', 'department'], '-'),
     date,
     endDate: formatDate(pick(record, ['deadlineAt', 'endDate'])),
     year: Number.isFinite(year) ? year : new Date().getFullYear(),
@@ -294,9 +294,9 @@ export const mapPublicity = (raw: unknown): PolicyDbPublicity => {
   return {
     id: pickNumber(record, ['id']),
     name: pickString(record, ['name', 'enterpriseName', 'title']),
-    district: pickString(record, ['district', 'districtName'], '—'),
-    region: pickString(record, ['region', 'regionPath'], '—'),
-    industry: pickString(record, ['industry', 'industryName'], '—'),
+    district: pickString(record, ['district', 'districtName'], '-'),
+    region: pickString(record, ['region', 'regionPath'], '-'),
+    industry: pickString(record, ['industry', 'industryName'], '-'),
     amount: amount === undefined ? null : pickNumber(record, ['amount']),
     year: Number(String(yearText).slice(0, 4)) || new Date().getFullYear(),
     category: mapPublicityCategory(pick(record, ['category', 'publicityType'])),
@@ -334,30 +334,85 @@ export const mapEnterpriseCard = (raw: unknown): EnterpriseItem => {
     id: pickNumber(record, ['id']),
     name: pickString(record, ['name']),
     status: mapEnterpriseStatus(pick(record, ['businessStatus', 'status'])),
-    province: pickString(record, ['provinceName', 'province'], '—'),
-    city: pickString(record, ['cityName', 'city'], '—'),
+    province: pickString(record, ['provinceName', 'province'], '-'),
+    city: pickString(record, ['cityName', 'city'], '-'),
     policyCount: pickNumber(record, ['policyCount']),
     tags: stringList(pick(record, ['tags', 'industryTags'])),
-    address: pickString(record, ['address'], '—'),
+    address: pickString(record, ['address'], '-'),
     businessIndustry: pickString(
       record,
       ['businessIndustry', 'companyIndustry'],
-      '—',
+      '-',
     ),
-    industry: pickString(record, ['industry', 'companyIndustry'], '—'),
+    industry: pickString(record, ['industry', 'companyIndustry'], '-'),
   }
 }
 
 const capitalNumber = (value: string) => {
   const matched = value.match(/[\d.]+/)
-  return matched ? matched[0] : value || '—'
+  return matched ? matched[0] : value || '-'
 }
 
 const shortNameOf = (name: string) => {
   const core = name
     .replace(/^(北京|天津|上海|重庆|河南|河北|山东|江苏|浙江|广东)/, '')
     .replace(/(有限责任公司|股份有限公司|有限公司|公司)$/, '')
-  return (core || name).slice(0, 4)
+  return (core || name).slice(0, 2)
+}
+
+const INDUSTRY_DETAIL_KEYS = [
+  'category',
+  'categoryBig',
+  'categoryMiddle',
+  'categorySmall',
+] as const
+
+const decodeUnicodeEscapes = (value: string) =>
+  value.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex: string) =>
+    String.fromCharCode(Number.parseInt(hex, 16)),
+  )
+
+const splitIndustryPath = (value: string) =>
+  value
+    .split('/')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+const parseIndustryDetail = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value
+  const text = value.trim()
+  if (!text) return ''
+  try {
+    return JSON.parse(text)
+  } catch {
+    const decoded = decodeUnicodeEscapes(text)
+    try {
+      return JSON.parse(decoded)
+    } catch {
+      return decoded
+    }
+  }
+}
+
+/** 门类 → 大类 → 中类 → 小类，跳过空级别 */
+const industryLevelsOf = (value: unknown): string[] => {
+  if (value === undefined || value === null || value === '') return []
+  let parsed = parseIndustryDetail(value)
+  if (typeof parsed === 'string') {
+    const decoded = decodeUnicodeEscapes(parsed).trim()
+    if (!decoded) return []
+    if (decoded.startsWith('{') || decoded.startsWith('[')) {
+      parsed = parseIndustryDetail(decoded)
+    } else {
+      return splitIndustryPath(decoded)
+    }
+  }
+  if (typeof parsed === 'string') return splitIndustryPath(parsed)
+  const record = asRecord(parsed)
+  if (!INDUSTRY_DETAIL_KEYS.some((key) => key in record)) return []
+  return INDUSTRY_DETAIL_KEYS.map((key) =>
+    decodeUnicodeEscapes(String(record[key] ?? '')).trim(),
+  ).filter(Boolean)
 }
 
 export type EnterpriseExtras = {
@@ -392,50 +447,48 @@ export const mapEnterpriseDetail = (
         .filter(Boolean)
         .join('、')
     : ''
-  const industryPath = pickString(flat, ['companyIndustryDetail'])
-  const chains: EnterpriseIndustryChain[] = industryPath
-    ? [{ id: 1, levels: industryPath.split('/').filter(Boolean) }]
+  const industryLevels = industryLevelsOf(pick(flat, ['companyIndustryDetail']))
+  const industryLabel = industryLevels.join(' / ')
+  const chains: EnterpriseIndustryChain[] = industryLevels.length
+    ? [{ id: 1, levels: industryLevels }]
     : []
   return {
     ...card,
     policyCount: extras.policyCount ?? card.policyCount,
     shortName: shortNameOf(card.name),
-    district: pickString(flat, ['districtName'], '—'),
+    district: pickString(flat, ['districtName'], '-'),
     staffCount: pickNumber(flat, ['socialSecurityNum', 'staffNumber']),
     honorTags: [],
     publicityAmount: 0,
-    legalRep: pickString(flat, ['legalPerson'], '—'),
+    legalRep: pickString(flat, ['legalPerson'], '-'),
     registeredCapital: capitalNumber(pickString(flat, ['registeredCapital'])),
-    creditCode: pickString(flat, ['creditCode'], '—'),
-    enterpriseType: pickString(flat, ['companyType'], '—'),
-    phone: pickString(flat, ['phone'], '—'),
-    email: pickString(flat, ['email'], '—'),
+    creditCode: pickString(flat, ['creditCode'], '-'),
+    enterpriseType: pickString(flat, ['companyType'], '-'),
+    phone: pickString(flat, ['phone'], '-'),
+    email: pickString(flat, ['email'], '-'),
     foundedDate: formatDate(pick(flat, ['establishTime'])),
-    staffScale: pickString(flat, ['staffNumber'], '—'),
+    staffScale: pickString(flat, ['staffNumber'], '-'),
     website: pickString(industryExt, ['website']),
     businessScope: pickString(industryExt, ['businessScope']),
     status: mapEnterpriseStatus(pick(industry, ['businessStatus'])),
-    businessIndustry: pickString(
-      industry,
-      ['companyIndustryDetail', 'companyIndustry'],
-      '—',
-    ),
-    industry: pickString(industry, ['companyIndustry'], '—'),
-    address: pickString(flat, ['address', 'registerAddress'], '—'),
+    businessIndustry:
+      industryLabel || pickString(industry, ['companyIndustry'], '-'),
+    industry: pickString(industry, ['companyIndustry'], '-'),
+    address: pickString(flat, ['address', 'registerAddress'], '-'),
     businessInfo: {
-      registrationNumber: pickString(industry, ['licenseNumber'], '—'),
-      organizationCode: pickString(industry, ['orgCode'], '—'),
-      registrationAuthority: pickString(industry, ['registerAuthority'], '—'),
-      businessTerm: pickString(industry, ['businessPeriod'], '—'),
+      registrationNumber: pickString(industry, ['licenseNumber'], '-'),
+      organizationCode: pickString(industry, ['orgCode'], '-'),
+      registrationAuthority: pickString(industry, ['registerAuthority'], '-'),
+      businessTerm: pickString(industry, ['businessPeriod'], '-'),
       approvalDate: formatDate(pick(industry, ['approveDate'])),
       insuredCount: pickNumber(industry, ['socialSecurityNum']),
-      formerName: former || '—',
+      formerName: former || '-',
       registeredAddress: pickString(
         industry,
         ['registerAddress'],
         card.address,
       ),
-      addressChangeDate: '—',
+      addressChangeDate: '-',
     },
     policyRecords: extras.policyRecords ?? [],
     patents: extras.patents ?? [],
@@ -472,11 +525,11 @@ export const mapPolicyRecord = (
     id: pickNumber(record, ['id'], index + 1),
     policyId: pickNumber(record, ['policyId', 'standardPolicyId']),
     name: pickString(record, ['standardPolicyName', 'policyName', 'name']),
-    grade: pickString(record, ['listLevel', 'grade'], '—'),
-    amount: pickString(record, ['amount'], '—'),
-    remark: pickString(record, ['remark'], '—'),
+    grade: pickString(record, ['listLevel', 'grade'], '-'),
+    amount: pickString(record, ['amount'], '-'),
+    remark: pickString(record, ['remark'], '-'),
     year: pickNumber(record, ['year']),
-    department: pickString(record, ['authorityName', 'department'], '—'),
+    department: pickString(record, ['authorityName', 'department'], '-'),
   }
 }
 
@@ -486,11 +539,11 @@ export const mapPatent = (raw: unknown, index: number): EnterprisePatent => {
     id: pickNumber(record, ['id'], index + 1),
     name: pickString(record, ['name', 'title']),
     applyDate: formatDate(pick(record, ['applyDate', 'applicationDate'])),
-    applyNo: pickString(record, ['applyNo', 'applicationNo'], '—'),
+    applyNo: pickString(record, ['applyNo', 'applicationNo'], '-'),
     publishDate: formatDate(pick(record, ['publishDate', 'publicationDate'])),
-    publishNo: pickString(record, ['publishNo', 'publicationNo'], '—'),
-    legalStatus: pickString(record, ['legalStatus', 'status'], '—'),
-    patentType: pickString(record, ['patentType', 'type'], '—'),
+    publishNo: pickString(record, ['publishNo', 'publicationNo'], '-'),
+    legalStatus: pickString(record, ['legalStatus', 'status'], '-'),
+    patentType: pickString(record, ['patentType', 'type'], '-'),
   }
 }
 
@@ -504,9 +557,9 @@ export const mapTrademark = (
     mark: pickString(record, ['mark', 'image'], ''),
     name: pickString(record, ['name', 'title']),
     applyDate: formatDate(pick(record, ['applyDate'])),
-    registerNo: pickString(record, ['registerNo', 'regNo'], '—'),
-    intlClass: pickString(record, ['intlClass', 'classNo'], '—'),
-    status: pickString(record, ['status'], '—'),
+    registerNo: pickString(record, ['registerNo', 'regNo'], '-'),
+    intlClass: pickString(record, ['intlClass', 'classNo'], '-'),
+    status: pickString(record, ['status'], '-'),
   }
 }
 
@@ -518,11 +571,11 @@ export const mapSoftware = (
   return {
     id: pickNumber(record, ['id'], index + 1),
     fullName: pickString(record, ['fullName', 'name']),
-    shortName: pickString(record, ['shortName'], '—'),
+    shortName: pickString(record, ['shortName'], '-'),
     approveDate: formatDate(pick(record, ['approveDate', 'registerDate'])),
-    registerNo: pickString(record, ['registerNo'], '—'),
-    classNo: pickString(record, ['classNo'], '—'),
-    version: pickString(record, ['version'], '—'),
+    registerNo: pickString(record, ['registerNo'], '-'),
+    classNo: pickString(record, ['classNo'], '-'),
+    version: pickString(record, ['version'], '-'),
     firstPublishDate: formatDate(pick(record, ['firstPublishDate'])),
   }
 }
@@ -535,8 +588,8 @@ export const mapWork = (
   return {
     id: pickNumber(record, ['id'], index + 1),
     fullName: pickString(record, ['fullName', 'name']),
-    registerNo: pickString(record, ['registerNo'], '—'),
-    category: pickString(record, ['category', 'type'], '—'),
+    registerNo: pickString(record, ['registerNo'], '-'),
+    category: pickString(record, ['category', 'type'], '-'),
     completeDate: formatDate(pick(record, ['completeDate'])),
     registerDate: formatDate(pick(record, ['registerDate'])),
     firstPublishDate: formatDate(pick(record, ['firstPublishDate'])),
@@ -551,9 +604,9 @@ export const mapQualification = (
   const issue = formatDate(pick(record, ['issueDate', 'date']))
   return {
     id: pickNumber(record, ['id'], index + 1),
-    category: pickString(record, ['certType', 'category'], '—'),
+    category: pickString(record, ['certType', 'category'], '-'),
     name: pickString(record, ['certName', 'name']),
-    certNo: pickString(record, ['certNo', 'certificateNo'], '—'),
+    certNo: pickString(record, ['certNo', 'certificateNo'], '-'),
     issueDate: issue,
     validUntil: formatDate(pick(record, ['validUntil', 'expireDate'])),
     year: pickNumber(record, ['year'], Number(issue.slice(0, 4)) || 0),
@@ -566,8 +619,8 @@ export const mapContact = (raw: unknown, index: number): EnterpriseContact => {
   const emailLike = detail.includes('@')
   return {
     id: pickNumber(record, ['id'], index + 1),
-    name: pickString(record, ['person', 'name'], '—'),
-    title: pickString(record, ['position', 'title'], '—'),
+    name: pickString(record, ['person', 'name'], '-'),
+    title: pickString(record, ['position', 'title'], '-'),
     phone: emailLike ? '' : detail,
     email: emailLike ? detail : pickString(record, ['email']),
   }
@@ -605,18 +658,29 @@ export const mapInvestProject = (raw: unknown, region = ''): InvestProject => {
   const code = pickString(record, ['code', 'projectCode'])
   const result = pickString(record, ['result', 'approvalResult'])
   const rawUrl = pickString(record, ['url'])
+  const failed = /驳回|不通过|未通过|不予受理|rejected/i.test(result)
+  const resultLabel = !result
+    ? failed
+      ? '未办结（驳回）'
+      : '办结（通过）'
+    : /不通过|未通过|驳回/.test(result)
+      ? '未办结（驳回）'
+      : /^通过$|passed/i.test(result)
+        ? '办结（通过）'
+        : result
   return {
     id: pickNumber(
       record,
       ['id'],
       hashCode(code || pickString(record, ['name'])),
     ),
-    code: code || '—',
+    code: code || '-',
     name: pickString(record, ['name', 'projectName']),
-    approvalUnit: pickString(record, ['approveType', 'approvalUnit'], '—'),
-    result: /驳回|未通过|rejected/i.test(result) ? 'rejected' : 'passed',
+    approvalUnit: pickString(record, ['approveType', 'approvalUnit'], '-'),
+    result: failed ? 'rejected' : 'passed',
+    resultLabel,
     approvalDate: formatDate(pick(record, ['date', 'approvalDate'])),
-    recordUnit: pickString(record, ['company', 'recordUnit'], '—'),
+    recordUnit: pickString(record, ['company', 'recordUnit'], '-'),
     region: pickString(record, ['region', 'province'], region),
     type: 'filing-public',
     url: /^https?:\/\//i.test(rawUrl) ? rawUrl : '',
@@ -641,7 +705,7 @@ export const mapMatchPolicy = (raw: unknown): MatchPolicy => {
       pickString(record, ['grade']) ||
       levelLabel(mapPolicyLevel(pick(record, ['policyLevel']))),
     score: pickNumber(record, ['score']),
-    department: pickString(record, ['department', 'issuingAuthority'], '—'),
+    department: pickString(record, ['department', 'issuingAuthority'], '-'),
     status,
     maxAmount:
       amount === undefined

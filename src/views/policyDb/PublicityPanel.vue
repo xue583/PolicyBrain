@@ -137,7 +137,7 @@ const onSearch = (keyword: string) => {
 }
 
 const formatAmount = (amount: number | null) =>
-  amount == null ? '—' : amount.toFixed(3)
+  amount == null ? '-' : amount.toFixed(3)
 
 const exportList = () => {
   if (!filteredList.value.length) {

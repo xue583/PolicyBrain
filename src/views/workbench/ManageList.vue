@@ -157,7 +157,7 @@ const contactRight: TextField[] = [
               <span class="field-label">{{ f.label }}</span>
               <span
                 class="field-value"
-                :class="{ 'is-empty': f.value === '——' }"
+                :class="{ 'is-empty': f.value === '--' }"
               >
                 {{ f.value }}
               </span>
@@ -168,7 +168,7 @@ const contactRight: TextField[] = [
               <span class="field-label">{{ f.label }}</span>
               <span
                 class="field-value"
-                :class="{ 'is-empty': f.value === '——' }"
+                :class="{ 'is-empty': f.value === '--' }"
               >
                 {{ f.value }}
               </span>
@@ -183,7 +183,7 @@ const contactRight: TextField[] = [
               <span class="field-label">{{ f.label }}</span>
               <span
                 class="field-value"
-                :class="{ 'is-empty': f.value === '——' }"
+                :class="{ 'is-empty': f.value === '--' }"
               >
                 {{ f.value }}
               </span>
@@ -194,7 +194,7 @@ const contactRight: TextField[] = [
               <span class="field-label">{{ f.label }}</span>
               <span
                 class="field-value"
-                :class="{ 'is-empty': f.value === '——' }"
+                :class="{ 'is-empty': f.value === '--' }"
               >
                 {{ f.value }}
               </span>

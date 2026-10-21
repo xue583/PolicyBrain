@@ -80,7 +80,7 @@ export const getEnterpriseDetail = (
           ? '2016-10-24'
           : `201${(item.id % 8) + 1}-0${(item.id % 8) + 1}-18`,
       insuredCount: staffCount,
-      formerName: '—',
+      formerName: '-',
       registeredAddress:
         item.id === 1
           ? '河南省郑州市航空港区黄海路与生物科技二街交叉口东北角郑州临空生物医药园11号楼'

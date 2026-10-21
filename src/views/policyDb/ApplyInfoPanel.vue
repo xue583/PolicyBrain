@@ -23,7 +23,7 @@ const safeApplyHtml = computed(() => sanitizeHtml(props.applyInfo.applyHtml))
       <h2 class="apply-title">支持领域</h2>
       <!-- eslint-disable-next-line vue/no-v-html -- HTML 已通过 DOMPurify 消毒 -->
       <div v-if="safeFields" class="apply-html" v-html="safeFields" />
-      <p v-else class="apply-text">—</p>
+      <p v-else class="apply-text">-</p>
     </section>
 
     <section class="apply-section">
@@ -36,7 +36,7 @@ const safeApplyHtml = computed(() => sanitizeHtml(props.applyInfo.applyHtml))
             {{ index + 1 }}．{{ item }}
           </li>
         </ol>
-        <p v-else class="apply-text">—</p>
+        <p v-else class="apply-text">-</p>
       </template>
       <p v-if="applyInfo.regulationNote" class="apply-note">
         {{ applyInfo.regulationNote }}
@@ -63,7 +63,7 @@ const safeApplyHtml = computed(() => sanitizeHtml(props.applyInfo.applyHtml))
           <span>{{ file.name }}</span>
         </a>
       </div>
-      <p v-else class="apply-text">—</p>
+      <p v-else class="apply-text">-</p>
     </section>
   </div>
 </template>

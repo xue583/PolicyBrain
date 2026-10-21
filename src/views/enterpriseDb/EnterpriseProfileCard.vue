@@ -7,8 +7,6 @@ import {
 } from '../../mock/enterpriseDb'
 import followHeartIcon from '../../assets/icon-follow-heart.png'
 import vipMatchImg from '../../assets/enterpriseDb/container-229.png'
-import phoneIcon from '../../assets/enterpriseDb/phone.png'
-import linkIcon from '../../assets/enterpriseDb/container.png'
 import expandIcon from '../../assets/enterpriseDb/container-alt.png'
 
 defineOptions({ name: 'EnterpriseProfileCard' })
@@ -119,7 +117,9 @@ const openWebsite = () => {
       </p>
       <p class="info-item">
         <span class="info-label">企业类型：</span>
-        <span class="info-value">{{ enterprise.enterpriseType }}</span>
+        <span class="info-value type-value" :title="enterprise.enterpriseType">
+          {{ enterprise.enterpriseType }}
+        </span>
       </p>
       <p class="info-item">
         <span class="info-label">人员规模：</span>
@@ -134,18 +134,21 @@ const openWebsite = () => {
       <p class="info-item">
         <span class="info-label">电话：</span>
         <span class="info-value phone-value">
-          <img :src="phoneIcon" alt="" class="field-icon" />
           {{ enterprise.phone }}
         </span>
       </p>
       <p class="info-item">
         <span class="info-label">网站：</span>
         <span class="info-value">
-          <a v-if="enterprise.website" class="site-link" @click="openWebsite">
-            <img :src="linkIcon" alt="" class="field-icon link-icon" />
+          <a
+            v-if="enterprise.website"
+            class="site-link"
+            :title="enterprise.website"
+            @click="openWebsite"
+          >
             {{ enterprise.website }}
           </a>
-          <span v-else>—</span>
+          <span v-else>-</span>
         </span>
       </p>
       <p class="info-item scope-item">
@@ -170,7 +173,7 @@ const openWebsite = () => {
   box-shadow: var(--pb-shadow-card);
 
   :deep(.ant-card-body) {
-    padding: 28px 32px;
+    padding: 20px;
     margin-top: 22px;
   }
 
@@ -344,13 +347,13 @@ const openWebsite = () => {
   align-items: flex-start;
   min-width: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
 }
 
 .info-label {
   flex-shrink: 0;
-  width: 120px;
+  width: 142px;
   color: #8c8c8c;
 }
 
@@ -364,8 +367,15 @@ const openWebsite = () => {
   }
 }
 
-.phone-value,
-.site-link {
+.type-value {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  word-break: normal;
+}
+
+.phone-value {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -377,13 +387,14 @@ const openWebsite = () => {
   object-fit: contain;
 }
 
-.link-icon {
-  width: 16px;
-  height: 16px;
-}
-
 .site-link {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--pb-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  word-break: normal;
 
   &:hover {
     color: #4096ff;

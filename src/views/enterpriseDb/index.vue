@@ -1,53 +1,42 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useCollapsedList } from '@/composables/useCollapsedList'
 import { useServerPage } from '@/composables/useServerPage'
 import FilterRow from '@/components/common/FilterRow.vue'
+import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
+import { useRegionStore } from '@/stores/region'
 import {
   enterpriseIndustries,
-  enterpriseProvinces,
   enterpriseStatusText,
   type EnterpriseItem,
 } from '../../mock/enterpriseDb'
 import { fetchEnterprisePage } from '@/api/enterprises'
-import {
-  fetchIndustryTree,
-  loadRegionOptions,
-  type CityOption,
-  type IndustryNode,
-} from '@/api/meta'
+import { fetchIndustryTree, type IndustryNode } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import industryTagIcon from '../../assets/enterpriseDb/industry-tag.png'
 import emptyIllustration from '../../assets/enterpriseDb/empty-illustration.png'
 
 defineOptions({ name: 'EnterpriseDb' })
 
-const COLLAPSED_PROVINCE_COUNT = 12
-const COLLAPSED_INDUSTRY_COUNT = 20
+/** 收起时只露一行，当前筛选区宽度大约容下 7 个产业 */
+const COLLAPSED_INDUSTRY_COUNT = 7
 
 const router = useRouter()
 const keyword = useRouteKeyword()
+const { provinceId, cityId, districtId } = storeToRefs(useRegionStore())
 
 const filters = reactive({
-  provinceId: null as number | null,
   industries: [] as string[],
 })
 
 const toIndustryNodes = (names: string[]): IndustryNode[] =>
   names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
 
-const provinceOptions = ref<CityOption[]>(
-  enterpriseProvinces.map((label, index) => ({ id: -(index + 1), label })),
-)
 const industryTree = ref<IndustryNode[]>(toIndustryNodes(enterpriseIndustries))
-
-const { showMore: showMoreProvinces, visibleList: visibleProvinces } =
-  useCollapsedList(provinceOptions, COLLAPSED_PROVINCE_COUNT, {
-    initialExpanded: true,
-  })
 
 const { showMore: showMoreIndustries, visibleList: visibleIndustries } =
   useCollapsedList(industryTree, COLLAPSED_INDUSTRY_COUNT)
@@ -64,10 +53,9 @@ const {
   (pageIndex, pageSize) =>
     fetchEnterprisePage({
       keyword: keyword.value,
-      provinceId:
-        filters.provinceId != null && filters.provinceId > 0
-          ? filters.provinceId
-          : undefined,
+      provinceId: provinceId.value,
+      cityId: cityId.value,
+      districtId: districtId.value,
       industries: filters.industries,
       pageIndex,
       pageSize,
@@ -75,28 +63,14 @@ const {
   () =>
     JSON.stringify({
       keyword: keyword.value,
-      provinceId: filters.provinceId,
+      provinceId: provinceId.value,
+      cityId: cityId.value,
+      districtId: districtId.value,
       industries: filters.industries,
     }),
 )
 
-const selectProvince = (province: CityOption) => {
-  filters.provinceId = filters.provinceId === province.id ? null : province.id
-}
-
 onMounted(() => {
-  void loadRegionOptions()
-    .then((options) => {
-      if (!options.length) return
-      const current = provinceOptions.value.find(
-        (item) => item.id === filters.provinceId,
-      )
-      provinceOptions.value = options
-      if (!current || current.id > 0) return
-      filters.provinceId =
-        options.find((item) => item.label === current.label)?.id ?? null
-    })
-    .catch(() => undefined)
   void fetchIndustryTree()
     .then((nodes) => {
       if (nodes.length) industryTree.value = nodes
@@ -125,27 +99,13 @@ const goDetail = (id: number) => {
         <a-button type="primary" class="map-btn">产业图谱</a-button>
       </div>
 
-      <FilterRow
-        label="注册地址："
-        v-model:expanded="showMoreProvinces"
-        collapsible
-      >
-        <a
-          v-for="province in visibleProvinces"
-          :key="province.id"
-          class="option-link"
-          :class="{ active: filters.provinceId === province.id }"
-          @click="selectProvince(province)"
-        >
-          {{ province.label }}
-        </a>
-      </FilterRow>
+      <RegionCascadeFilter label="注册地址：" :collapsed-count="12" />
 
       <FilterRow
         class="industry-row"
         label="所属产业："
         v-model:expanded="showMoreIndustries"
-        collapsible
+        :collapsible="industryTree.length > COLLAPSED_INDUSTRY_COUNT"
       >
         <IndustryCascadeFilter
           v-model="filters.industries"
@@ -289,10 +249,6 @@ const goDetail = (id: number) => {
   margin-inline-end: 0;
 }
 
-.option-link {
-  font-size: 16px;
-}
-
 :deep(.more-link .anticon) {
   font-size: 12px;
 }
@@ -336,7 +292,7 @@ const goDetail = (id: number) => {
 .ent-title-wrap {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex: 1;
   gap: 8px;
   min-width: 0;
 }
@@ -368,11 +324,14 @@ const goDetail = (id: number) => {
 }
 
 .ent-name {
+  min-width: 0;
+  overflow: hidden;
   color: var(--pb-primary);
   font-size: 22px;
   font-weight: 600;
   line-height: 1.4;
-  word-break: break-all;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 
   &:hover {
     color: #4096ff;

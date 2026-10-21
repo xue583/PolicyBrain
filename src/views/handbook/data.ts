@@ -414,7 +414,7 @@ export const handbookChapters: HandbookChapter[] = [
   {
     id: 7,
     name: '十五、关于我们',
-    html: '<p>政策大脑——企业和政策数据公共服务平台</p>',
+    html: '<p>政策大脑--企业和政策数据公共服务平台</p>',
     sections: [],
   },
 ]

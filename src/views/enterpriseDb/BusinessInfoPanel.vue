@@ -96,7 +96,7 @@ const bizLabelStyle = {
   }
 
   :deep(.ant-descriptions-item-label) {
-    width: 168px;
+    width: 171px;
   }
 
   :deep(.ant-descriptions-item-content) {

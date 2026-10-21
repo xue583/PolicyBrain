@@ -1,43 +1,61 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { EnvironmentOutlined } from '@ant-design/icons-vue'
+import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { fetchInvestProjects, fetchInvestRegions } from '@/api/invest'
 import type { InvestCategory } from '@/api/invest'
 import type { InvestRegion } from '../../mock/investDb'
 import { useServerPage } from '@/composables/useServerPage'
-import { toErrorMessage } from '@/utils/apiError'
+import { useRegionStore } from '@/stores/region'
 import ContentHeader from './components/ContentHeader.vue'
 import ProjectTable from './components/ProjectTable.vue'
 
 defineOptions({ name: 'InvestDb' })
 
-const regions = ref<InvestRegion[]>([])
-const regionError = ref('')
+const { province, provinceId, selectedLabel } = storeToRefs(useRegionStore())
+
 const categories = ref<InvestCategory[]>([])
-const selectedRegionKeys = ref<string[]>(['henan'])
-const selectedRegion = computed(() => selectedRegionKeys.value[0] ?? 'henan')
 const activeType = ref('all')
 const keyword = ref('')
 const appliedKeyword = ref('')
+const allCount = ref(0)
+const collectedTotal = ref(0)
 
-let keywordTimer = 0
-watch(keyword, (value) => {
-  window.clearTimeout(keywordTimer)
-  keywordTimer = window.setTimeout(() => {
-    appliedKeyword.value = value.trim()
-  }, 300)
-})
+let regionList: InvestRegion[] | null = null
 
-const regionLabel = computed(
-  () =>
-    regions.value.find((item) => item.key === selectedRegion.value)?.label ??
+const stripRegionSuffix = (name: string) =>
+  name.replace(
+    /(特别行政区|维吾尔自治区|壮族自治区|回族自治区|自治区|省|市)$/u,
     '',
-)
+  )
 
-watch(selectedRegion, () => {
+/** 省名对应投资库编码，如「北京市」→ beijing；没有对应编码时原样传给接口 */
+const resolveInvestProvince = (
+  regions: InvestRegion[],
+  provinceName: string,
+) => {
+  if (!provinceName) return undefined
+  const normalized = stripRegionSuffix(provinceName)
+  const matched = regions.find((item) => {
+    if (item.key === 'national' || item.label === '全国') return false
+    return stripRegionSuffix(item.label) === normalized
+  })
+  return matched?.key ?? provinceName
+}
+
+const ensureInvestRegions = async () => {
+  if (regionList) return regionList
+  regionList = await fetchInvestRegions()
+  return regionList
+}
+
+watch(provinceId, () => {
   activeType.value = 'all'
   categories.value = []
 })
+
+const applyKeyword = () => {
+  appliedKeyword.value = keyword.value.trim()
+}
 
 const typeTabs = computed(() => [
   { key: 'all', label: '全部' },
@@ -54,96 +72,57 @@ const {
   reload,
 } = useServerPage(
   async (pageIndex, pageSize) => {
+    const regions = await ensureInvestRegions()
     const result = await fetchInvestProjects({
-      province: selectedRegion.value,
+      province: resolveInvestProvince(regions, province.value),
+      regionLabel: selectedLabel.value,
       category: activeType.value === 'all' ? undefined : activeType.value,
       search: appliedKeyword.value,
       pageIndex,
       pageSize,
     })
     if (result.categories.length) categories.value = result.categories
+    if (activeType.value === 'all') allCount.value = result.page.totalElements
+    if (result.nationalCount > 0) collectedTotal.value = result.nationalCount
     return result.page
   },
   () =>
     JSON.stringify({
-      region: selectedRegion.value,
+      province: province.value,
       category: activeType.value,
       search: appliedKeyword.value,
     }),
-  8,
+  10,
 )
 
 const typeCounts = computed(() => {
-  const regionCount =
-    regions.value.find((item) => item.key === selectedRegion.value)?.count ??
-    total.value
-  const counts: Record<string, number> = { all: regionCount }
+  const counts: Record<string, number> = {
+    all: allCount.value || total.value,
+  }
   for (const item of categories.value) counts[item.name] = item.count
   return counts
-})
-
-onMounted(() => {
-  void fetchInvestRegions()
-    .then((list) => {
-      regions.value = list
-      if (
-        list.length &&
-        !list.some((item) => item.key === selectedRegion.value)
-      ) {
-        selectedRegionKeys.value = [list[0]!.key]
-      }
-    })
-    .catch((err: unknown) => {
-      regionError.value = toErrorMessage(err, '地区加载失败')
-    })
 })
 </script>
 
 <template>
   <PageState>
-    <a-layout class="invest-db" has-sider>
-      <a-layout-sider class="region-sider" theme="light" :width="220">
-        <a-card :bordered="false" class="region-card">
-          <div class="region-title">
-            <EnvironmentOutlined />
-            <span>选择地区</span>
-          </div>
-          <a-menu
-            v-model:selectedKeys="selectedRegionKeys"
-            mode="inline"
-            class="region-menu"
-          >
-            <a-menu-item v-for="item in regions" :key="item.key">
-              <div class="region-item">
-                <span>{{ item.label }}</span>
-                <span class="region-count">{{ item.count }}</span>
-              </div>
-            </a-menu-item>
-          </a-menu>
-        </a-card>
-      </a-layout-sider>
+    <div class="invest-db">
+      <a-alert v-if="error" type="error" show-icon :message="error">
+        <template #action>
+          <a-button size="small" @click="reload">重试</a-button>
+        </template>
+      </a-alert>
 
-      <a-layout-content class="invest-content">
-        <a-alert
-          v-if="regionError || error"
-          type="error"
-          show-icon
-          :message="regionError || error"
-          style="margin-bottom: 12px"
-        >
-          <template #action>
-            <a-button size="small" @click="reload">重试</a-button>
-          </template>
-        </a-alert>
+      <a-card :bordered="false" class="invest-card">
         <ContentHeader
-          :total-count="
-            regions.find((item) => item.key === selectedRegion)?.count ?? total
-          "
-          :region-label="regionLabel"
-          v-model:keyword="keyword"
-          v-model:active-type="activeType"
+          :total-count="collectedTotal || allCount || total"
+          :keyword="keyword"
+          :active-type="activeType"
           :counts="typeCounts"
           :tabs="typeTabs"
+          @update:keyword="keyword = $event"
+          @update:active-type="activeType = $event"
+          @search="applyKeyword"
         />
 
         <ProjectTable
@@ -153,111 +132,30 @@ onMounted(() => {
           v-model:current-page="currentPage"
           :page-size="pageSize"
         />
-      </a-layout-content>
-    </a-layout>
+      </a-card>
+    </div>
   </PageState>
 </template>
 
 <style scoped lang="scss">
 .invest-db {
-  background: transparent;
-  gap: 28px;
-  margin-top: -189px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: -140px;
 }
 
-.region-sider {
-  background: transparent;
-
-  :deep(.ant-layout-sider-children) {
-    display: flex;
-    flex-direction: column;
-  }
-}
-
-.region-card {
+.invest-card {
   border-radius: 12px;
-}
+  box-shadow: var(--pb-shadow-card);
+  --filter-row-border: none;
+  --filter-label-width: 84px;
+  --filter-font-size: 14px;
+  --filter-options-gap: 2px 22px;
+  --filter-row-padding: 6px 0;
 
-.region-title {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  padding: 0 8px 16px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #262626;
-
-  .anticon {
-    color: var(--pb-primary);
-    font-size: 16px;
-  }
-}
-
-.region-menu {
-  background: transparent;
-
-  // antd 用 .ant-menu-light.ant-menu-root.ant-menu-inline 写右边框，单 class 压不过
-  &.ant-menu-root.ant-menu-inline {
-    border-inline-end: none;
-  }
-
-  :deep(.ant-menu-item) {
-    width: 100%;
-    height: 44px;
-    margin: 4px 0;
-    padding-inline: 16px;
-    line-height: 44px;
-    border-radius: 8px;
-    color: #595959;
-  }
-
-  :deep(.ant-menu-item-selected) {
-    background: #ebf2fc;
-    color: #226ce6;
-
-    &::after {
-      display: none;
-    }
-
-    .region-count {
-      color: #226ce6;
-    }
-  }
-
-  :deep(.ant-menu-item:hover:not(.ant-menu-item-selected)) {
-    background: #e6f4ff;
-    color: var(--pb-primary);
-  }
-}
-
-.region-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.region-count {
-  color: #8c8c8c;
-  font-variant-numeric: tabular-nums;
-}
-
-.invest-content {
-  min-width: 0;
-  background: transparent;
-}
-
-@include below-lg {
-  .invest-db {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .region-sider {
-    @include sider-stack;
+  :deep(.ant-card-body) {
+    padding: 20px 24px 12px;
   }
 }
 </style>

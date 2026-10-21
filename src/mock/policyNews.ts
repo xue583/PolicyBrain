@@ -238,7 +238,7 @@ const policySeeds: Omit<
   },
   {
     id: 6,
-    title: '郑州市加快推进制造业数字化转型行动方案（2026—2028年）',
+    title: '郑州市加快推进制造业数字化转型行动方案（2026-2028年）',
     status: 'normal',
     tags: [
       { text: '河南省郑州市', color: 'blue' },

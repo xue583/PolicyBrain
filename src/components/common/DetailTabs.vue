@@ -80,7 +80,7 @@ defineOptions({ name: 'DetailTabs' })
   }
 
   :deep(.ant-tabs-content-holder) {
-    padding: 20px 36px 28px;
+    padding: 20px;
   }
 }
 </style>

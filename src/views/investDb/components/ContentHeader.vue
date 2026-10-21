@@ -1,16 +1,29 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { investTypeTabs } from '../../../mock/investDb'
+import { storeToRefs } from 'pinia'
+import { SearchOutlined } from '@ant-design/icons-vue'
+import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
+import SelectedConditionsBar from '@/components/common/SelectedConditionsBar.vue'
+import { useRegionStore } from '@/stores/region'
+import { clearRegionSelection } from '@/utils/regionActions'
+import { investTypeTabs } from '../../../mock/investDb'
 
 const props = defineProps<{
   totalCount: number
-  regionLabel: string
   keyword: string
   activeType: string
   counts: Record<string, number>
   tabs?: Array<{ key: string; label: string }>
 }>()
+
+const emit = defineEmits<{
+  'update:keyword': [value: string]
+  'update:activeType': [value: string]
+  search: []
+}>()
+
+const { selectedLabel: regionLabel } = storeToRefs(useRegionStore())
 
 const tabs = computed(
   () =>
@@ -18,101 +31,218 @@ const tabs = computed(
     investTypeTabs.map((item) => ({ key: item.key, label: item.label })),
 )
 
-defineEmits<{
-  'update:keyword': [value: string]
-  'update:activeType': [value: string]
-}>()
+const placeholder = computed(() =>
+  regionLabel.value
+    ? `搜索${regionLabel.value}项目名称、代码或单位`
+    : '搜索项目名称、代码或单位',
+)
+
+const selectedConditions = computed(() =>
+  regionLabel.value
+    ? [{ key: 'region', label: `省市：${regionLabel.value}` }]
+    : [],
+)
+
+const onKeyword = (value: string) => {
+  emit('update:keyword', value)
+  if (!value.trim()) emit('search')
+}
+
+const submitSearch = () => {
+  emit('search')
+}
 </script>
 
 <template>
-  <a-card :bordered="false" class="content-card">
-    <a-flex
-      class="content-header"
-      justify="space-between"
-      align="center"
-      wrap="wrap"
-      :gap="12"
-    >
+  <div class="content-header">
+    <div class="toolbar">
       <ResultCountBar
         class="invest-count"
         prefix="共收录"
-        :total="totalCount.toLocaleString('zh-CN')"
+        :total="totalCount"
         unit="家企业"
         decorated
       />
-      <a-input-search
-        :value="keyword"
-        class="project-search"
-        :placeholder="`搜索${regionLabel}项目名称、代码或单位`"
-        enter-button="搜索"
-        allow-clear
-        @update:value="$emit('update:keyword', $event)"
-      />
-    </a-flex>
+      <div class="project-search">
+        <a-input
+          :value="keyword"
+          allow-clear
+          :placeholder="placeholder"
+          @update:value="onKeyword"
+          @press-enter="submitSearch"
+        >
+          <template #prefix>
+            <SearchOutlined class="search-icon" />
+          </template>
+        </a-input>
+        <a-button type="primary" @click="submitSearch">
+          <span>搜索</span>
+        </a-button>
+      </div>
+    </div>
 
-    <a-divider style="margin: 16px 0 14px" />
+    <RegionCascadeFilter
+      label="选择省市："
+      :collapsed-count="14"
+      initial-expanded
+    />
 
-    <a-radio-group :value="activeType" class="type-filter">
-      <a-radio-button
+    <SelectedConditionsBar
+      :conditions="selectedConditions"
+      @remove="clearRegionSelection"
+      @clear="clearRegionSelection"
+    />
+
+    <div class="type-tabs" role="tablist">
+      <button
         v-for="tab in tabs"
         :key="tab.key"
-        :value="tab.key"
-        @click="$emit('update:activeType', tab.key)"
+        type="button"
+        class="type-tab"
+        :class="{ active: activeType === tab.key }"
+        @click="emit('update:activeType', tab.key)"
       >
-        {{ tab.label }} {{ counts[tab.key] }}
-      </a-radio-button>
-    </a-radio-group>
-  </a-card>
+        {{ tab.label }} {{ counts[tab.key] ?? 0 }}
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped lang="scss">
-.content-card {
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
-
-.content-header {
-  min-height: 48px;
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 40px;
+  margin-bottom: 8px;
 }
 
 .invest-count {
-  --rc-em-margin: 0px;
+  --rc-em-margin: 0;
+  --rc-color: #595959;
+  flex-shrink: 0;
 }
 
 .project-search {
-  width: 360px;
+  display: flex;
+  width: 473px;
   max-width: 100%;
 
-  :deep(.ant-input-search-button) {
+  :deep(.ant-input-affix-wrapper) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  :deep(.ant-btn) {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+    padding-inline: 20px;
     font-weight: 500;
+    height: 36px;
   }
 }
 
-.type-filter {
+.search-icon {
+  color: #bfbfbf;
+}
+
+:deep(.filter-label),
+:deep(.option-link),
+:deep(.more-link) {
+  font-size: 14px;
+}
+
+:deep(button.option-link) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+:deep(.selected-section) {
+  margin-top: 2px;
+  padding-top: 2px;
+  border-top: none;
+}
+
+:deep(.condition-tag) {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px 0 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 26px;
+}
+
+:deep(.clear-link) {
+  font-size: 14px;
+}
+
+.type-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  align-items: stretch;
+  margin: 8px 0 16px;
+  padding: 4px;
+  background: #f4f8fc;
+  border: 1px solid #e7eef6;
+  border-radius: 8px;
+}
 
-  :deep(.ant-radio-button-wrapper) {
-    height: auto;
-    padding: 6px 14px;
-    border-radius: 999px !important;
-    border-inline-start-width: 1px;
-    line-height: 22px;
-    font-size: 14px;
-    color: #595959;
+.type-tab {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 8px 22px;
+  border: 0;
+  background: transparent;
+  color: #595959;
+  font-size: 14px;
+  line-height: 22px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  & + &::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 0;
+    width: 1px;
+    background: #dce6f0;
+  }
+
+  &:hover:not(.active) {
+    color: var(--pb-primary);
+  }
+
+  &.active {
+    color: var(--pb-primary);
+    font-weight: 600;
     background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(22, 119, 255, 0.06);
 
     &::before {
       display: none;
     }
   }
 
-  :deep(.ant-radio-button-wrapper-checked) {
-    color: var(--pb-primary);
-    border-color: var(--pb-primary) !important;
-    background: #fff;
-    font-weight: 500;
+  &.active + &::before {
+    display: none;
+  }
+}
+
+@include below-lg {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-search {
+    width: 100%;
   }
 }
 </style>

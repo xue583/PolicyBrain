@@ -1,5 +1,5 @@
 /**
- * 企业管理页 mock —— 字段与文案均按设计稿截图硬编码。
+ * 企业管理页 mock -- 字段与文案均按设计稿截图硬编码。
  * 注意：卡头公司名（郑州源创基因科技有限公司）与表单企业名（唐河县大华机械设备有限公司）
  * 在两张设计稿中即为不一致，按图原样还原，不要"修正"。
  */
@@ -42,21 +42,21 @@ export const manageProfile = {
   legalRep: {
     name: '郭峰',
     phone: '13782139779',
-    tel: '——',
-    fax: '——',
-    email: '——',
+    tel: '--',
+    fax: '--',
+    email: '--',
   },
   contact: {
-    name: '——',
-    phone: '——',
-    tel: '——',
-    fax: '——',
-    email: '——',
+    name: '--',
+    phone: '--',
+    tel: '--',
+    fax: '--',
+    email: '--',
   },
   overview: {
     /** 企业是否上市：设计稿选中"否" */
     listed: false,
-    listedInfo: '—/—/—',
+    listedInfo: '-/-/-',
     /** 是否属于国家高新区内企业：设计稿选中"是" */
     inHighTechZone: true,
     zoneInfo: '生物与新医药/农业生物技术/现代农业装备与信息',

@@ -33,7 +33,7 @@ const dynamicsRecords = ref<DynamicsRecord[]>(
   Array.from({ length: 15 }, (_, i) => ({
     id: i + 1,
     companyName: companyNames[i % companyNames.length]!,
-    // 图中变动类型列展示为占位符 ——，接入后端后填充
+    // 图中变动类型列展示为占位符 --，接入后端后填充
     changeType: '',
     before: '包装制造',
     after: '包装制造',
@@ -224,7 +224,7 @@ const batchRemove = () => {
         <template
           v-if="column.dataIndex === 'changeType' && activeTab === 'company'"
         >
-          {{ (record as DynamicsRecord).changeType || '——' }}
+          {{ (record as DynamicsRecord).changeType || '--' }}
         </template>
       </template>
       <template #emptyText>

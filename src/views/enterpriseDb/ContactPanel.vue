@@ -80,14 +80,14 @@ const onUnlock = () => {
           </span>
           <div>
             <p class="meta-label">电子邮箱</p>
-            <p class="meta-value">{{ email || '—' }}</p>
+            <p class="meta-value">{{ email || '-' }}</p>
           </div>
         </li>
         <li>
           <img :src="linkIcon" alt="" class="meta-icon-img" />
           <div>
             <p class="meta-label">官方网站</p>
-            <p class="meta-value">{{ website || '—' }}</p>
+            <p class="meta-value">{{ website || '-' }}</p>
           </div>
         </li>
         <li>
@@ -96,7 +96,7 @@ const onUnlock = () => {
           </span>
           <div>
             <p class="meta-label">注册地址</p>
-            <p class="meta-value">{{ address || '—' }}</p>
+            <p class="meta-value">{{ address || '-' }}</p>
           </div>
         </li>
       </ul>

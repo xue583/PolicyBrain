@@ -199,12 +199,12 @@ const totalApiCount = 45
   flex-direction: column;
   flex-shrink: 0;
   gap: 16px;
-  width: 260px;
+  width: 345px;
 }
 
 /* Sidebar Card */
 .sidebar-card {
-  width: 260px;
+  width: 100%;
   flex-shrink: 0;
   background: #fff;
   border-radius: var(--pb-radius-lg);
@@ -274,12 +274,8 @@ const totalApiCount = 45
 }
 
 .sidebar-ad {
-  margin: auto 16px 16px;
-  border-radius: var(--pb-radius);
-  overflow: hidden;
-
   img {
-    width: 260px;
+    width: 100%;
     height: auto;
     display: block;
   }
@@ -292,7 +288,7 @@ const totalApiCount = 45
   background: #fff;
   border-radius: var(--pb-radius-lg);
   box-shadow: var(--pb-shadow-card);
-  padding: 20px 24px 28px;
+  padding: 20px;
 }
 
 .empty-tip {

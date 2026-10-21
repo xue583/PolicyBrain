@@ -1,7 +1,7 @@
 import { request, type RequestConfig } from '@/utils/request'
 import type { AuthUser, SessionTokens } from '@/utils/auth'
 
-/** POST /auth/smsCodes — PolicySmsPurpose：1 注册，2 登录 */
+/** POST /auth/smsCodes - PolicySmsPurpose：1 注册，2 登录 */
 export const PolicySmsPurpose = {
   Register: 1,
   Login: 2,
@@ -15,7 +15,7 @@ export type SendSmsPayload = {
   purpose: PolicySmsPurpose
 }
 
-/** POST /auth/smsCodeVerifications、/auth/sessions — purpose：1 注册，2 登录 */
+/** POST /auth/smsCodeVerifications、/auth/sessions - purpose：1 注册，2 登录 */
 export type VerifyCodePayload = {
   phone: string
   code: string
@@ -28,7 +28,7 @@ export type RefreshTokenPayload = {
   token: string
 }
 
-/** PATCH /account/users/me/profile — PolicyUserType */
+/** PATCH /account/users/me/profile - PolicyUserType */
 export const PolicyUserType = {
   EnterpriseSpecialist: 1,
   EnterpriseService: 2,
@@ -79,7 +79,7 @@ export const verifySmsCode = (
   })
 }
 
-/** POST /auth/sessions — 创建会话（登录/注册），需带 purpose */
+/** POST /auth/sessions - 创建会话（登录/注册），需带 purpose */
 export const createSession = (
   data: CreateSessionPayload,
   config?: RequestConfig,

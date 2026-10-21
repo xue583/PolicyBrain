@@ -26,6 +26,8 @@ export interface InvestProject {
   name: string
   approvalUnit: string
   result: InvestResult
+  /** 审批结果展示文案；缺省时按通过/驳回两态兜底 */
+  resultLabel?: string
   approvalDate: string
   recordUnit: string
   region: string

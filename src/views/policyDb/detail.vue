@@ -36,7 +36,7 @@ const policyId = computed(() => Number(route.params.id))
 const policy = ref<PolicyDbDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
-const regionLabel = computed(() => policy.value?.city || '—')
+const regionLabel = computed(() => policy.value?.city || '-')
 
 const EMPTY_APPLY_INFO: PolicyDbApplyInfo = {
   fields: '',
@@ -95,7 +95,7 @@ const load = async () => {
     if (seq !== pageSeq || policyId.value !== id) return
     policy.value = {
       ...card,
-      date: '—',
+      date: '-',
       tags: [
         card.grade ? { text: card.grade, color: 'blue' } : null,
         card.industryTag ? { text: card.industryTag, color: 'gold' } : null,

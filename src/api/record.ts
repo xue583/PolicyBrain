@@ -32,16 +32,16 @@ export const pickNumber = (
 }
 
 export const formatDate = (value: unknown) => {
-  if (value === undefined || value === null || value === '') return '—'
+  if (value === undefined || value === null || value === '') return '-'
   const text = String(value)
-  if (text.startsWith('1900') || text.startsWith('0001')) return '—'
+  if (text.startsWith('1900') || text.startsWith('0001')) return '-'
   const matched = text.match(/\d{4}-\d{2}-\d{2}/)
   return matched ? matched[0] : text
 }
 
 export const daysUntil = (value: unknown) => {
   const text = formatDate(value)
-  if (text === '—') return 0
+  if (text === '-') return 0
   const end = new Date(`${text}T00:00:00`)
   if (Number.isNaN(end.getTime())) return 0
   const today = new Date()

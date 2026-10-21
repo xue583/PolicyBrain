@@ -118,7 +118,7 @@ const userInfo = computed(() => {
     phone: maskPhone(phone) || '未绑定手机',
     username: profile?.nickname || phone || '未设置',
     company: profile?.companyName || '未填写',
-    lastLogin: formatLastLogin(profile?.lastLoginTime) || '—',
+    lastLogin: formatLastLogin(profile?.lastLoginTime) || '-',
     bindPhone: phone || '未绑定',
     identity,
     avatar: profile?.avatar || '',
