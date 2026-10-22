@@ -1,28 +1,29 @@
 import { request, type RequestConfig } from '@/utils/request'
-import type { AuthUser, SessionTokens } from '@/utils/auth'
+import type { SessionTokens } from '@/utils/auth'
 
-/** POST /auth/smsCodes - PolicySmsPurpose：1 注册，2 登录 */
-export const PolicySmsPurpose = {
-  Register: 1,
-  Login: 2,
-} as const
-
-export type PolicySmsPurpose =
-  (typeof PolicySmsPurpose)[keyof typeof PolicySmsPurpose]
-
+/** POST /auth/smsCodes - SendPolicyCodeDto，登录/注册共用同一验证码 */
 export type SendSmsPayload = {
   phone: string
-  purpose: PolicySmsPurpose
 }
 
-/** POST /auth/smsCodeVerifications、/auth/sessions - purpose：1 注册，2 登录 */
+/** POST /auth/smsCodeVerifications - VerifyPolicyCodeDto */
 export type VerifyCodePayload = {
   phone: string
   code: string
-  purpose: PolicySmsPurpose
 }
 
-export type CreateSessionPayload = VerifyCodePayload
+/**
+ * POST /auth/sessions - PolicyLoginDto。
+ * 登录与注册已合并：手机号未注册时，验证码通过即自动注册并登录。
+ * keyId / keyEnvelope 为可选会话密钥信封；不传则走静态密钥。
+ */
+export type CreateSessionPayload = {
+  phone: string
+  code: string
+  keyId?: string
+  keyEnvelope?: string
+  inviteCode?: string
+}
 
 export type RefreshTokenPayload = {
   token: string
@@ -37,7 +38,20 @@ export const PolicyUserType = {
 export type PolicyUserType =
   (typeof PolicyUserType)[keyof typeof PolicyUserType]
 
+/** PATCH /account/users/me/profile 入参。inviter、invitationCode 只在返回里出现 */
 export type UpdateProfilePayload = {
+  identity?: PolicyUserType
+  companyName?: string
+  unifiedSocialCreditCode?: string
+  jobTitle?: string
+  nickname?: string
+  avatar?: string
+}
+
+/** PATCH /account/users/me/profile 与 GET /account/users/me 返回的用户资料 */
+export type UserProfile = {
+  id?: number
+  phone?: string
   identity?: PolicyUserType
   companyName?: string
   unifiedSocialCreditCode?: string
@@ -46,6 +60,7 @@ export type UpdateProfilePayload = {
   inviter?: string
   invitationCode?: string
   avatar?: string
+  lastLoginTime?: string
 }
 
 const withSilentError = (config?: RequestConfig): RequestConfig => ({
@@ -79,7 +94,11 @@ export const verifySmsCode = (
   })
 }
 
-/** POST /auth/sessions - 创建会话（登录/注册），需带 purpose */
+/**
+ * POST /auth/sessions - 创建会话（登录/注册同一接口）。
+ * Swagger 的 200 未声明响应体；线上为 { status, message, data, encrypted }，
+ * data 由请求层解包解密后读取访问令牌。
+ */
 export const createSession = (
   data: CreateSessionPayload,
   config?: RequestConfig,
@@ -115,7 +134,9 @@ export const refreshToken = (
 }
 
 /** GET /account/users/me */
-export const fetchCurrentUser = (config?: RequestConfig): Promise<AuthUser> => {
+export const fetchCurrentUser = (
+  config?: RequestConfig,
+): Promise<UserProfile> => {
   return request({
     url: '/account/users/me',
     method: 'get',
@@ -123,11 +144,11 @@ export const fetchCurrentUser = (config?: RequestConfig): Promise<AuthUser> => {
   })
 }
 
-/** PATCH /account/users/me/profile */
+/** PATCH /account/users/me/profile - 更新个人资料、身份认证 */
 export const updateCurrentUser = (
   data: UpdateProfilePayload,
   config?: RequestConfig,
-): Promise<AuthUser> => {
+): Promise<UserProfile> => {
   return request({
     url: '/account/users/me/profile',
     method: 'patch',

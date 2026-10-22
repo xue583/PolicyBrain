@@ -12,7 +12,6 @@ defineProps<{
   unifiedSocialCreditCode: string
   jobTitle: string
   nickname: string
-  invitationCode: string
 }>()
 
 const emit = defineEmits<{
@@ -20,7 +19,6 @@ const emit = defineEmits<{
   'update:unifiedSocialCreditCode': [value: string]
   'update:jobTitle': [value: string]
   'update:nickname': [value: string]
-  'update:invitationCode': [value: string]
   prev: []
   submit: []
 }>()
@@ -93,23 +91,6 @@ const emit = defineEmits<{
             placeholder="请输入内容"
             @input="
               emit('update:nickname', ($event.target as HTMLInputElement).value)
-            "
-          />
-        </label>
-      </div>
-
-      <div class="form-row">
-        <label class="form-item">
-          <span class="form-label">邀请人邀请码</span>
-          <input
-            :value="invitationCode"
-            class="form-input"
-            placeholder="请输入内容"
-            @input="
-              emit(
-                'update:invitationCode',
-                ($event.target as HTMLInputElement).value,
-              )
             "
           />
         </label>

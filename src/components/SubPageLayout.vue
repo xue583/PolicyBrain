@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { getSubPageHero } from '@/mock/policyNews'
 import { SITE } from '@/constants/site'
+import { useServiceContact } from '@/composables/useServiceContact'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
 import { useSyncedSearchQuery } from '@/composables/useRouteKeyword'
 import logoLightImg from '@/assets/logo-light.png'
@@ -52,6 +53,8 @@ const isPersonalCenter = computed(() => pageKey.value === 'personal-center')
 const { keyword, applyKeyword } = useSyncedSearchQuery({
   clearWhen: pageKey,
 })
+
+const { phone: servicePhone, workHours: serviceHours } = useServiceContact()
 
 const openBeian = () => {
   window.open(SITE.icpUrl, '_blank', 'noopener,noreferrer')
@@ -183,8 +186,8 @@ const openBeian = () => {
 
         <div class="footer-main">
           <div class="footer-col contact">
-            <p><strong>客服热线：</strong>{{ SITE.phone }}</p>
-            <p><strong>工作时间：</strong>{{ SITE.workHours }}</p>
+            <p><strong>客服热线：</strong>{{ servicePhone }}</p>
+            <p><strong>工作时间：</strong>{{ serviceHours }}</p>
             <p><strong>联系地址：</strong>{{ SITE.address }}</p>
           </div>
           <div class="footer-col disclaimer">

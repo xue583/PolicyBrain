@@ -9,7 +9,6 @@ vi.mock('@/api/auth', () => ({
   sendSmsCode: vi.fn(),
   updateCurrentUser: vi.fn(),
   verifySmsCode: vi.fn(),
-  PolicySmsPurpose: { Register: 1, Login: 2 },
 }))
 
 const {
@@ -17,8 +16,8 @@ const {
   fetchCurrentUser,
   logoutSession,
   sendSmsCode,
+  updateCurrentUser,
   verifySmsCode,
-  PolicySmsPurpose,
 } = await import('@/api/auth')
 
 describe('useAuthStore', () => {
@@ -39,19 +38,18 @@ describe('useAuthStore', () => {
     })
 
     const auth = useAuthStore()
-    await auth.loginBySms('13900000000', '123456', PolicySmsPurpose.Login)
+    await auth.loginBySms('13900000000', '1234')
 
     expect(createSession).toHaveBeenCalledWith({
       phone: '13900000000',
-      code: '123456',
-      purpose: 2,
+      code: '1234',
     })
     expect(auth.isLoggedIn).toBe(true)
     expect(auth.user?.nickname).toBe('李四')
     expect(localStorage.getItem('pb_access_token')).toBe('access')
   })
 
-  it('creates a register session with purpose 1', async () => {
+  it('creates a register session on the same endpoint and forwards invite code', async () => {
     vi.mocked(createSession).mockResolvedValue({
       accessToken: 'access',
       refreshToken: 'refresh',
@@ -59,12 +57,12 @@ describe('useAuthStore', () => {
     vi.mocked(fetchCurrentUser).mockResolvedValue({ phone: '13900000000' })
 
     const auth = useAuthStore()
-    await auth.loginBySms('13900000000', '123456', PolicySmsPurpose.Register)
+    await auth.loginBySms('13900000000', '1234', 'INVITE01')
 
     expect(createSession).toHaveBeenCalledWith({
       phone: '13900000000',
-      code: '123456',
-      purpose: 1,
+      code: '1234',
+      inviteCode: 'INVITE01',
     })
   })
 
@@ -112,37 +110,56 @@ describe('useAuthStore', () => {
     expect(auth.user?.phone).toBe('19545670526')
   })
 
-  it('verifies register sms with purpose 1', async () => {
+  it('stores the profile returned by identity update', async () => {
+    vi.mocked(updateCurrentUser).mockResolvedValue({
+      id: 8,
+      phone: '13900000000',
+      identity: 1,
+      companyName: '河南省政策宝数字科技有限公司',
+      unifiedSocialCreditCode: '91410000MA9ABCDE12',
+      jobTitle: '经理',
+      nickname: '李四',
+      inviter: '张三',
+      invitationCode: 'ABC123',
+      avatar: '',
+      lastLoginTime: '2026-10-22T07:32:19.174Z',
+    })
+
+    const auth = useAuthStore()
+    await auth.updateProfile({
+      identity: 1,
+      companyName: '河南省政策宝数字科技有限公司',
+      unifiedSocialCreditCode: '91410000MA9ABCDE12',
+      jobTitle: '经理',
+      nickname: '李四',
+    })
+
+    expect(auth.user?.invitationCode).toBe('ABC123')
+    expect(auth.user?.inviter).toBe('张三')
+    expect(auth.user?.lastLoginTime).toBe('2026-10-22T07:32:19.174Z')
+    expect(localStorage.getItem('pb_user')).toContain('ABC123')
+  })
+
+  it('verifies sms with phone and code only', async () => {
     vi.mocked(verifySmsCode).mockResolvedValue({})
 
     const auth = useAuthStore()
-    await auth.verifyRegisterCode(
-      '13900000000',
-      '123456',
-      PolicySmsPurpose.Register,
-    )
+    await auth.verifyRegisterCode('13900000000', '1234')
 
     expect(verifySmsCode).toHaveBeenCalledWith({
       phone: '13900000000',
-      code: '123456',
-      purpose: 1,
+      code: '1234',
     })
   })
 
-  it('sends sms with the given purpose', async () => {
+  it('sends sms with phone only', async () => {
     vi.mocked(sendSmsCode).mockResolvedValue({})
 
     const auth = useAuthStore()
-    await auth.requestSmsCode('13900000000', PolicySmsPurpose.Login)
-    await auth.requestSmsCode('13900000000', PolicySmsPurpose.Register)
+    await auth.requestSmsCode('13900000000')
 
-    expect(sendSmsCode).toHaveBeenNthCalledWith(1, {
+    expect(sendSmsCode).toHaveBeenCalledWith({
       phone: '13900000000',
-      purpose: 2,
-    })
-    expect(sendSmsCode).toHaveBeenNthCalledWith(2, {
-      phone: '13900000000',
-      purpose: 1,
     })
   })
 })

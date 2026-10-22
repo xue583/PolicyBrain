@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  clearInviteCode,
   clearToken,
+  getInviteCode,
   getRefreshToken,
   getStoredUser,
   getToken,
   onNeedLogin,
   pickTokens,
+  rememberInviteCode,
   saveSessionTokens,
   setStoredUser,
   setToken,
@@ -34,6 +37,19 @@ describe('pickTokens', () => {
       expires: 'e',
       refreshTokenExpires: 're',
     })
+  })
+})
+
+describe('invite code', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
+  it('remembers a trimmed invite code from the invite link', () => {
+    rememberInviteCode('  AB12  ')
+    expect(getInviteCode()).toBe('AB12')
+    clearInviteCode()
+    expect(getInviteCode()).toBe('')
   })
 })
 

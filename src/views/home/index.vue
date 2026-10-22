@@ -24,6 +24,7 @@ import { useRegionStore } from '@/stores/region'
 import { orderNewsForCity } from '@/utils/homeNews'
 import { Divider } from 'ant-design-vue'
 import { SITE } from '@/constants/site'
+import { useServiceContact } from '@/composables/useServiceContact'
 import { navItems } from '@/mock/nav'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -41,6 +42,7 @@ import featureCardBg from '../../assets/home/feature-card-bg.png'
 
 defineOptions({ name: 'HomePage' })
 
+const { phone, wechat, workHours } = useServiceContact()
 const router = useRouter()
 const regionStore = useRegionStore()
 const {
@@ -493,9 +495,9 @@ const openBeian = () => {
 
             <div class="info-block">
               <h4>联系我们</h4>
-              <p><PhoneOutlined /> 客服电话：{{ SITE.phone }}</p>
-              <p><CommentOutlined /> 客服微信：{{ SITE.wechat }}</p>
-              <p><ClockCircleOutlined /> 工作时间：{{ SITE.workHours }}</p>
+              <p><PhoneOutlined /> 客服电话：{{ phone }}</p>
+              <p><CommentOutlined /> 客服微信：{{ wechat }}</p>
+              <p><ClockCircleOutlined /> 工作时间：{{ workHours }}</p>
             </div>
 
             <div class="info-block">

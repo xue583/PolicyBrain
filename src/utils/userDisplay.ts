@@ -23,3 +23,21 @@ export const formatLastLogin = (value?: string | null) => {
   const d = dayjs(value)
   return d.isValid() ? d.format('YYYY-MM-DD') : value
 }
+
+const membershipDate = (value?: string | null) => {
+  if (!value || value.startsWith('0001') || value.startsWith('1900')) return ''
+  return formatLastLogin(value)
+}
+
+/** 会员有效期：开始日期 至 结束日期。缺任一侧则不展示。 */
+export const formatMembershipPeriod = (
+  membership?: {
+    startedAt?: string | null
+    expiresAt?: string | null
+  } | null,
+) => {
+  const start = membershipDate(membership?.startedAt)
+  const end = membershipDate(membership?.expiresAt)
+  if (!start || !end) return ''
+  return `${start} 至 ${end}`
+}

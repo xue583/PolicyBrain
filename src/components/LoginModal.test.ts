@@ -19,7 +19,6 @@ vi.mock('@/api/auth', () => ({
   sendSmsCode: vi.fn(),
   updateCurrentUser: vi.fn(),
   verifySmsCode: vi.fn(),
-  PolicySmsPurpose: { Register: 1, Login: 2 },
   PolicyUserType: { EnterpriseSpecialist: 1, EnterpriseService: 2 },
 }))
 
@@ -56,12 +55,13 @@ const fillPhoneAndCode = async (
   code = '1234',
 ) => {
   await wrapper.get('input[type="tel"]').setValue(phone)
-  await wrapper.get('input[maxlength="6"]').setValue(code)
+  await wrapper.get('input[maxlength="4"]').setValue(code)
 }
 
 describe('LoginModal', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     vi.clearAllMocks()
     vi.mocked(sendSmsCode).mockResolvedValue({})
     vi.mocked(createSession).mockResolvedValue({
@@ -77,23 +77,22 @@ describe('LoginModal', () => {
     })
   })
 
-  it('creates a login session with a 4-6 digit sms code', async () => {
+  it('creates a login session with a 4 digit sms code', async () => {
     const wrapper = mountModal()
-    await fillPhoneAndCode(wrapper, '13900000000', '123456')
+    await fillPhoneAndCode(wrapper, '13900000000', '1234')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
 
     expect(createSession).toHaveBeenCalledWith({
       phone: '13900000000',
-      code: '123456',
-      purpose: 2,
+      code: '1234',
     })
     expect(verifySmsCode).not.toHaveBeenCalled()
     expect(message.success).toHaveBeenCalledWith('登录成功')
     wrapper.unmount()
   })
 
-  it('creates the register session on step one, then only updates profile', async () => {
+  it('creates the register session and finishes without identity steps', async () => {
     const wrapper = mountModal()
     await wrapper.findAll('.login-tab')[1]!.trigger('click')
     await fillPhoneAndCode(wrapper)
@@ -104,51 +103,24 @@ describe('LoginModal', () => {
     expect(createSession).toHaveBeenCalledWith({
       phone: '13900000000',
       code: '1234',
-      purpose: 1,
     })
     expect(verifySmsCode).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('您主要如何使用平台')
-
-    await wrapper.get('.identity-card').trigger('click')
-    await wrapper.get('.btn-primary').trigger('click')
-    const inputs = wrapper.findAll('.form-input')
-    await inputs[0]!.setValue('河南省政策宝数字科技有限公司')
-    await inputs[1]!.setValue('91410000MA9ABCDE12')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-
-    expect(createSession).toHaveBeenCalledTimes(1)
-    expect(updateCurrentUser).toHaveBeenCalledWith({
-      identity: 1,
-      companyName: '河南省政策宝数字科技有限公司',
-      unifiedSocialCreditCode: '91410000MA9ABCDE12',
-      jobTitle: undefined,
-      nickname: undefined,
-      invitationCode: undefined,
-    })
+    expect(updateCurrentUser).not.toHaveBeenCalled()
+    expect(wrapper.text()).not.toContain('您主要如何使用平台')
     expect(message.success).toHaveBeenCalledWith('注册成功')
     wrapper.unmount()
   })
 
-  it('keeps the modal open when profile update fails after register', async () => {
-    vi.mocked(updateCurrentUser).mockRejectedValue(
-      new ApiError('公司名称无效', 400),
-    )
+  it('keeps the modal open when register fails', async () => {
+    vi.mocked(createSession).mockRejectedValue(new ApiError('验证码错误', 400))
     const wrapper = mountModal()
     await wrapper.findAll('.login-tab')[1]!.trigger('click')
     await fillPhoneAndCode(wrapper)
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    await wrapper.get('.identity-card').trigger('click')
-    await wrapper.get('.btn-primary').trigger('click')
-    const inputs = wrapper.findAll('.form-input')
-    await inputs[0]!.setValue('河南省政策宝数字科技有限公司')
-    await inputs[1]!.setValue('91410000MA9ABCDE12')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
 
     expect(message.success).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('公司名称无效')
+    expect(wrapper.text()).toContain('验证码错误')
     expect(wrapper.find('.login-overlay').exists()).toBe(true)
     wrapper.unmount()
   })
@@ -158,13 +130,46 @@ describe('LoginModal', () => {
     await fillPhoneAndCode(wrapper)
     await wrapper.get('.code-btn').trigger('click')
     await flushPromises()
+    expect(sendSmsCode).toHaveBeenCalledWith({ phone: '13900000000' })
     expect(wrapper.get('.code-btn').text()).toContain('s')
 
     await wrapper.findAll('.login-tab')[1]!.trigger('click')
-    expect(wrapper.get('input[maxlength="6"]').element).toMatchObject({
+    expect(wrapper.get('input[maxlength="4"]').element).toMatchObject({
       value: '',
     })
     expect(wrapper.get('.code-btn').text()).toBe('获取验证码')
+    wrapper.unmount()
+  })
+
+  it('opens registration from an invite link and sends inviteCode', async () => {
+    sessionStorage.setItem('pb_invite_register', '1')
+    sessionStorage.setItem('pb_invite_code', 'INVITE01')
+    const wrapper = mountModal()
+    expect(wrapper.text()).toContain('注册政策大脑会员')
+    await fillPhoneAndCode(wrapper)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(createSession).toHaveBeenCalledWith({
+      phone: '13900000000',
+      code: '1234',
+      inviteCode: 'INVITE01',
+    })
+    wrapper.unmount()
+  })
+
+  it('forwards a remembered invite code when creating a session', async () => {
+    sessionStorage.setItem('pb_invite_code', 'INVITE01')
+    const wrapper = mountModal()
+    await fillPhoneAndCode(wrapper)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(createSession).toHaveBeenCalledWith({
+      phone: '13900000000',
+      code: '1234',
+      inviteCode: 'INVITE01',
+    })
     wrapper.unmount()
   })
 

@@ -16,7 +16,6 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:identity': [value: PolicyUserType]
-  prev: []
   next: []
 }>()
 </script>
@@ -48,9 +47,6 @@ const emit = defineEmits<{
   </div>
 
   <div class="reg-actions">
-    <button type="button" class="btn-ghost" @click="emit('prev')">
-      上一步：账户验证
-    </button>
     <button type="button" class="btn-primary" @click="emit('next')">
       下一步：身份认证
     </button>

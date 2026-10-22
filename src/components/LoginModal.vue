@@ -1,24 +1,15 @@
 <script setup lang="ts">
-import { computed, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import frameBg from '../assets/login/header-bg.png'
 import closeIcon from '../assets/login/close.png'
-import stepAccount from '../assets/login/register/step-account.png'
-import stepIdentityActive from '../assets/login/register/step-identity-active.png'
-import stepIdentityInactive from '../assets/login/register/step-identity-inactive.png'
-import stepAuthActive from '../assets/login/register/step-auth-active.png'
-import stepAuthInactive from '../assets/login/register/step-auth-inactive.png'
 import vipBanner from '../assets/login/register/vip-banner.png'
 import vipBadge from '../assets/login/register/vip-badge.png'
-import roleEnterprise from '../assets/login/register/role-enterprise.png'
-import roleService from '../assets/login/register/role-service.png'
 import { ApiError } from '@/utils/request'
 import { useAuthStore } from '@/stores/auth'
-import { PolicySmsPurpose, PolicyUserType } from '@/api/auth'
+import { consumeInviteRegister, getInviteCode } from '@/utils/auth'
 import LoginForm from './login/LoginForm.vue'
 import RegisterStepAccount from './login/RegisterStepAccount.vue'
-import RegisterStepIdentity from './login/RegisterStepIdentity.vue'
-import RegisterStepAuth from './login/RegisterStepAuth.vue'
 
 const auth = useAuthStore()
 
@@ -33,28 +24,14 @@ const submitting = ref(false)
 const sendingCode = ref(false)
 
 type AuthTab = 'login' | 'register'
-type RegisterStep = 1 | 2 | 3
-type IdentityRole = PolicyUserType | ''
 
-const SMS_CODE_RE = /^\d{4,6}$/
+const SMS_CODE_RE = /^\d{4}$/
 
 const tab = ref<AuthTab>('login')
-const registerStep = ref<RegisterStep>(1)
 const phone = ref('')
 const code = ref('')
 const phoneError = ref('')
 const countdown = ref(0)
-const identity = ref<IdentityRole>('')
-const identityError = ref('')
-const formError = ref('')
-
-const authForm = reactive({
-  companyName: '',
-  unifiedSocialCreditCode: '',
-  jobTitle: '',
-  nickname: '',
-  invitationCode: '',
-})
 
 let timer: ReturnType<typeof setInterval> | null = null
 
@@ -63,39 +40,6 @@ const registerTitle = '注册政策大脑会员'
 const codeBtnText = computed(() =>
   countdown.value > 0 ? `${countdown.value}s` : '获取验证码',
 )
-
-/** a-steps 的 current 从 0 起 */
-const stepsCurrent = computed(() => registerStep.value - 1)
-
-const registerSteps = computed(() => [
-  {
-    title: '1、账户验证',
-    icon: stepAccount,
-  },
-  {
-    title: '2、身份选择',
-    icon: registerStep.value >= 2 ? stepIdentityActive : stepIdentityInactive,
-  },
-  {
-    title: '3、身份认证',
-    icon: registerStep.value >= 3 ? stepAuthActive : stepAuthInactive,
-  },
-])
-
-const roles = [
-  {
-    key: PolicyUserType.EnterpriseSpecialist,
-    title: '企业专员',
-    desc: '负责所在企业的政策管理与申报',
-    icon: roleEnterprise,
-  },
-  {
-    key: PolicyUserType.EnterpriseService,
-    title: '企服人员',
-    desc: '负责所在企业的政策管理与申报',
-    icon: roleService,
-  },
-]
 
 const stopCountdown = () => {
   if (timer) {
@@ -107,19 +51,10 @@ const stopCountdown = () => {
 
 const resetAll = () => {
   tab.value = 'login'
-  registerStep.value = 1
   phone.value = ''
   code.value = ''
   phoneError.value = ''
-  identity.value = ''
-  identityError.value = ''
-  formError.value = ''
   sendingCode.value = false
-  authForm.companyName = ''
-  authForm.unifiedSocialCreditCode = ''
-  authForm.jobTitle = ''
-  authForm.nickname = ''
-  authForm.invitationCode = ''
   stopCountdown()
 }
 
@@ -136,6 +71,7 @@ watch(
   (v) => {
     if (v) {
       resetAll()
+      if (consumeInviteRegister()) tab.value = 'register'
       window.addEventListener('keydown', onKeydown)
     } else {
       stopCountdown()
@@ -154,9 +90,6 @@ const switchTab = (next: AuthTab) => {
   tab.value = next
   code.value = ''
   phoneError.value = ''
-  identityError.value = ''
-  formError.value = ''
-  registerStep.value = 1
   stopCountdown()
 }
 
@@ -171,7 +104,7 @@ const validatePhone = (value: string) => {
 
 const validateSmsCode = () => {
   if (!SMS_CODE_RE.test(code.value.trim())) {
-    phoneError.value = '请输入4-6位短信验证码'
+    phoneError.value = '请输入4位短信验证码'
     return false
   }
   return true
@@ -195,12 +128,7 @@ const sendCode = async () => {
   if (!validatePhone(phone.value)) return
   sendingCode.value = true
   try {
-    await auth.requestSmsCode(
-      phone.value,
-      tab.value === 'register'
-        ? PolicySmsPurpose.Register
-        : PolicySmsPurpose.Login,
-    )
+    await auth.requestSmsCode(phone.value)
     message.success('验证码已发送')
     startCountdown()
   } catch (err) {
@@ -220,7 +148,7 @@ const onLoginSubmit = async () => {
     await auth.loginBySms(
       phone.value,
       code.value.trim(),
-      PolicySmsPurpose.Login,
+      getInviteCode() || undefined,
     )
     message.success('登录成功')
     emit('success')
@@ -233,12 +161,8 @@ const onLoginSubmit = async () => {
   }
 }
 
-const goRegisterStep2 = async () => {
+const submitRegister = async () => {
   if (submitting.value) return
-  if (auth.isLoggedIn) {
-    registerStep.value = 2
-    return
-  }
   if (!validatePhone(phone.value)) return
   if (!validateSmsCode()) return
   submitting.value = true
@@ -246,71 +170,14 @@ const goRegisterStep2 = async () => {
     await auth.loginBySms(
       phone.value,
       code.value.trim(),
-      PolicySmsPurpose.Register,
+      getInviteCode() || undefined,
     )
-    registerStep.value = 2
-  } catch (err) {
-    phoneError.value =
-      err instanceof ApiError ? err.message : '验证码校验失败，请稍后重试'
-  } finally {
-    submitting.value = false
-  }
-}
-
-const onIdentityChange = (value: PolicyUserType) => {
-  identity.value = value
-  identityError.value = ''
-}
-
-const goRegisterStep3 = () => {
-  if (!identity.value) {
-    identityError.value = '请选择使用身份'
-    return
-  }
-  identityError.value = ''
-  registerStep.value = 3
-}
-
-const submitRegister = async () => {
-  if (submitting.value) return
-  const creditRequired = identity.value === PolicyUserType.EnterpriseSpecialist
-  if (
-    !identity.value ||
-    !authForm.companyName.trim() ||
-    (creditRequired && !authForm.unifiedSocialCreditCode.trim())
-  ) {
-    formError.value = '请填写带 * 的必填信息'
-    return
-  }
-  formError.value = ''
-  submitting.value = true
-  try {
-    if (!auth.isLoggedIn) {
-      if (!validatePhone(phone.value) || !validateSmsCode()) {
-        formError.value = '请返回账户验证步骤检查手机号与验证码'
-        return
-      }
-      await auth.loginBySms(
-        phone.value,
-        code.value.trim(),
-        PolicySmsPurpose.Register,
-      )
-    }
-    await auth.updateProfile({
-      identity: identity.value,
-      companyName: authForm.companyName.trim(),
-      unifiedSocialCreditCode:
-        authForm.unifiedSocialCreditCode.trim() || undefined,
-      jobTitle: authForm.jobTitle.trim() || undefined,
-      nickname: authForm.nickname.trim() || undefined,
-      invitationCode: authForm.invitationCode.trim() || undefined,
-    })
     message.success('注册成功')
     emit('success')
     close()
   } catch (err) {
-    formError.value =
-      err instanceof ApiError ? err.message : '资料提交失败，请稍后重试'
+    phoneError.value =
+      err instanceof ApiError ? err.message : '注册失败，请稍后重试'
   } finally {
     submitting.value = false
   }
@@ -372,24 +239,7 @@ const submitRegister = async () => {
                   <button type="button" class="login-tab active">注册</button>
                 </div>
 
-                <a-steps
-                  class="reg-steps"
-                  label-placement="vertical"
-                  :current="stepsCurrent"
-                >
-                  <a-step
-                    v-for="s in registerSteps"
-                    :key="s.title"
-                    :title="s.title"
-                  >
-                    <template #icon>
-                      <img class="reg-step-icon" :src="s.icon" :alt="s.title" />
-                    </template>
-                  </a-step>
-                </a-steps>
-
                 <RegisterStepAccount
-                  v-if="registerStep === 1"
                   v-model:phone="phone"
                   v-model:code="code"
                   :phone-error="phoneError"
@@ -401,38 +251,6 @@ const submitRegister = async () => {
                   :vip-badge="vipBadge"
                   @blur-phone="onPhoneBlur"
                   @send-code="sendCode"
-                  @next="goRegisterStep2"
-                />
-
-                <RegisterStepIdentity
-                  v-else-if="registerStep === 2"
-                  :identity="identity"
-                  :identity-error="identityError"
-                  :roles="roles"
-                  @update:identity="onIdentityChange"
-                  @prev="registerStep = 1"
-                  @next="goRegisterStep3"
-                />
-
-                <RegisterStepAuth
-                  v-else
-                  :identity="identity"
-                  :form-error="formError"
-                  :submitting="submitting"
-                  :vip-banner="vipBanner"
-                  :company-name="authForm.companyName"
-                  :unified-social-credit-code="authForm.unifiedSocialCreditCode"
-                  :job-title="authForm.jobTitle"
-                  :nickname="authForm.nickname"
-                  :invitation-code="authForm.invitationCode"
-                  @update:company-name="authForm.companyName = $event"
-                  @update:unified-social-credit-code="
-                    authForm.unifiedSocialCreditCode = $event
-                  "
-                  @update:job-title="authForm.jobTitle = $event"
-                  @update:nickname="authForm.nickname = $event"
-                  @update:invitation-code="authForm.invitationCode = $event"
-                  @prev="registerStep = 2"
                   @submit="submitRegister"
                 />
               </template>

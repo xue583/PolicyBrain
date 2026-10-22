@@ -231,9 +231,15 @@
 
   .ant-steps-item {
     position: relative;
-    flex: 1;
+    flex: 1 1 0% !important;
     overflow: visible;
     padding-inline-start: 0 !important;
+    min-width: 0;
+  }
+
+  /* antd 把最后一步设为 flex: 0 0 auto，两步时会挤到右缘并被裁切 */
+  &.ant-steps .ant-steps-item:last-child {
+    flex: 1 1 0% !important;
   }
 
   /* 关掉 antd 默认连线，避免错位溢出 */
@@ -333,12 +339,13 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 56px;
+  width: 100%;
+  aspect-ratio: 816 / 140;
   margin-bottom: 10px;
   padding: 0 14px 0 80px;
-  background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
+  background-size: cover;
 }
 
 .vip-banner-copy {

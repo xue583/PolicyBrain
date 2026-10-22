@@ -23,11 +23,13 @@ const asRecord = (value: unknown): Record<string, unknown> => {
     : {}
 }
 
-/** 列表 data 兼容 totalElements/pageIndex 与投资库的 total/page */
+/** 列表 data 兼容 totalElements、totalCount 与投资库的 total/page */
 export const asPage = <T>(data: unknown): PageData<T> => {
   const body = asRecord(data)
   const items = Array.isArray(body.items) ? (body.items as T[]) : []
-  const total = Number(body.totalElements ?? body.total ?? items.length)
+  const total = Number(
+    body.totalElements ?? body.totalCount ?? body.total ?? items.length,
+  )
   const pageSize = Number(body.pageSize ?? items.length)
   const pageIndex = Number(body.pageIndex ?? body.page ?? 1)
   return {

@@ -20,7 +20,7 @@ const emit = defineEmits<{
   'update:code': [value: string]
   blurPhone: []
   sendCode: []
-  next: []
+  submit: []
 }>()
 </script>
 
@@ -31,11 +31,11 @@ const emit = defineEmits<{
         <span>新用户会员礼遇</span>
         <img :src="vipBadge" alt="VIP" class="vip-badge" />
       </div>
-      <p class="vip-banner-desc">完成注册与身份认证，即可获赠3个月VIP</p>
+      <p class="vip-banner-desc">完成注册即可使用，身份认证后获赠3个月VIP</p>
     </div>
   </div>
 
-  <form @submit.prevent="emit('next')">
+  <form @submit.prevent="emit('submit')">
     <PhoneCodeFields
       :phone="phone"
       :code="code"
@@ -50,7 +50,7 @@ const emit = defineEmits<{
     />
 
     <button type="submit" class="login-submit" :disabled="submitting">
-      {{ submitting ? '校验中...' : '下一步：选择身份' }}
+      {{ submitting ? '注册中...' : '完成注册' }}
     </button>
   </form>
 </template>

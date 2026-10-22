@@ -10,6 +10,11 @@ import VipPromoModal from './components/VipPromoModal.vue'
 import { PRIMARY_COLOR } from '@/constants/site'
 import { useAuthStore } from '@/stores/auth'
 import { useRegionSync } from '@/composables/useRegionSync'
+import {
+  markInviteRegister,
+  rememberInviteCode,
+  triggerNeedLogin,
+} from '@/utils/auth'
 
 dayjs.locale('zh-cn')
 
@@ -44,6 +49,7 @@ onMounted(() => {
   if (
     !isLoggedIn.value &&
     route.name !== 'membership' &&
+    !route.query.invite &&
     !isPromoDismissedToday()
   ) {
     promoOpen.value = true
@@ -58,6 +64,20 @@ watch(
   () => route.name,
   (name) => {
     if (name === 'membership') promoOpen.value = false
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.query.invite,
+  (invite) => {
+    const value = Array.isArray(invite) ? invite[0] : invite
+    if (typeof value !== 'string' || !value.trim()) return
+    rememberInviteCode(value)
+    if (isLoggedIn.value) return
+    promoOpen.value = false
+    markInviteRegister()
+    triggerNeedLogin()
   },
   { immediate: true },
 )

@@ -15,8 +15,18 @@ export const fetchMembershipPlans = (level?: string | number) => {
   })
 }
 
+/** GET /account/memberships/me */
+export type AccountMembership = {
+  level?: number
+  planCode?: string | null
+  startedAt?: string | null
+  expiresAt?: string | null
+  remainingDays?: number
+  lastOrderNo?: string | null
+}
+
 export const fetchMyMembership = () => {
-  return request({
+  return request<AccountMembership>({
     url: '/account/memberships/me',
     method: 'get',
     ...silent(),

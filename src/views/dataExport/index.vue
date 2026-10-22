@@ -314,7 +314,7 @@ const onBatchUploaded = (name: string) => {
 
 .mode-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 16px;
 }
 
@@ -326,6 +326,8 @@ const onBatchUploaded = (name: string) => {
   height: 98px;
   padding: 16px 24px;
   text-align: left;
+  appearance: none;
+  user-select: none;
   background: #fff;
   border: 1px solid #d6e4ff;
   border-radius: 12px;
@@ -333,14 +335,16 @@ const onBatchUploaded = (name: string) => {
   cursor: pointer;
   transition:
     border-color 0.2s,
-    box-shadow 0.2s,
-    background 0.2s;
+    box-shadow 0.2s;
 
   &:hover:not(.active) {
     border-color: var(--pb-primary);
   }
 
   &.active {
+    // 背景图顶部有 12px 选中耳朵，加高后补上内边距，文字仍落在白色卡片内
+    height: 110px;
+    padding-top: 28px;
     border-color: transparent;
     border-radius: 0;
     background-color: transparent;
@@ -351,6 +355,7 @@ const onBatchUploaded = (name: string) => {
     background-origin: border-box;
     background-clip: border-box;
     box-shadow: none;
+    transition: none;
   }
 }
 

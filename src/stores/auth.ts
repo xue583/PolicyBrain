@@ -5,6 +5,7 @@ import {
   getStoredUser,
   getToken,
   onAuthChange,
+  clearInviteCode,
   pickTokens,
   saveSessionTokens,
   setStoredUser,
@@ -17,7 +18,6 @@ import {
   sendSmsCode,
   updateCurrentUser,
   verifySmsCode,
-  type PolicySmsPurpose,
   type UpdateProfilePayload,
 } from '@/api/auth'
 
@@ -63,17 +63,22 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value
   }
 
-  const requestSmsCode = async (phone: string, purpose: PolicySmsPurpose) => {
-    return sendSmsCode({ phone, purpose })
+  const requestSmsCode = async (phone: string) => {
+    return sendSmsCode({ phone })
   }
 
   const loginBySms = async (
     phone: string,
     code: string,
-    purpose: PolicySmsPurpose,
+    inviteCode?: string,
   ) => {
-    const result = await createSession({ phone, code, purpose })
+    const result = await createSession({
+      phone,
+      code,
+      ...(inviteCode ? { inviteCode } : {}),
+    })
     applySession(result)
+    clearInviteCode()
     try {
       await loadCurrentUser()
     } catch {
@@ -82,12 +87,8 @@ export const useAuthStore = defineStore('auth', () => {
     return result
   }
 
-  const verifyRegisterCode = async (
-    phone: string,
-    code: string,
-    purpose: PolicySmsPurpose,
-  ) => {
-    return verifySmsCode({ phone, code, purpose })
+  const verifyRegisterCode = async (phone: string, code: string) => {
+    return verifySmsCode({ phone, code })
   }
 
   const updateProfile = async (payload: UpdateProfilePayload) => {

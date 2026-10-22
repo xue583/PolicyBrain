@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { formatLastLogin, identityLabel, maskPhone } from './userDisplay'
+import {
+  formatLastLogin,
+  formatMembershipPeriod,
+  identityLabel,
+  maskPhone,
+} from './userDisplay'
 
 describe('identityLabel', () => {
   it('maps policy user types', () => {
@@ -34,5 +39,29 @@ describe('formatLastLogin', () => {
   it('returns empty when missing', () => {
     expect(formatLastLogin()).toBe('')
     expect(formatLastLogin('')).toBe('')
+  })
+})
+
+describe('formatMembershipPeriod', () => {
+  it('joins membership start and end dates', () => {
+    expect(
+      formatMembershipPeriod({
+        startedAt: '2026-10-22T07:22:07',
+        expiresAt: '2027-10-22T07:22:07',
+      }),
+    ).toBe('2026-10-22 至 2027-10-22')
+  })
+
+  it('returns empty when either date is missing', () => {
+    expect(formatMembershipPeriod()).toBe('')
+    expect(formatMembershipPeriod({ startedAt: '2026-10-22T07:22:07' })).toBe(
+      '',
+    )
+    expect(
+      formatMembershipPeriod({
+        startedAt: '0001-01-01T00:00:00',
+        expiresAt: '2027-10-22T07:22:07',
+      }),
+    ).toBe('')
   })
 })

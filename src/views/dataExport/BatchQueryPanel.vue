@@ -81,7 +81,6 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
       <p class="upload-hint">
         文件大小不超过5M · 仅支持Excel格式(.xls/.xlsx) · 单次查询限500家企业
       </p>
-      <a-button type="primary" class="pick-btn">选择文件</a-button>
     </a-upload-dragger>
 
     <slot />
@@ -204,21 +203,14 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 .upload-sub,
 .upload-hint {
   margin: 0;
-  font-size: 24px;
+  font-size: 14px;
   line-height: 20px;
   color: #8c8c8c;
 }
 
 .upload-hint {
   margin-top: 15px;
-  font-size: 24px;
-}
-
-.pick-btn {
-  margin-top: 31px;
-  height: 36px;
-  padding-inline: 28px;
-  border-radius: 6px;
+  font-size: 14px;
 }
 
 @include below-lg {

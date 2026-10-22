@@ -4,6 +4,8 @@
  * 前端只保留用户展示信息。开发阶段可通过 VITE_AUTH_STORAGE 切换存储介质。
  */
 const TOKEN_KEY = 'pb_access_token'
+const INVITE_KEY = 'pb_invite_code'
+const INVITE_REGISTER_KEY = 'pb_invite_register'
 const REFRESH_KEY = 'pb_refresh_token'
 const EXPIRES_KEY = 'pb_token_expires'
 const REFRESH_EXPIRES_KEY = 'pb_refresh_expires'
@@ -80,6 +82,38 @@ export const triggerNeedLogin = () => {
   }
   pendingNeedLogin = false
   needLoginListeners.forEach((fn) => fn())
+}
+
+/** 邀请链接 `/?invite=` 暂存，登录/注册创建会话时随 PolicyLoginDto.inviteCode 上传 */
+export const rememberInviteCode = (code: string) => {
+  if (typeof window === 'undefined') return
+  const value = code.trim()
+  if (!value) return
+  window.sessionStorage.setItem(INVITE_KEY, value)
+}
+
+export const getInviteCode = (): string => {
+  if (typeof window === 'undefined') return ''
+  return window.sessionStorage.getItem(INVITE_KEY) || ''
+}
+
+export const clearInviteCode = () => {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.removeItem(INVITE_KEY)
+  window.sessionStorage.removeItem(INVITE_REGISTER_KEY)
+}
+
+/** 从邀请链接进入且未登录时，下一次打开登录弹窗切到注册 */
+export const markInviteRegister = () => {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.setItem(INVITE_REGISTER_KEY, '1')
+}
+
+export const consumeInviteRegister = () => {
+  if (typeof window === 'undefined') return false
+  const pending = window.sessionStorage.getItem(INVITE_REGISTER_KEY) === '1'
+  if (pending) window.sessionStorage.removeItem(INVITE_REGISTER_KEY)
+  return pending
 }
 
 export const getToken = (): string => {

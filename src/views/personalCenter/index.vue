@@ -7,8 +7,14 @@ import {
   EditOutlined,
   CrownOutlined,
 } from '@ant-design/icons-vue'
+import { fetchMyMembership, type AccountMembership } from '@/api/membership'
 import { useAuthStore } from '@/stores/auth'
-import { formatLastLogin, identityLabel, maskPhone } from '@/utils/userDisplay'
+import {
+  formatLastLogin,
+  formatMembershipPeriod,
+  identityLabel,
+  maskPhone,
+} from '@/utils/userDisplay'
 import baseIcon from '@/assets/personalCenter/基础@2x.png'
 import msgIcon from '@/assets/personalCenter/goutong@2x.png'
 import shareIcon from '@/assets/personalCenter/fenxiang2@2x.png'
@@ -25,6 +31,8 @@ import DynamicsPanel from './DynamicsPanel.vue'
 import InvoicePanel from './InvoicePanel.vue'
 import ServicePanel from './ServicePanel.vue'
 import UploadAvatarModal from './UploadAvatarModal.vue'
+import IdentityAuthModal from './IdentityAuthModal.vue'
+import NicknameModal from './NicknameModal.vue'
 
 defineOptions({ name: 'PersonalCenter' })
 
@@ -101,6 +109,8 @@ const currentMenu = computed(
     menuItems.find((item) => item.key === selectedMenu.value) ?? menuItems[0]!,
 )
 
+const certifiedIdentity = computed(() => identityLabel(user.value?.identity))
+
 const userInfo = computed(() => {
   const profile = user.value
   const phone = profile?.phone || ''
@@ -110,7 +120,7 @@ const userInfo = computed(() => {
     company: profile?.companyName || '未填写',
     lastLogin: formatLastLogin(profile?.lastLoginTime) || '-',
     bindPhone: phone || '未绑定',
-    identity: identityLabel(profile?.identity) || '未认证',
+    identity: certifiedIdentity.value || '未认证',
     avatar: profile?.avatar || '',
   }
 })
@@ -126,10 +136,27 @@ const goMembership = () => {
   void router.push({ name: 'membership' })
 }
 
+const membership = ref<AccountMembership | null>(null)
+const membershipPeriod = computed(() =>
+  formatMembershipPeriod(membership.value),
+)
+
+const loadMembership = () => {
+  if (!auth.isLoggedIn) return
+  void fetchMyMembership()
+    .then((data) => {
+      membership.value = data && typeof data === 'object' ? data : null
+    })
+    .catch(() => undefined)
+}
+
 const uploadAvatarOpen = ref(false)
+const identityAuthOpen = ref(false)
+const nicknameOpen = ref(false)
 
 onMounted(() => {
   void auth.loadCurrentUser().catch(() => undefined)
+  loadMembership()
 })
 </script>
 
@@ -182,7 +209,7 @@ onMounted(() => {
     </div>
 
     <!-- Right Content -->
-    <div class="content">
+    <div class="content" :class="{ 'is-invoice': selectedMenu === 'invoice' }">
       <!-- 基础资料 -->
       <template v-if="selectedMenu === 'base'">
         <h2 class="content-title">
@@ -213,7 +240,14 @@ onMounted(() => {
               <div class="info-row">
                 <span class="info-label">用户名：</span>
                 <span class="info-value">{{ userInfo.username }}</span>
-                <EditOutlined class="edit-icon" />
+                <button
+                  type="button"
+                  class="edit-icon"
+                  aria-label="编辑用户名"
+                  @click="nicknameOpen = true"
+                >
+                  <EditOutlined />
+                </button>
               </div>
               <div class="info-row">
                 <span class="info-label">所属公司：</span>
@@ -229,7 +263,16 @@ onMounted(() => {
               </div>
               <div class="info-row">
                 <span class="info-label">认证身份：</span>
-                <span class="info-value">{{ userInfo.identity }}</span>
+                <a-button
+                  v-if="!certifiedIdentity"
+                  type="primary"
+                  size="small"
+                  class="identity-btn"
+                  @click="identityAuthOpen = true"
+                >
+                  身份认证
+                </a-button>
+                <span v-else class="info-value">{{ certifiedIdentity }}</span>
               </div>
             </div>
           </div>
@@ -242,6 +285,9 @@ onMounted(() => {
           </h3>
           <div class="member-row">
             <span class="member-label">个人会员：</span>
+            <span v-if="membershipPeriod" class="member-period">
+              {{ membershipPeriod }}
+            </span>
             <a-button type="primary" class="vip-btn" @click="goMembership">
               <template #icon><CrownOutlined /></template>
               开通会员
@@ -268,6 +314,8 @@ onMounted(() => {
     </div>
 
     <UploadAvatarModal v-model:open="uploadAvatarOpen" />
+    <IdentityAuthModal v-model:open="identityAuthOpen" />
+    <NicknameModal v-model:open="nicknameOpen" />
   </div>
 </template>
 
@@ -443,6 +491,20 @@ onMounted(() => {
   border-radius: var(--pb-radius-lg);
   padding: 20px;
   box-shadow: var(--pb-shadow-card);
+
+  &.is-invoice {
+    .content-title {
+      margin-bottom: 0;
+      padding-bottom: 14px;
+    }
+
+    .title-bar {
+      width: 4px;
+      height: 16px;
+      border-radius: 1px;
+      transform: skewX(-22deg);
+    }
+  }
 }
 
 .empty-card {
@@ -535,6 +597,13 @@ onMounted(() => {
   border-radius: 6px;
 }
 
+.identity-btn {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
 .profile-info {
   flex: 1;
   display: grid;
@@ -559,9 +628,15 @@ onMounted(() => {
 }
 
 .edit-icon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--pb-primary);
   cursor: pointer;
   font-size: 13px;
+  line-height: 1;
 
   &:hover {
     color: var(--pb-primary-hover);
@@ -577,6 +652,11 @@ onMounted(() => {
 .member-label {
   font-size: 14px;
   color: var(--pb-sub);
+}
+
+.member-period {
+  font-size: 14px;
+  color: var(--pb-text);
 }
 
 .vip-btn {

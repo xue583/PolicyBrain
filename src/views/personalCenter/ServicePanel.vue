@@ -3,10 +3,11 @@ import { CustomerServiceOutlined } from '@ant-design/icons-vue'
 import serviceImg from '@/assets/personalCenter/service-agent.png'
 import qrFrameImg from '@/assets/personalCenter/qr-frame.png'
 import qrCodeImg from '@/assets/personalCenter/qr-service.png'
+import { useServiceContact } from '@/composables/useServiceContact'
 
 defineOptions({ name: 'ServicePanel' })
 
-const SERVICE_PHONE = '18800091116'
+const { phone, qrUrl } = useServiceContact()
 </script>
 
 <template>
@@ -22,12 +23,12 @@ const SERVICE_PHONE = '18800091116'
     <div class="service-card">
       <div class="qr-wrap">
         <img class="qr-frame" :src="qrFrameImg" alt="" />
-        <img class="qr-code" :src="qrCodeImg" alt="客服微信二维码" />
+        <img class="qr-code" :src="qrUrl || qrCodeImg" alt="客服微信二维码" />
       </div>
       <button type="button" class="qr-btn">扫码添加客服微信</button>
       <p class="service-phone">
         <CustomerServiceOutlined />
-        联系客服电话：{{ SERVICE_PHONE }}
+        联系客服电话：{{ phone }}
       </p>
     </div>
   </div>

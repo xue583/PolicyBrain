@@ -37,7 +37,7 @@ const emit = defineEmits<{
       :value="code"
       class="login-input login-input--code"
       type="text"
-      maxlength="6"
+      maxlength="4"
       placeholder="请输入短信验证码"
       @input="emit('update:code', ($event.target as HTMLInputElement).value)"
     />
