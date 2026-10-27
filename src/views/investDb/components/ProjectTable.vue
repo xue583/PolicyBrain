@@ -105,7 +105,7 @@ const columns: TableColumnType<InvestProject>[] = [
           <span class="result" :class="record.result">
             <CheckCircleFilled v-if="record.result === 'passed'" />
             <CloseCircleFilled v-else />
-            {{ resultLabel(record) }}
+            {{ resultLabel(record as InvestProject) }}
           </span>
         </template>
       </template>

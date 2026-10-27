@@ -116,14 +116,16 @@ export const shouldSkipApiPrefix = (url?: string) => {
  * application/x-www-form-urlencoded。设为 false 后请求头会被省略，
  * 浏览器才会带上 multipart boundary。
  */
-export const preserveMultipartContentType = (headers: {
-  set?: (name: string, value: unknown) => void
-}) => {
-  if (typeof headers.set === 'function') {
-    headers.set('Content-Type', false)
+export const preserveMultipartContentType = (headers: unknown) => {
+  if (!headers || typeof headers !== 'object') return
+  const h = headers as {
+    set?: (name: string, value: unknown) => void
+  } & Record<string, unknown>
+  if (typeof h.set === 'function') {
+    h.set('Content-Type', false)
     return
   }
-  ;(headers as Record<string, unknown>)['Content-Type'] = false
+  h['Content-Type'] = false
 }
 
 export const shouldSkipRefresh = (config?: {

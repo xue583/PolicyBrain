@@ -113,7 +113,7 @@ const exportOpen = ref(false)
 const exporting = ref(false)
 const startPage = ref(1)
 const endPage = ref(1)
-const exportPageSize = ref<number | null>(pageSize)
+const exportPageSize = ref<number | undefined>(pageSize)
 
 const positiveInt = (value: number | null | undefined) => {
   if (value == null || !Number.isFinite(value)) return null
