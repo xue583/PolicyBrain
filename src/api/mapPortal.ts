@@ -27,6 +27,7 @@ import type {
 import type { InvestProject, InvestRegion } from '@/mock/investDb'
 import type {
   MatchPolicy,
+  MatchPolicyBadge,
   MatchPolicyStatus,
 } from '@/mock/enterpriseDb/matchPolicies'
 import {
@@ -713,7 +714,9 @@ const matchAmountLines = (record: Record<string, unknown>) => {
   return lines.length ? lines : undefined
 }
 
-const matchBadge = (record: Record<string, unknown>) => {
+const matchBadge = (
+  record: Record<string, unknown>,
+): MatchPolicyBadge | undefined => {
   const raw = pick(record, ['badge', 'tag'])
   if (raw && typeof raw === 'object') {
     const row = asRecord(raw)
@@ -722,7 +725,7 @@ const matchBadge = (record: Record<string, unknown>) => {
     return {
       text,
       tone: pickString(row, ['tone']) === 'green' ? 'green' : 'blue',
-    } as MatchPolicy['badge']
+    }
   }
   if (typeof raw !== 'string' || !raw.trim()) return undefined
   return {

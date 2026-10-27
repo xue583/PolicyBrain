@@ -67,13 +67,6 @@ const safeInviteHref = (value: string) => {
 }
 
 const safeInviteUrl = computed(() => safeInviteHref(inviteUrl.value))
-const linkStatus = computed(() => {
-  if (linkLoading.value) return '邀请链接生成中…'
-  if (linkError.value) return linkError.value
-  if (!inviteUrl.value.trim()) return '暂未获取到邀请链接'
-  if (!safeInviteUrl.value) return '邀请链接无效'
-  return ''
-})
 
 const loadInviteLink = async () => {
   const requestId = ++linkRequestId
