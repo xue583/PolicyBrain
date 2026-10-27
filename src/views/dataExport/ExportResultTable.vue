@@ -101,7 +101,7 @@ const emit = defineEmits<{
 
 .result-table {
   :deep(.ant-table) {
-    background: transparent;
+    background: white;
     font-size: 14px;
   }
 

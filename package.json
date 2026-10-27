@@ -22,8 +22,10 @@
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.21",
     "dompurify": "^3.4.13",
+    "echarts": "^6.1.0",
     "pinia": "^4.0.3",
     "vue": "^3.5.40",
+    "vue-echarts": "^8.3.2",
     "vue-router": "^5.2.0"
   },
   "devDependencies": {

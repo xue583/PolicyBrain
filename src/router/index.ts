@@ -15,6 +15,16 @@ const routes: RouteRecordRaw[] = [
     meta: { navKey: 'home', title: '政策大脑 - 全国政策数据AI辅助申报平台' },
   },
   {
+    path: '/insights',
+    name: 'insights',
+    component: () => import('@/views/insights/index.vue'),
+    meta: {
+      navKey: 'insights',
+      title: '全国政策数据驾驶舱',
+      cockpit: true,
+    },
+  },
+  {
     path: '/news',
     component: SubPageLayout,
     meta: { navKey: 'news' },
@@ -64,16 +74,47 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '企业数据库' },
       },
       {
+        path: 'match',
+        name: 'enterprise-db-match-blank',
+        component: () => import('@/views/enterpriseDb/match.vue'),
+        meta: {
+          hideHero: true,
+          matchPage: true,
+          title: '企业找政策（匹配政策）',
+        },
+      },
+      {
         path: ':id(\\d+)/match',
         name: 'enterprise-db-match',
         component: () => import('@/views/enterpriseDb/match.vue'),
-        meta: { hideHero: true, title: '企业找政策（匹配政策）' },
+        meta: {
+          hideHero: true,
+          matchPage: true,
+          title: '企业找政策（匹配政策）',
+        },
       },
       {
         path: ':id(\\d+)',
         name: 'enterprise-db-detail',
         component: () => import('@/views/enterpriseDb/detail.vue'),
         meta: { hideHero: true, title: '企业详情' },
+      },
+    ],
+  },
+  {
+    path: '/policy-match',
+    component: SubPageLayout,
+    meta: { navKey: 'policy-match', hideHero: true },
+    children: [
+      {
+        path: '',
+        name: 'policy-match',
+        component: () => import('@/views/policyMatch/index.vue'),
+        meta: {
+          hideHero: true,
+          policyMatchPage: true,
+          title: '匹配企业',
+        },
       },
     ],
   },

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
+import { readAvatarUploadUrl, uploadCurrentUserAvatar } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+import { toErrorMessage } from '@/utils/apiError'
+import { setStoredUser } from '@/utils/auth'
 import defaultAvatar from '@/assets/personalCenter/个人中心@2x.png'
 
 defineOptions({ name: 'UploadAvatarModal' })
@@ -15,6 +18,7 @@ const emit = defineEmits<{
 const auth = useAuthStore()
 
 const previewUrl = ref('')
+const selectedFile = ref<File | null>(null)
 const submitting = ref(false)
 
 const close = () => {
@@ -24,7 +28,10 @@ const close = () => {
 watch(
   () => props.open,
   (open) => {
-    if (!open) previewUrl.value = ''
+    if (!open) {
+      previewUrl.value = ''
+      selectedFile.value = null
+    }
   },
 )
 
@@ -70,6 +77,7 @@ const beforeUpload = async (file: File) => {
     reader.onerror = () => reject(new Error('read failed'))
     reader.readAsDataURL(file)
   })
+  selectedFile.value = file
   try {
     previewUrl.value = await cropTo180(dataUrl)
   } catch {
@@ -78,18 +86,33 @@ const beforeUpload = async (file: File) => {
   return false
 }
 
+const isDisplayableAvatar = (value?: string | null) =>
+  /^(https?:|data:|blob:)/i.test(value?.trim() || '')
+
 const confirmUpdate = async () => {
-  if (!previewUrl.value) {
+  if (!selectedFile.value) {
     message.warning('请先选择头像图片')
     return
   }
   submitting.value = true
   try {
-    await auth.updateProfile({ avatar: previewUrl.value })
+    const uploaded = await uploadCurrentUserAvatar(selectedFile.value)
+    const signedUrl = readAvatarUploadUrl(uploaded)
+    if (signedUrl && auth.user) auth.user.avatar = signedUrl
+    try {
+      const profile = await auth.loadCurrentUser()
+      if (signedUrl && profile && !isDisplayableAvatar(profile.avatar)) {
+        profile.avatar = signedUrl
+        auth.user = profile
+      }
+    } catch {
+      // 文件已经上传成功，刷新资料失败时仍展示本次返回的 url
+    }
+    if (auth.user) setStoredUser(auth.user)
     message.success('头像更新成功')
     close()
-  } catch {
-    // 请求层已统一提示错误
+  } catch (err) {
+    message.error(toErrorMessage(err, '头像更新失败，请稍后重试'))
   } finally {
     submitting.value = false
   }

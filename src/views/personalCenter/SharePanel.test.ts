@@ -22,9 +22,25 @@ import SharePanel from './SharePanel.vue'
 vi.mock('@/api/account', () => ({
   fetchAccountShares: vi.fn(),
   fetchShareLink: vi.fn(),
+  exportAccountShares: vi.fn(),
 }))
 
-const { fetchAccountShares } = await import('@/api/account')
+vi.mock('ant-design-vue', async () => {
+  const actual =
+    await vi.importActual<typeof import('ant-design-vue')>('ant-design-vue')
+  return {
+    ...actual,
+    message: {
+      success: vi.fn(),
+      error: vi.fn(),
+      warning: vi.fn(),
+    },
+  }
+})
+
+const { fetchAccountShares, exportAccountShares } =
+  await import('@/api/account')
+const { message } = await import('ant-design-vue')
 
 const mountPanel = async () => {
   const pinia = createPinia()
@@ -93,6 +109,50 @@ describe('SharePanel invite list', () => {
     expect(text).toContain('企服人员')
     expect(text).toContain('赠送一个月')
     expect(text).toContain('超额无赠送')
+    wrapper.unmount()
+  })
+
+  it('exports the selected page range and opens the file url', async () => {
+    vi.mocked(exportAccountShares).mockResolvedValue(
+      'https://example.com/shares.xlsx',
+    )
+    const opened: string[] = []
+    const open = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        opened.push(this.href)
+      })
+
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    const exportBtn = wrapper
+      .findAll('button')
+      .find((node) => node.text().includes('导出Excel'))
+    expect(exportBtn).toBeTruthy()
+    await exportBtn!.trigger('click')
+    await flushPromises()
+
+    expect(document.body.textContent).toContain('开始页')
+    expect(document.body.textContent).toContain('结束页')
+    expect(document.body.textContent).toContain('每页大小')
+    expect(document.body.textContent).toContain('当前共 2 条')
+
+    const confirm = [...document.body.querySelectorAll('button')].find((node) =>
+      node.textContent?.includes('确认导出'),
+    )
+    expect(confirm).toBeTruthy()
+    confirm!.click()
+    await flushPromises()
+
+    expect(exportAccountShares).toHaveBeenCalledWith({
+      startPage: 1,
+      endPage: 1,
+      pageSize: 10,
+    })
+    expect(opened).toContain('https://example.com/shares.xlsx')
+    expect(message.success).toHaveBeenCalledWith('导出文件已生成')
+    open.mockRestore()
     wrapper.unmount()
   })
 })

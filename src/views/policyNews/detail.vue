@@ -240,8 +240,7 @@ const openOriginal = () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 32px;
-  padding-top: 8px;
+  margin: 20px;
 }
 
 .attachment-item {

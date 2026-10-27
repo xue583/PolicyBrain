@@ -12,6 +12,7 @@ import heroBg from '@/assets/hero-bg.png'
 import policyDbBg from '@/assets/policy-db-bg.png'
 import enterpriseDbBg from '@/assets/enterpriseDb/banner@2x.png'
 import matchBanner from '@/assets/enterpriseDb/match/banner.png'
+import policyMatchBanner from '@/assets/policyMatch/banner.png'
 import exportBanner from '@/assets/export/banner@2x.png'
 import investDb from '@/assets/investDb/banner@2x.png'
 import apiBg from '@/assets/api/banner@2x.png'
@@ -31,13 +32,17 @@ const heroBgByPage: Record<string, string> = {
   api: apiBg,
   export: exportBanner,
 }
-const isPolicyMatch = computed(() => route.name === 'enterprise-db-match')
-const currentHeroBg = computed(() =>
-  isPolicyMatch.value ? matchBanner : (heroBgByPage[pageKey.value] ?? heroBg),
-)
+const isPolicyMatch = computed(() => Boolean(route.meta.matchPage))
+const isPolicyToEnt = computed(() => Boolean(route.meta.policyMatchPage))
+const currentHeroBg = computed(() => {
+  if (isPolicyToEnt.value) return policyMatchBanner
+  return isPolicyMatch.value
+    ? matchBanner
+    : (heroBgByPage[pageKey.value] ?? heroBg)
+})
 const showPageBg = computed(
   () =>
-    (isPolicyMatch.value || !hideHero.value) &&
+    (isPolicyMatch.value || isPolicyToEnt.value || !hideHero.value) &&
     pageKey.value !== 'export' &&
     pageKey.value !== 'invest-db' &&
     pageKey.value !== 'api',
@@ -69,7 +74,10 @@ const openBeian = () => {
     <div
       v-if="showPageBg"
       class="page-bg"
-      :class="{ 'enterprise-bg': isEnterpriseDb }"
+      :class="{
+        'enterprise-bg': isEnterpriseDb,
+        'policy-match-bg': isPolicyToEnt,
+      }"
       :style="{ backgroundImage: `url(${currentHeroBg})` }"
     />
 
@@ -247,7 +255,8 @@ const openBeian = () => {
   pointer-events: none;
   z-index: 0;
 
-  &.enterprise-bg::after {
+  &.enterprise-bg::after,
+  &.policy-match-bg::after {
     content: '';
     position: absolute;
     left: 0;
@@ -259,6 +268,10 @@ const openBeian = () => {
       rgb(240 242 245 / 0) 0%,
       var(--pb-bg) 72%
     );
+  }
+
+  &.policy-match-bg {
+    height: 460px;
   }
 }
 

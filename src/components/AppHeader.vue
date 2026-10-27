@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
@@ -7,9 +7,11 @@ import {
   EnvironmentOutlined,
   BellFilled,
   RightOutlined,
+  FundProjectionScreenOutlined,
 } from '@ant-design/icons-vue'
 import { navItems } from '@/mock/nav'
 import { loadRegionOptions, type CityOption } from '@/api/meta'
+import { useMessageBadge } from '@/composables/useMessageBadge'
 import { selectRegionCity, selectRegionProvince } from '@/utils/regionActions'
 import { useAuthStore } from '@/stores/auth'
 import { useRegionStore } from '@/stores/region'
@@ -30,6 +32,8 @@ const auth = useAuthStore()
 const regionStore = useRegionStore()
 const { isLoggedIn } = storeToRefs(auth)
 const { areaLabel } = storeToRefs(regionStore)
+const { unreadCount, refreshMessageUnread, resetMessageUnread } =
+  useMessageBadge()
 
 const provinceOptions = ref<CityOption[]>([])
 const cityOptions = ref<CityOption[]>([])
@@ -41,6 +45,7 @@ const loginOpen = ref(false)
 const scrolled = ref(false)
 
 const activeNav = computed(() => (route.meta.navKey as string) || 'home')
+const productIntroHref = `${import.meta.env.BASE_URL}product-intro.html`
 const isHome = computed(() => route.name === 'home')
 const isMembership = computed(() => route.name === 'membership')
 const isImmersive = computed(() => Boolean(route.meta.immersiveHeader))
@@ -120,8 +125,50 @@ watch(regionOpen, (open) => {
   if (open) void syncColumnsWithSelection()
 })
 
-const onNavClick = ({ key }: { key: string | number }) => {
+const menuItems = computed(() =>
+  navItems.map((item) => {
+    if (!item.newWindow) return { key: item.key, label: item.label }
+    const { href } = router.resolve({ name: item.key })
+    return {
+      key: item.key,
+      label: h(
+        'a',
+        {
+          href,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          class: 'nav-blank',
+        },
+        item.label,
+      ),
+    }
+  }),
+)
+
+/** 数据洞察在新标签页打开驾驶舱，当前页保持不动 */
+const openInNewTab = (name: string) => {
+  const { href } = router.resolve({ name })
+  const tab = window.open(href, '_blank')
+  if (tab) tab.opener = null
+  else void router.push({ name })
+}
+
+const onNavClick = ({
+  key,
+  domEvent,
+}: {
+  key: string | number
+  domEvent?: Event
+}) => {
   const name = String(key)
+  const item = navItems.find((nav) => nav.key === name)
+  if (item?.newWindow) {
+    const target = domEvent?.target
+    if (!(target instanceof Element && target.closest('a'))) {
+      openInNewTab(name)
+    }
+    return
+  }
   if (route.name !== name) {
     void router.push({ name })
   }
@@ -147,9 +194,32 @@ const openLogin = () => {
   loginOpen.value = true
 }
 
+const goMessages = () => {
+  if (!isLoggedIn.value) {
+    openLogin()
+    return
+  }
+  if (route.name === 'personal-center' && route.query.tab === 'message') return
+  void router.push({ name: 'personal-center', query: { tab: 'message' } })
+}
+
+const onWindowFocus = () => {
+  if (isLoggedIn.value) void refreshMessageUnread()
+}
+
+watch(
+  isLoggedIn,
+  (logged) => {
+    if (logged) void refreshMessageUnread()
+    else resetMessageUnread()
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
   onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('focus', onWindowFocus)
   offNeedLogin = onNeedLogin(() => {
     loginOpen.value = true
   })
@@ -163,6 +233,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
+  window.removeEventListener('focus', onWindowFocus)
   if (scrollRaf) cancelAnimationFrame(scrollRaf)
   offNeedLogin?.()
 })
@@ -258,7 +329,7 @@ onUnmounted(() => {
         :selected-keys="[activeNav]"
         mode="horizontal"
         class="header-menu"
-        :items="navItems.map((n) => ({ key: n.key, label: n.label }))"
+        :items="menuItems"
         @click="onNavClick"
       />
 
@@ -266,6 +337,10 @@ onUnmounted(() => {
         <a class="ai-link" @click.prevent="goWorkbench">
           <img :src="robotImg" alt="" class="ai-icon" />
           <span class="ai-link-text">AI政策大脑</span>
+        </a>
+        <a class="intro-link" :href="productIntroHref">
+          <FundProjectionScreenOutlined class="intro-icon" />
+          <span>产品介绍</span>
         </a>
         <a class="mobile-link">
           <img :src="mobileImg" alt="" class="mobile-icon" />
@@ -278,8 +353,15 @@ onUnmounted(() => {
         >
           开通会员
         </a>
-        <a class="mobile-link">
-          <BellFilled />
+        <a class="mobile-link message-link" @click.prevent="goMessages">
+          <a-badge
+            class="message-badge"
+            :count="unreadCount"
+            :overflow-count="99"
+            size="small"
+          >
+            <BellFilled />
+          </a-badge>
           <span>消息</span>
         </a>
         <UserAccountMenu v-if="isLoggedIn" />
@@ -351,6 +433,7 @@ onUnmounted(() => {
     }
 
     .header-right {
+      .intro-link,
       .ai-link,
       .mobile-link {
         color: rgba(255, 255, 255, 0.92);
@@ -373,7 +456,7 @@ onUnmounted(() => {
 .header-inner {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
   width: 100%;
   max-width: calc(100% - 32px);
   height: 100%;
@@ -502,25 +585,30 @@ onUnmounted(() => {
 .header-menu {
   flex: 1;
   min-width: 0;
-  margin-left: 8%;
+  margin-left: 8px;
   border-bottom: none;
   line-height: 62px;
   background: transparent;
-  font-size: 16px;
+  font-size: 15px;
 
   :deep(.ant-menu-item) {
-    padding-inline: 14px;
+    padding-inline: 10px;
     color: #343434;
     font-weight: 400;
 
     &::after {
-      inset-inline: 14px;
+      inset-inline: 10px;
       border-bottom-width: 2px;
     }
 
     &:hover {
       color: var(--pb-primary);
     }
+  }
+
+  :deep(a.nav-blank) {
+    color: inherit;
+    text-decoration: none;
   }
 
   :deep(.ant-menu-item-selected) {
@@ -536,9 +624,10 @@ onUnmounted(() => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
 
+  .intro-link,
   .ai-link,
   .mobile-link {
     display: inline-flex;
@@ -553,6 +642,17 @@ onUnmounted(() => {
     }
   }
 
+  .intro-link {
+    flex-shrink: 0;
+    color: #666666;
+    font-size: 16px;
+    text-decoration: none;
+  }
+
+  .intro-icon {
+    font-size: 16px;
+  }
+
   .ai-link {
     cursor: pointer;
   }
@@ -565,6 +665,24 @@ onUnmounted(() => {
 
   .mobile-link {
     font-size: 16px;
+  }
+
+  .message-link {
+    cursor: pointer;
+  }
+
+  .message-badge {
+    color: inherit;
+    line-height: 1;
+
+    :deep(.ant-badge-count) {
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      font-size: 10px;
+      line-height: 16px;
+      box-shadow: none;
+    }
   }
 
   .ai-link-text {

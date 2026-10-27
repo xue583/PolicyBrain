@@ -80,6 +80,7 @@ export default defineConfig(({ mode }) => {
             '/search',
             '/match',
             '/kb',
+            '/home',
           ].map((prefix) => [
             prefix,
             {

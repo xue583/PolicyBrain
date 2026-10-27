@@ -105,10 +105,25 @@ const AUTH_SKIP_RE =
 
 /** 文档路由在根路径，不要再拼 VITE_BASE_API=/api */
 const SKIP_API_PREFIX_RE =
-  /^\/(auth|account|health|system|meta|invest|policies|news|enterprises|search|match|kb)(\/|$|\?)/i
+  /^\/(auth|account|health|system|meta|invest|policies|news|enterprises|search|match|kb|home)(\/|$|\?)/i
 
 export const shouldSkipApiPrefix = (url?: string) => {
   return SKIP_API_PREFIX_RE.test(url || '')
+}
+
+/**
+ * FormData 不能带 application/json，也不能在发出前被补成
+ * application/x-www-form-urlencoded。设为 false 后请求头会被省略，
+ * 浏览器才会带上 multipart boundary。
+ */
+export const preserveMultipartContentType = (headers: {
+  set?: (name: string, value: unknown) => void
+}) => {
+  if (typeof headers.set === 'function') {
+    headers.set('Content-Type', false)
+    return
+  }
+  ;(headers as Record<string, unknown>)['Content-Type'] = false
 }
 
 export const shouldSkipRefresh = (config?: {
@@ -118,6 +133,22 @@ export const shouldSkipRefresh = (config?: {
   if (config?.skipAuthRefresh) return true
   const url = config?.url || ''
   return AUTH_SKIP_RE.test(url)
+}
+
+export const readApiMessage = (data: unknown, fallback: string) => {
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  if (!data || typeof data !== 'object') return fallback
+  const body = data as Record<string, unknown>
+  const message = [body.message, body.msg, body.title].find(
+    (item) => typeof item === 'string' && item.trim(),
+  )
+  const detail =
+    typeof body.data === 'string' && body.data.trim() ? body.data.trim() : ''
+  if (typeof message === 'string' && detail && detail !== message.trim()) {
+    return `${message.trim()}：${detail}`
+  }
+  if (typeof message === 'string') return message.trim()
+  return detail || fallback
 }
 
 export const unwrapEnvelope = (
@@ -133,11 +164,7 @@ export const unwrapEnvelope = (
     const body = payload as ApiEnvelope
     const status = body.status ?? httpStatus
     if (status >= 400) {
-      throw new ApiError(
-        body.message || body.msg || '请求失败',
-        status,
-        body.path,
-      )
+      throw new ApiError(readApiMessage(body, '请求失败'), status, body.path)
     }
     return 'data' in body ? body.data : payload
   }
@@ -232,6 +259,10 @@ service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     cfg.headers.Authorization = `Bearer ${token}`
   }
+
+  if (typeof FormData !== 'undefined' && cfg.data instanceof FormData) {
+    preserveMultipartContentType(cfg.headers)
+  }
   return cfg
 })
 
@@ -265,7 +296,7 @@ service.interceptors.response.use(
     const status = error.response?.status ?? 0
     const data = error.response?.data as ApiEnvelope | undefined
     const apiErr = new ApiError(
-      data?.message || data?.msg || error.message || '网络异常',
+      readApiMessage(data, error.message || '网络异常'),
       status || 500,
       data?.path,
     )

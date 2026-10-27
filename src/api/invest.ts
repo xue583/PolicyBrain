@@ -6,7 +6,7 @@ import { asRecord } from '@/api/record'
 export type InvestCategory = { name: string; count: number }
 
 export type InvestProjectQuery = PageQuery & {
-  /** 投资库地区编码，如 beijing、henan；不传为全国 */
+  /** 投资库地区编码，如 beijing、henan；全国为 national */
   province?: string
   category?: string
   search?: string

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import dayjs from 'dayjs'
+import { message } from 'ant-design-vue'
 import {
   ExportOutlined,
   PictureOutlined,
   RollbackOutlined,
   TrophyOutlined,
 } from '@ant-design/icons-vue'
-import { fetchAccountShares } from '@/api/account'
+import { exportAccountShares, fetchAccountShares } from '@/api/account'
+import { ApiError } from '@/utils/request'
 import { useServerPage } from '@/composables/useServerPage'
 import { useAuthStore } from '@/stores/auth'
 import { identityLabel, maskPhone } from '@/utils/userDisplay'
@@ -107,6 +109,101 @@ const filteredInvites = computed(() =>
 )
 
 const posterOpen = ref(false)
+const exportOpen = ref(false)
+const exporting = ref(false)
+const startPage = ref(1)
+const endPage = ref(1)
+const exportPageSize = ref<number | null>(pageSize)
+
+const positiveInt = (value: number | null | undefined) => {
+  if (value == null || !Number.isFinite(value)) return null
+  const parsed = Math.trunc(value)
+  return parsed >= 1 ? parsed : null
+}
+
+/** 按用户填写的每页大小估算可导出页数 */
+const exportPageCount = computed(() => {
+  const size = positiveInt(exportPageSize.value)
+  if (!size || total.value <= 0) return 1
+  return Math.max(1, Math.ceil(total.value / size))
+})
+
+watch([exportPageCount, startPage], () => {
+  const count = exportPageCount.value
+  if (startPage.value > count) startPage.value = count
+  if (endPage.value > count) endPage.value = count
+  if (endPage.value < startPage.value) endPage.value = startPage.value
+})
+
+const openExport = () => {
+  const size = pageSize
+  exportPageSize.value = size
+  startPage.value = 1
+  endPage.value = Math.max(
+    1,
+    total.value > 0 ? Math.ceil(total.value / size) : 1,
+  )
+  exportOpen.value = true
+}
+
+const closeExport = () => {
+  if (exporting.value) return
+  exportOpen.value = false
+}
+
+const openExportFile = (url: string) => {
+  const link = document.createElement('a')
+  link.href = url
+  link.target = '_blank'
+  link.rel = 'noopener noreferrer'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+const submitExport = async () => {
+  if (exporting.value) return
+  const size = positiveInt(exportPageSize.value)
+  const start = positiveInt(startPage.value)
+  const end = positiveInt(endPage.value)
+  if (!start) {
+    message.warning('请选择开始页')
+    return
+  }
+  if (!end) {
+    message.warning('请选择结束页')
+    return
+  }
+  if (!size) {
+    message.warning('请填写每页大小')
+    return
+  }
+  if (end < start) {
+    message.warning('结束页不能小于开始页')
+    return
+  }
+  exporting.value = true
+  try {
+    const url = await exportAccountShares({
+      startPage: start,
+      endPage: end,
+      pageSize: size,
+    })
+    if (!url) {
+      message.error('未获取到导出文件')
+      return
+    }
+    openExportFile(url)
+    message.success('导出文件已生成')
+    exportOpen.value = false
+  } catch (err) {
+    message.error(
+      err instanceof ApiError ? err.message : '导出失败，请稍后重试',
+    )
+  } finally {
+    exporting.value = false
+  }
+}
 
 const goHome = () => {
   void router.push({ name: 'home' })
@@ -140,6 +237,67 @@ const rewardTagClass = (reward: string) =>
 
     <SharePosterModal v-model:open="posterOpen" />
 
+    <a-modal
+      :open="exportOpen"
+      :width="440"
+      :footer="null"
+      :mask-closable="!exporting"
+      :keyboard="!exporting"
+      wrap-class-name="share-export-modal"
+      @cancel="closeExport"
+    >
+      <template #title>
+        <span class="export-title">导出Excel</span>
+      </template>
+      <div class="export-form">
+        <label class="export-field">
+          <span>开始页</span>
+          <a-input-number
+            v-model:value="startPage"
+            class="export-control"
+            :min="1"
+            :max="exportPageCount"
+            :precision="0"
+            :disabled="exporting"
+          />
+        </label>
+        <label class="export-field">
+          <span>结束页</span>
+          <a-input-number
+            v-model:value="endPage"
+            class="export-control"
+            :min="startPage"
+            :max="exportPageCount"
+            :precision="0"
+            :disabled="exporting"
+          />
+        </label>
+        <label class="export-field">
+          <span>每页大小</span>
+          <a-input-number
+            v-model:value="exportPageSize"
+            class="export-control"
+            :min="1"
+            :precision="0"
+            :disabled="exporting"
+            placeholder="请填写每页大小"
+            @press-enter="submitExport"
+          />
+        </label>
+        <p class="export-hint">
+          当前共 {{ total }} 条，按每页
+          {{ positiveInt(exportPageSize) || '-' }} 条计算，共
+          {{ exportPageCount }} 页
+        </p>
+        <div class="export-actions">
+          <a-button :disabled="exporting" @click="closeExport">取消</a-button>
+          <a-button type="primary" :loading="exporting" @click="submitExport">
+            确认导出
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+
     <div class="invite-toolbar">
       <span class="invite-tip">
         <TrophyOutlined />
@@ -154,7 +312,7 @@ const rewardTagClass = (reward: string) =>
           placeholder="搜索被邀请人或邀请人手机号"
           :options="phoneOptions"
         />
-        <a-button class="export-btn" @click.prevent>
+        <a-button class="export-btn" :disabled="loading" @click="openExport">
           <template #icon><ExportOutlined /></template>
           导出Excel
         </a-button>
@@ -387,5 +545,43 @@ const rewardTagClass = (reward: string) =>
 .reward-tag.reward-exceed {
   background: #f3f3f3;
   color: #8c8c8c;
+}
+
+.export-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--pb-title);
+}
+
+.export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.export-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--pb-sub);
+}
+
+.export-control {
+  width: 100%;
+}
+
+.export-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--pb-sub);
+}
+
+.export-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>

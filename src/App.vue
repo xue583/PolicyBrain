@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
@@ -19,6 +19,7 @@ import {
 dayjs.locale('zh-cn')
 
 const route = useRoute()
+const isCockpit = computed(() => route.meta.cockpit === true)
 const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 useRegionSync()
@@ -47,6 +48,7 @@ const dismissPromoToday = () => {
 
 onMounted(() => {
   if (
+    !isCockpit.value &&
     !isLoggedIn.value &&
     route.name !== 'membership' &&
     !route.query.invite &&
@@ -107,10 +109,11 @@ watch(
       },
     }"
   >
-    <a-layout class="app-shell">
-      <AppHeader />
+    <a-layout class="app-shell" :class="{ 'is-cockpit': isCockpit }">
+      <AppHeader v-if="!isCockpit" />
       <router-view />
       <VipPromoModal
+        v-if="!isCockpit"
         v-model:open="promoOpen"
         @dismiss-today="dismissPromoToday"
       />
@@ -124,5 +127,19 @@ watch(
   flex-direction: column;
   min-height: 100vh;
   background: var(--pb-bg);
+}
+
+.app-shell.is-cockpit {
+  height: 100vh;
+  overflow: hidden;
+  background: #e7f3ff;
+}
+
+@media (max-width: 992px), (max-height: 760px) {
+  .app-shell.is-cockpit {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
 }
 </style>

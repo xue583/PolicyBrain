@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   clearToken,
@@ -16,7 +16,9 @@ import {
   fetchCurrentUser,
   logoutSession,
   sendSmsCode,
+  readAvatarUploadUrl,
   updateCurrentUser,
+  uploadCurrentUserAvatar,
   verifySmsCode,
   type UpdateProfilePayload,
 } from '@/api/auth'
@@ -100,6 +102,28 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value
   }
 
+  const isDisplayableAvatar = (value?: string | null) =>
+    /^(https?:|data:|blob:)/i.test(value?.trim() || '')
+
+  /** POST /account/users/me/avatar。页面展示接口返回的 url。 */
+  const uploadAvatar = async (file: Blob) => {
+    const uploaded = await uploadCurrentUserAvatar(file)
+    const signedUrl = readAvatarUploadUrl(uploaded)
+    if (signedUrl) {
+      user.value = { ...(user.value || {}), avatar: signedUrl }
+    }
+    try {
+      const profile = await loadCurrentUser()
+      if (signedUrl && profile && !isDisplayableAvatar(profile.avatar)) {
+        user.value = { ...profile, avatar: signedUrl }
+      }
+    } catch {
+      // 图片已经上传成功，刷新资料失败时仍展示本次返回的 url
+    }
+    if (user.value) setStoredUser(user.value)
+    return user.value
+  }
+
   const logout = async () => {
     try {
       if (token.value) {
@@ -132,8 +156,13 @@ export const useAuthStore = defineStore('auth', () => {
     loginBySms,
     verifyRegisterCode,
     updateProfile,
+    uploadAvatar,
     loadCurrentUser,
     logout,
     hydrateUser,
   }
 })
+
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useAuthStore, import.meta.hot))
+}

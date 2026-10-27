@@ -179,12 +179,16 @@ export const useRegionSync = () => {
     })
   }
 
-  // store → 路由 query + 用户上下文
-  watch([region.provinceId, region.cityId, region.districtId], () => {
-    const ids = storeIds()
-    writeRegionQuery(ids)
-    persistContext(ids)
-  })
+  // Pinia 会把 store 上的 id 解包成普通值，直接放进 watch 数组无法跟踪后续修改。
+  // 顶部只选省时 cityId、districtId 会被清空，也要靠这次监听写回账号上下文。
+  watch(
+    () => [region.provinceId, region.cityId, region.districtId],
+    () => {
+      const ids = storeIds()
+      writeRegionQuery(ids)
+      persistContext(ids)
+    },
+  )
 
   // 路由 query → store（地址栏修改、浏览器前进后退）
   watch(

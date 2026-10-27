@@ -452,17 +452,6 @@ const savePoster = async () => {
                     <path d="M8.5 4.5 12 8l-3.5 3.5" />
                   </svg>
                 </a>
-                <a
-                  v-if="safeInviteUrl"
-                  class="share-poster-url"
-                  :href="safeInviteUrl"
-                  :title="safeInviteUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {{ safeInviteUrl }}
-                </a>
-                <p v-else class="share-poster-url is-muted">{{ linkStatus }}</p>
               </div>
             </div>
           </div>
@@ -673,34 +662,6 @@ const savePoster = async () => {
 
 .share-poster-reward {
   font-weight: 700;
-}
-
-.share-poster-url {
-  margin: 0;
-  color: #1677ff;
-  font-size: 3cqw;
-  line-height: 1.45;
-  text-align: center;
-  text-decoration: none;
-  word-break: break-all;
-
-  &:hover {
-    text-decoration: underline;
-  }
-
-  &:focus-visible {
-    outline: 2px solid #1677ff;
-    outline-offset: 2px;
-  }
-
-  &.is-muted {
-    color: #8b95a8;
-    text-align: left;
-
-    &:hover {
-      text-decoration: none;
-    }
-  }
 }
 
 .share-poster-actions {

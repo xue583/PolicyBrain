@@ -2,14 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from './auth'
 
-vi.mock('@/api/auth', () => ({
-  createSession: vi.fn(),
-  fetchCurrentUser: vi.fn(),
-  logoutSession: vi.fn(),
-  sendSmsCode: vi.fn(),
-  updateCurrentUser: vi.fn(),
-  verifySmsCode: vi.fn(),
-}))
+vi.mock('@/api/auth', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/api/auth')>('@/api/auth')
+  return {
+    createSession: vi.fn(),
+    fetchCurrentUser: vi.fn(),
+    logoutSession: vi.fn(),
+    sendSmsCode: vi.fn(),
+    updateCurrentUser: vi.fn(),
+    uploadCurrentUserAvatar: vi.fn(),
+    verifySmsCode: vi.fn(),
+    readAvatarUploadUrl: actual.readAvatarUploadUrl,
+  }
+})
 
 const {
   createSession,
@@ -17,6 +23,7 @@ const {
   logoutSession,
   sendSmsCode,
   updateCurrentUser,
+  uploadCurrentUserAvatar,
   verifySmsCode,
 } = await import('@/api/auth')
 
@@ -138,6 +145,26 @@ describe('useAuthStore', () => {
     expect(auth.user?.inviter).toBe('张三')
     expect(auth.user?.lastLoginTime).toBe('2026-10-22T07:32:19.174Z')
     expect(localStorage.getItem('pb_user')).toContain('ABC123')
+  })
+
+  it('uploads the avatar file and shows the returned download url', async () => {
+    const file = new File(['img'], 'avatar.png', { type: 'image/png' })
+    vi.mocked(uploadCurrentUserAvatar).mockResolvedValue({
+      url: 'https://files.example.com/a.png?X-Amz-Signature=abc',
+    })
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      id: 8,
+      avatar: 'policy/avatar/a.png',
+    })
+
+    const auth = useAuthStore()
+    await auth.uploadAvatar(file)
+
+    expect(uploadCurrentUserAvatar).toHaveBeenCalledWith(file)
+    expect(updateCurrentUser).not.toHaveBeenCalled()
+    expect(auth.user?.avatar).toBe(
+      'https://files.example.com/a.png?X-Amz-Signature=abc',
+    )
   })
 
   it('verifies sms with phone and code only', async () => {

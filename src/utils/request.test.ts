@@ -10,6 +10,7 @@ vi.mock('ant-design-vue', () => ({
 }))
 
 const {
+  preserveMultipartContentType,
   shouldSkipApiPrefix,
   shouldSkipRefresh,
   unwrapEnvelope,
@@ -69,6 +70,16 @@ describe('unwrapEnvelope', () => {
   })
 })
 
+describe('preserveMultipartContentType', () => {
+  it('marks content type false so the browser can set the multipart boundary', () => {
+    const headers: Record<string, unknown> = {
+      'Content-Type': 'application/json',
+    }
+    preserveMultipartContentType(headers)
+    expect(headers['Content-Type']).toBe(false)
+  })
+})
+
 describe('shouldSkipRefresh', () => {
   it('skips when the flag is set or the url is an auth endpoint', () => {
     expect(shouldSkipRefresh({ skipAuthRefresh: true })).toBe(true)
@@ -88,6 +99,7 @@ describe('shouldSkipApiPrefix', () => {
     expect(shouldSkipApiPrefix('/policies/1')).toBe(true)
     expect(shouldSkipApiPrefix('/enterprises')).toBe(true)
     expect(shouldSkipApiPrefix('/search/news')).toBe(true)
+    expect(shouldSkipApiPrefix('/home/hot-keywords')).toBe(true)
     expect(shouldSkipApiPrefix('/users/me')).toBe(false)
     expect(shouldSkipApiPrefix('/authenticate')).toBe(false)
     expect(shouldSkipApiPrefix('/newsletter')).toBe(false)

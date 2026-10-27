@@ -12,20 +12,21 @@ import {
 } from '@ant-design/icons-vue'
 import {
   featureCards,
-  hotKeywords,
   industryTags,
   homeFollowList,
   type HomeNewsItem,
 } from '../../mock/home'
+import { fetchHotKeywords, type HotKeywordGroups } from '@/api/home'
 import { fetchNewsPage } from '@/api/news'
 import { fetchIndustryNames } from '@/api/meta'
 import type { PolicyItem } from '../../mock/policyNews'
 import { useRegionStore } from '@/stores/region'
 import { orderNewsForCity } from '@/utils/homeNews'
-import { Divider } from 'ant-design-vue'
+import { Divider, message } from 'ant-design-vue'
+import { fetchEnterprisePage } from '@/api/enterprises'
+import { useAuthStore } from '@/stores/auth'
 import { SITE } from '@/constants/site'
 import { useServiceContact } from '@/composables/useServiceContact'
-import { navItems } from '@/mock/nav'
 import SiteQrBlock from '@/components/SiteQrBlock.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import heroDecorSm from '../../assets/home/hero-decor-sm.png'
@@ -44,6 +45,7 @@ defineOptions({ name: 'HomePage' })
 
 const { phone, wechat, workHours } = useServiceContact()
 const router = useRouter()
+const auth = useAuthStore()
 const regionStore = useRegionStore()
 const {
   provinceId,
@@ -55,6 +57,10 @@ const {
 } = storeToRefs(regionStore)
 const searchType = ref<'policy' | 'enterprise'>('policy')
 const keyword = ref('')
+const hotKeywordGroups = ref<HotKeywordGroups>({
+  policies: [],
+  enterprises: [],
+})
 const newsTab = ref<'news' | 'follow'>('news')
 const newsLimit = ref(8)
 const newsExpanded = ref(false)
@@ -218,7 +224,18 @@ watch([remoteNews, newsTab], () => {
   void nextTick(() => syncNewsLimit())
 })
 
+const visibleHotKeywords = computed(() =>
+  searchType.value === 'enterprise'
+    ? hotKeywordGroups.value.enterprises
+    : hotKeywordGroups.value.policies,
+)
+
 onMounted(() => {
+  void fetchHotKeywords('all', 4)
+    .then((groups) => {
+      hotKeywordGroups.value = groups
+    })
+    .catch(() => undefined)
   void fetchIndustryNames()
     .then((names) => {
       if (names.length) industryTagList.value = names
@@ -262,6 +279,50 @@ const goNews = (id?: number) => {
 
 const goNav = (key: string) => {
   void router.push({ name: key })
+}
+
+/** 首页「企业匹配政策」：按搜索词或登录用户的公司名定位企业，进入匹配政策页。 */
+const openEnterpriseMatch = async () => {
+  const typed = keyword.value.trim()
+  const company = auth.user?.companyName?.trim() || ''
+  const q = typed || company
+  if (!q) {
+    void router.push({ name: 'enterprise-db-match-blank' })
+    return
+  }
+  try {
+    const page = await fetchEnterprisePage({
+      keyword: q,
+      pageIndex: 1,
+      pageSize: 10,
+    })
+    const target = page.items.find((item) => item.name === q) ?? page.items[0]
+    if (!target) {
+      message.warning('未找到该企业')
+      return
+    }
+    void router.push({
+      name: 'enterprise-db-match',
+      params: { id: String(target.id) },
+    })
+  } catch {
+    message.warning('企业查询失败，请稍后重试')
+  }
+}
+
+const onFeatureCard = (card: (typeof featureCards)[number]) => {
+  if (card.key === 'match-policy') {
+    void openEnterpriseMatch()
+    return
+  }
+  if (card.key === 'match-enterprise') {
+    const q = keyword.value.trim()
+    void router.push(
+      q ? { name: 'policy-match', query: { q } } : { name: 'policy-match' },
+    )
+    return
+  }
+  goNav(card.routeName)
 }
 
 const openBeian = () => {
@@ -326,15 +387,15 @@ const openBeian = () => {
             </button>
           </div>
 
-          <div class="hot-keywords">
+          <div v-if="visibleHotKeywords.length" class="hot-keywords">
             <span class="hot-label">热门：</span>
             <a
-              v-for="word in hotKeywords"
-              :key="word"
+              v-for="item in visibleHotKeywords"
+              :key="item.keyword"
               class="hot-word"
-              @click="applyHot(word)"
+              @click="applyHot(item.keyword)"
             >
-              {{ word }}
+              {{ item.keyword }}
             </a>
           </div>
         </div>
@@ -348,7 +409,7 @@ const openBeian = () => {
           :key="card.key"
           class="feature-card"
           :style="{ backgroundImage: `url(${featureCardBg})` }"
-          @click="goNav(card.routeName)"
+          @click="onFeatureCard(card)"
         >
           <div class="feature-icon">
             <img :src="iconMap[card.icon]" :alt="card.title" />
@@ -483,13 +544,10 @@ const openBeian = () => {
             <div class="info-block">
               <h4>关于公司</h4>
               <div class="info-links">
-                <a
-                  v-for="item in navItems.filter((n) => n.key !== 'home')"
-                  :key="item.key"
-                  @click="goNav(item.key)"
-                >
-                  {{ item.label }}
-                </a>
+                <router-link to="/about">关于我们</router-link>
+                <router-link to="/about/member">会员协议</router-link>
+                <router-link to="/about/agreement">用户协议</router-link>
+                <router-link to="/about/privacy">隐私政策</router-link>
               </div>
             </div>
 
@@ -777,6 +835,7 @@ const openBeian = () => {
   background-size: 100% 100%;
   border-radius: var(--pb-radius);
   box-shadow: var(--pb-shadow);
+  cursor: pointer;
   transition:
     transform 0.2s,
     box-shadow 0.2s;

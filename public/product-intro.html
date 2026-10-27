@@ -1,0 +1,2143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>政策大脑 · 双引擎驱动的政企数据智能平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* === 基础重置 === */
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden;
+  background:linear-gradient(180deg,#F4F8FF 0%,#E7EFFF 100%); }
+body { font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif; -webkit-font-smoothing:antialiased; }
+
+/* === 固定 16:9 舞台：按视口等比缩放铺满，只裁外圈留白，内容不变形 === */
+#stage {
+  position:fixed; left:50%; top:50%;
+  width:1920px; height:1080px;
+  transform:translate(-50%,-50%) scale(1);
+  transform-origin:center center;
+  overflow:hidden;
+}
+
+/* === 幻灯片显隐：只用 visibility/opacity，绝不用 display:none/block === */
+.slide { position:absolute; inset:0; visibility:hidden; opacity:0; transition:opacity .55s ease; }
+.slide.active { visibility:visible; opacity:1; }
+
+/* === 入场编排：.reveal 元素随幻灯片激活逐级浮现 === */
+.reveal { opacity:0; transform:translateY(40px); transition:opacity .8s ease, transform .8s cubic-bezier(.22,.9,.3,1); }
+.slide.active .reveal { opacity:1; transform:none; }
+.slide.active .reveal:nth-child(1) { transition-delay:.05s; }
+.slide.active .reveal:nth-child(2) { transition-delay:.14s; }
+.slide.active .reveal:nth-child(3) { transition-delay:.23s; }
+.slide.active .reveal:nth-child(4) { transition-delay:.32s; }
+.slide.active .reveal:nth-child(5) { transition-delay:.41s; }
+.slide.active .reveal:nth-child(6) { transition-delay:.50s; }
+.slide.active .reveal:nth-child(7) { transition-delay:.59s; }
+.slide.active .reveal:nth-child(8) { transition-delay:.68s; }
+
+/* ============================================================
+   风格 · 科技蓝（浅色政务科技风）
+   设计意图：白蓝渐变底 + 点阵与几何装饰 + 玻璃拟态卡片；
+   主色 #1668DC，辅色青 #19B8C4；数字用 Sora，中文用 Noto Sans SC；
+   内页统一「标头 + 卡片矩阵 + 底部信息条」节奏，保证 24 页视觉同族。
+   ============================================================ */
+:root {
+  --ink:#0C1E3C; --ink2:#3D5A80; --ink3:#7A90B0;
+  --blue:#1668DC; --blue2:#3E8BFF; --cyan:#19B8C4;
+  --line:rgba(22,104,220,.16);
+  --card:rgba(255,255,255,.78);
+}
+.s-a { color:var(--ink);
+  background:
+    radial-gradient(1200px 720px at 88% -12%, rgba(62,139,255,.18), transparent 60%),
+    radial-gradient(980px 640px at -12% 112%, rgba(25,184,196,.13), transparent 60%),
+    linear-gradient(180deg,#F4F8FF 0%,#E7EFFF 100%);
+}
+/* 点阵网格 */
+.s-a .dots { position:absolute; inset:0;
+  background-image:radial-gradient(rgba(22,104,220,.15) 1.6px, transparent 1.6px);
+  background-size:38px 38px; opacity:.5;
+  -webkit-mask-image:radial-gradient(940px 640px at 80% 26%, #000 30%, transparent 78%);
+          mask-image:radial-gradient(940px 640px at 80% 26%, #000 30%, transparent 78%);
+}
+/* 几何装饰 */
+.s-a .geo { position:absolute; background:linear-gradient(135deg,var(--blue2),var(--blue)); opacity:.09; pointer-events:none; }
+.s-a .geo.g1 { width:540px; height:330px; right:-130px; top:170px; clip-path:polygon(28% 0,100% 0,72% 100%,0 100%); }
+.s-a .geo.g2 { width:420px; height:250px; right:70px; bottom:-90px; clip-path:polygon(0 0,64% 0,100% 100%,36% 100%); opacity:.06; }
+.s-a .geo.g3 { width:140px; height:140px; clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); opacity:.11; }
+.s-a .hairline { position:absolute; left:0; right:0; top:84px; height:1px;
+  background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line) 82%,transparent); }
+
+/* 顶部品牌标识 */
+.s-a .brand { position:absolute; top:50px; left:96px; display:flex; align-items:center; gap:16px; z-index:5; }
+.s-a .brand .mark { width:46px; height:46px; border-radius:12px;
+  background:linear-gradient(135deg,var(--blue),var(--blue2));
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 8px 24px rgba(22,104,220,.35); }
+.s-a .brand .mark svg { width:26px; height:26px; }
+.s-a .brand .name { font-size:20px; font-weight:700; letter-spacing:2px; color:var(--ink); }
+.s-a .brand .name small { display:block; font-size:11px; font-weight:400; letter-spacing:3px; color:var(--ink3); margin-top:2px; }
+.s-a .topright { position:absolute; top:62px; right:var(--chrome-clear, 96px); z-index:5; font-family:'Sora',sans-serif;
+  font-size:13px; letter-spacing:4px; color:var(--ink3); text-transform:uppercase; }
+.s-a .part { position:absolute; top:62px; right:var(--chrome-clear, 96px); z-index:5; font-size:17px; font-weight:500;
+  letter-spacing:3px; color:var(--blue); border:1px solid var(--line); background:rgba(255,255,255,.55);
+  padding:8px 22px; border-radius:999px; }
+
+/* === 内容页骨架 === */
+.s-a .page { position:absolute; inset:0; padding:128px 110px 96px; display:flex; flex-direction:column; }
+.s-a .phead { display:flex; align-items:flex-end; justify-content:space-between; gap:40px; }
+.s-a .pkick { display:flex; align-items:center; gap:14px; font-family:'Sora',sans-serif;
+  font-size:17px; font-weight:700; letter-spacing:4px; color:var(--blue); margin-bottom:16px; }
+.s-a .pkick::before { content:''; width:10px; height:10px; background:var(--blue); clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); }
+.s-a h2 { font-size:52px; font-weight:900; letter-spacing:2px; line-height:1.24; }
+.s-a h2 .grad { background:linear-gradient(120deg,var(--blue),var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.s-a .psub { font-size:22px; color:var(--ink2); margin-top:14px; letter-spacing:1px; line-height:1.5; }
+.s-a .pnum { font-family:'Sora',sans-serif; font-size:130px; font-weight:800; line-height:.8; flex:none;
+  color:transparent; -webkit-text-stroke:2px rgba(22,104,220,.22); letter-spacing:-4px; }
+
+/* === 卡片矩阵（通用） === */
+.s-a .cards { display:grid; gap:30px; margin-top:52px; }
+.s-a .cards.c2 { grid-template-columns:repeat(2,1fr); }
+.s-a .cards.c3 { grid-template-columns:repeat(3,1fr); }
+.s-a .cards.c4 { grid-template-columns:repeat(4,1fr); }
+.s-a .cards.c5 { grid-template-columns:repeat(5,1fr); }
+.s-a .card { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:36px 34px;
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 18px 44px rgba(22,104,220,.09); position:relative; overflow:hidden;
+  transition:transform .35s ease, box-shadow .35s ease; }
+.s-a .card:hover { transform:translateY(-8px); box-shadow:0 30px 64px rgba(22,104,220,.18); }
+.s-a .card::after { content:''; position:absolute; left:0; top:0; width:100%; height:5px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan)); opacity:.85; }
+.s-a .card .no { font-family:'Sora',sans-serif; font-size:22px; font-weight:800; color:var(--blue); letter-spacing:2px; }
+.s-a .card .icon { width:58px; height:58px; border-radius:15px; margin:16px 0 20px;
+  background:linear-gradient(135deg,rgba(22,104,220,.12),rgba(25,184,196,.14));
+  display:flex; align-items:center; justify-content:center; }
+.s-a .card h3 { font-size:28px; font-weight:800; margin-bottom:13px; letter-spacing:1px; line-height:1.3; }
+.s-a .card p { font-size:19px; line-height:1.72; color:var(--ink2); }
+.s-a .card p + p { margin-top:8px; }
+
+/* 小卡（密集网格用） */
+.s-a .mini { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:26px 26px;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); box-shadow:0 14px 34px rgba(22,104,220,.08);
+  transition:transform .35s ease, box-shadow .35s ease; }
+.s-a .mini:hover { transform:translateY(-6px); box-shadow:0 24px 52px rgba(22,104,220,.16); }
+.s-a .mini .no { font-family:'Sora',sans-serif; font-size:19px; font-weight:800; color:var(--blue); }
+.s-a .mini h4 { font-size:23px; font-weight:800; margin:10px 0 10px; letter-spacing:1px; line-height:1.32; }
+.s-a .mini p { font-size:17.5px; line-height:1.66; color:var(--ink2); }
+.s-a .mini .tagline { display:inline-block; margin-top:12px; font-size:15px; font-weight:700; color:var(--blue);
+  background:rgba(22,104,220,.08); padding:5px 14px; border-radius:999px; letter-spacing:2px; }
+
+/* === 步骤流（横向链路） === */
+.s-a .flow { display:flex; align-items:stretch; gap:0; margin-top:44px; }
+.s-a .flow .step { flex:1; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:26px 24px;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); box-shadow:0 14px 34px rgba(22,104,220,.08); }
+.s-a .flow .step .no { font-family:'Sora',sans-serif; font-size:19px; font-weight:800; color:var(--blue); }
+.s-a .flow .step h4 { font-size:23px; font-weight:800; margin:8px 0 8px; }
+.s-a .flow .step p { font-size:17px; line-height:1.6; color:var(--ink2); }
+.s-a .flow .arr { flex:none; width:52px; display:flex; align-items:center; justify-content:center; }
+.s-a .flow .arr::before { content:''; width:15px; height:15px; border-top:3px solid var(--blue);
+  border-right:3px solid var(--blue); transform:rotate(45deg); opacity:.6; }
+
+/* === 层叠架构 === */
+.s-a .layers { display:flex; flex-direction:column; gap:16px; margin-top:44px; flex:1; }
+.s-a .layer { display:grid; grid-template-columns:250px 1fr; align-items:center; gap:28px;
+  background:var(--card); border:1px solid var(--line); border-radius:18px; padding:24px 30px;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); box-shadow:0 14px 34px rgba(22,104,220,.07); }
+.s-a .layer .lt { display:flex; align-items:center; gap:16px; }
+.s-a .layer .lt .no { font-family:'Sora',sans-serif; font-size:34px; font-weight:800;
+  background:linear-gradient(135deg,var(--blue),var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.s-a .layer .lt h3 { font-size:26px; font-weight:800; letter-spacing:1px; }
+.s-a .layer .lc { display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; }
+.s-a .layer .lc span { font-size:19px; color:var(--ink2); position:relative; padding-left:18px; }
+.s-a .layer .lc span::before { content:''; position:absolute; left:0; top:50%; width:8px; height:8px; border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--cyan)); transform:translateY(-50%); }
+.s-a .layer .lc span b { color:var(--ink); font-weight:700; }
+
+/* === 前后对比表 === */
+.s-a .vs { margin-top:44px; display:flex; flex-direction:column; gap:13px; }
+.s-a .vs .row { display:grid; grid-template-columns:200px 1fr 56px 1fr; align-items:center; gap:18px;
+  background:var(--card); border:1px solid var(--line); border-radius:16px; padding:19px 26px;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+.s-a .vs .row .k { font-size:22px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:12px; }
+.s-a .vs .row .k i { font-style:normal; font-family:'Sora',sans-serif; font-size:15px; font-weight:800; color:#fff;
+  background:linear-gradient(135deg,var(--blue),var(--blue2)); border-radius:8px; padding:4px 10px; }
+.s-a .vs .row .old { font-size:19px; color:var(--ink3); position:relative; padding-left:26px; }
+.s-a .vs .row .old::before { content:'✕'; position:absolute; left:0; color:#B8C4D4; font-weight:700; }
+.s-a .vs .row .new { font-size:19.5px; color:var(--ink); font-weight:500; position:relative; padding-left:26px; }
+.s-a .vs .row .new::before { content:'✓'; position:absolute; left:0; color:var(--blue); font-weight:800; }
+.s-a .vs .row .go { display:flex; align-items:center; justify-content:center; }
+.s-a .vs .row .go::before { content:''; width:13px; height:13px; border-top:3px solid var(--blue);
+  border-right:3px solid var(--blue); transform:rotate(45deg); opacity:.65; }
+
+/* === 漏斗 === */
+.s-a .funnel { display:flex; flex-direction:column; gap:14px; margin-top:40px; flex:1; justify-content:center; }
+.s-a .funnel .fs { display:grid; grid-template-columns:64px 1fr; align-items:center; gap:22px;
+  background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 26px;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+.s-a .funnel .fs .no { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+  font-family:'Sora',sans-serif; font-weight:800; font-size:21px; color:#fff;
+  background:linear-gradient(135deg,var(--blue),var(--blue2)); box-shadow:0 8px 20px rgba(22,104,220,.3); }
+.s-a .funnel .fs h4 { font-size:23px; font-weight:800; margin-bottom:6px; }
+.s-a .funnel .fs p { font-size:18px; color:var(--ink2); line-height:1.55; }
+
+/* === 时间线 === */
+.s-a .timeline { display:grid; grid-template-columns:repeat(3,1fr); gap:26px; margin-top:46px; position:relative; }
+.s-a .timeline::before { content:''; position:absolute; left:4%; right:4%; top:26px; height:3px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan)); opacity:.35; border-radius:3px; }
+.s-a .timeline .tnode { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:30px 28px;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); box-shadow:0 16px 40px rgba(22,104,220,.09); position:relative; }
+.s-a .timeline .tnode::before { content:''; position:absolute; top:-11px; left:44px; width:20px; height:20px; border-radius:50%;
+  background:#fff; border:4px solid var(--blue); box-shadow:0 4px 14px rgba(22,104,220,.35); }
+.s-a .timeline .tnode .date { font-family:'Sora',sans-serif; font-size:26px; font-weight:800; color:var(--blue); margin-bottom:8px; }
+.s-a .timeline .tnode h4 { font-size:24px; font-weight:800; margin-bottom:10px; }
+.s-a .timeline .tnode p { font-size:18px; line-height:1.65; color:var(--ink2); }
+.s-a .timeline .tnode.todo { border-style:dashed; }
+.s-a .timeline .tnode.todo::before { border-color:#B8C4D4; }
+.s-a .timeline .tnode.todo .date { color:var(--ink3); }
+
+/* === 主题横条（封面/过渡） === */
+.s-a .quote-bar { margin-top:auto; display:flex; align-items:center; gap:22px;
+  background:linear-gradient(90deg,rgba(22,104,220,.10),rgba(25,184,196,.07));
+  border:1px solid var(--line); border-radius:18px; padding:24px 34px; }
+.s-a .quote-bar .qm { font-family:'Sora',sans-serif; font-size:40px; font-weight:800; color:var(--blue); opacity:.5; }
+.s-a .quote-bar p { font-size:24px; font-weight:700; color:var(--ink); letter-spacing:1px; line-height:1.5; }
+.s-a .quote-bar p em { font-style:normal; background:linear-gradient(120deg,var(--blue),var(--cyan));
+  -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+/* === 底部信息条 === */
+.s-a .footbar { margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:24px;
+  border-top:1px solid var(--line); padding-top:26px; }
+.s-a .footbar .fl { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.s-a .footbar .lab { font-size:19px; font-weight:700; color:var(--ink); letter-spacing:2px; flex:none; }
+.s-a .footbar .txt { font-size:19px; color:var(--ink2); letter-spacing:1px; }
+.s-a .tags { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.s-a .tag { font-size:18px; color:var(--blue); border:1px solid var(--line); background:rgba(255,255,255,.6);
+  padding:9px 24px; border-radius:999px; letter-spacing:2px; }
+.s-a .note { font-size:15.5px; color:var(--ink3); border:1px dashed var(--line); border-radius:12px;
+  padding:12px 20px; line-height:1.6; background:rgba(255,255,255,.4); }
+
+/* === 封面 === */
+.s-a .cover { position:absolute; inset:0; padding:168px 96px 0; display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center; }
+.s-a .kicker { display:flex; align-items:center; gap:18px; font-size:23px; font-weight:500; letter-spacing:6px; color:var(--ink2); }
+.s-a .kicker::before { content:''; width:56px; height:7px; border-radius:4px; background:linear-gradient(90deg,var(--blue),var(--cyan)); }
+.s-a h1 { font-size:146px; font-weight:900; line-height:1.06; letter-spacing:4px; margin:24px 0 10px; }
+.s-a h1 .grad { background:linear-gradient(120deg,var(--blue) 10%,var(--cyan) 90%);
+  -webkit-background-clip:text; background-clip:text; color:transparent; }
+.s-a .en { font-family:'Sora',sans-serif; font-size:15px; font-weight:600; letter-spacing:6px; color:var(--ink3); margin-bottom:34px; }
+.s-a .lede { font-size:27px; font-weight:500; color:var(--ink2); line-height:1.6; }
+.s-a .lede b { color:var(--blue); font-weight:700; }
+.s-a .lede2 { font-size:20px; color:var(--ink3); margin-top:14px; letter-spacing:1px; }
+.s-a .illus { width:100%; height:auto; }
+.s-a .illus .fcard { animation:floaty 5.5s ease-in-out infinite; }
+.s-a .illus .fcard.f2 { animation-delay:1.4s; }
+.s-a .illus .fcard.f3 { animation-delay:2.8s; }
+@keyframes floaty { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-16px); } }
+.s-a .illus .orbit { transform-origin:360px 420px; animation:spin 26s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.s-a .illus .pulse { animation:pulse 2.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{ opacity:.35; } 50%{ opacity:1; } }
+.s-a .statbar { position:absolute; left:96px; right:96px; bottom:64px; height:146px;
+  background:var(--card); border:1px solid var(--line); border-radius:22px;
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 24px 60px rgba(22,104,220,.14);
+  display:grid; grid-template-columns:repeat(3,1fr); align-items:center; z-index:5; }
+.s-a .stat { text-align:center; position:relative; }
+.s-a .stat + .stat::before { content:''; position:absolute; left:0; top:22%; height:56%; width:1px; background:var(--line); }
+.s-a .stat b { font-family:'Sora',sans-serif; font-size:64px; font-weight:800; letter-spacing:-1px;
+  background:linear-gradient(135deg,var(--blue),var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.s-a .stat span { display:block; font-size:20px; color:var(--ink2); margin-top:4px; letter-spacing:3px; }
+
+/* === 议程页三大块 === */
+.s-a .agenda { display:grid; grid-template-columns:repeat(3,1fr); gap:34px; margin-top:56px; flex:1; }
+.s-a .agenda .acard { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:42px 38px;
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 20px 48px rgba(22,104,220,.10);
+  display:flex; flex-direction:column; position:relative; overflow:hidden; transition:transform .35s ease, box-shadow .35s ease; }
+.s-a .agenda .acard:hover { transform:translateY(-10px); box-shadow:0 34px 68px rgba(22,104,220,.2); }
+.s-a .agenda .acard::after { content:''; position:absolute; left:0; top:0; width:100%; height:6px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan)); }
+.s-a .agenda .acard .no { font-family:'Sora',sans-serif; font-size:60px; font-weight:800; line-height:1;
+  background:linear-gradient(135deg,var(--blue),var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.s-a .agenda .acard h3 { font-size:34px; font-weight:900; margin:16px 0 22px; letter-spacing:2px; }
+.s-a .agenda .acard ul { list-style:none; display:flex; flex-direction:column; gap:15px; }
+.s-a .agenda .acard li { font-size:21px; color:var(--ink2); position:relative; padding-left:26px; line-height:1.5; }
+.s-a .agenda .acard li::before { content:''; position:absolute; left:2px; top:12px; width:9px; height:9px;
+  border-radius:50%; background:linear-gradient(135deg,var(--blue),var(--cyan)); }
+
+/* === 结束页 === */
+.s-a .end { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+.s-a .end .ek { font-size:24px; letter-spacing:10px; color:var(--ink2); margin-bottom:18px; }
+.s-a .end h1 { font-size:120px; }
+.s-a .end .esub { font-size:30px; font-weight:700; letter-spacing:6px; color:var(--ink); margin-top:8px; }
+.s-a .end .ecomp { font-size:21px; color:var(--ink3); letter-spacing:4px; margin-top:14px; }
+.s-a .end .qr { margin-top:44px; display:flex; align-items:center; gap:26px;
+  background:var(--card); border:1px solid var(--line); border-radius:22px; padding:24px 34px;
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 20px 50px rgba(22,104,220,.14); }
+.s-a .end .qr img { width:132px; height:132px; border-radius:12px; display:block; }
+.s-a .end .qr .qt { font-size:19px; color:var(--ink2); line-height:1.7; letter-spacing:1px; }
+.s-a .end .qr .qt b { display:block; font-size:23px; color:var(--ink); letter-spacing:2px; margin-bottom:4px; }
+
+/* === 页码（JS 注入） === */
+.pageno { position:absolute; right:54px; bottom:30px; z-index:4; font-family:'Sora',sans-serif;
+  font-size:15px; letter-spacing:3px; color:var(--ink3); }
+.pageno b { color:var(--blue); font-weight:800; }
+
+/* === 导航与提示 === */
+#dots { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); display:flex; gap:9px; z-index:50; }
+#dots i { width:9px; height:9px; border-radius:50%; background:rgba(12,30,60,.22); cursor:pointer; transition:all .3s; }
+#dots i.on { background:#1668DC; width:26px; border-radius:5px; }
+#hint { position:fixed; left:22px; bottom:18px; z-index:50; font-family:'Sora',sans-serif;
+  font-size:12px; letter-spacing:1.5px; color:rgba(12,30,60,.42); }
+#intro-close { position:fixed; top:18px; right:22px; z-index:80; display:inline-flex; align-items:center; gap:6px;
+  height:36px; padding:0 14px 0 10px; border:1px solid rgba(22,104,220,.22); border-radius:999px;
+  background:rgba(255,255,255,.92); color:#0C1E3C; cursor:pointer;
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  font-size:14px; font-weight:500; letter-spacing:1px;
+  box-shadow:0 8px 24px rgba(12,30,60,.12); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+#intro-close svg { width:16px; height:16px; }
+#intro-close:hover { color:#1668DC; border-color:#1668DC; background:#fff; }
+body.editing [contenteditable] { outline:1px dashed rgba(22,104,220,.55); outline-offset:4px; border-radius:4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .slide, .card, .mini { transition:none; }
+  .s-a .illus .fcard, .s-a .illus .orbit, .s-a .illus .pulse { animation:none; }
+}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ================= 第 1 页 · 封面 ================= -->
+  <section class="slide s-a active">
+    <div class="dots"></div>
+    <div class="geo g1"></div><div class="geo g2"></div><div class="geo g3" style="left:45%;top:9%"></div>
+    <div class="hairline"></div>
+
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">河南智策数字科技有限公司<small>HENAN ZHICE DIGITAL TECHNOLOGY</small></div>
+    </div>
+    <div class="topright">Roadshow · 2026</div>
+
+    <div class="cover">
+      <div>
+        <div class="kicker reveal">双引擎驱动的政企数据智能平台</div>
+        <h1 class="reveal">政策<span class="grad">大脑</span></h1>
+        <div class="en reveal">POLICY DATA · AI ENGINE · ENTERPRISE SERVICE</div>
+        <div class="lede reveal"><b>8000+</b> 政府信源 &nbsp;·&nbsp; <b>2000万+</b> 政策资讯 &nbsp;·&nbsp; <b>500万+</b> 受益企业</div>
+        <div class="lede2 reveal">15 款标准化智能系统 · 覆盖 机构 / 政府 / 高校 / 企业</div>
+      </div>
+
+      <div class="reveal">
+        <svg class="illus" viewBox="0 0 720 720" fill="none">
+          <defs>
+            <linearGradient id="a-top" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#EAF3FF"/><stop offset="1" stop-color="#B9D6FF"/>
+            </linearGradient>
+            <linearGradient id="a-side" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7FB0FF"/><stop offset="1" stop-color="#1668DC"/>
+            </linearGradient>
+            <linearGradient id="a-bar" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#4E9BFF"/><stop offset="1" stop-color="#1668DC"/>
+            </linearGradient>
+            <filter id="a-blur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="26"/></filter>
+          </defs>
+
+          <ellipse cx="360" cy="430" rx="290" ry="200" fill="#1668DC" opacity=".14" filter="url(#a-blur)"/>
+
+          <g class="orbit">
+            <ellipse cx="360" cy="420" rx="300" ry="112" stroke="#1668DC" stroke-opacity=".3" stroke-dasharray="3 12" stroke-width="2"/>
+            <circle cx="660" cy="420" r="7" fill="#19B8C4"/>
+            <circle cx="60" cy="420" r="5" fill="#1668DC"/>
+          </g>
+
+          <g class="fcard f1">
+            <rect x="44" y="118" width="252" height="92" rx="16" fill="#FFFFFF" fill-opacity=".92" stroke="#1668DC" stroke-opacity=".28"/>
+            <rect x="70" y="142" width="40" height="40" rx="10" fill="#1668DC" fill-opacity=".14"/>
+            <path d="M80 156h20v16H80z" stroke="#1668DC" stroke-width="2" fill="none"/>
+            <rect x="126" y="146" width="120" height="9" rx="4.5" fill="#1668DC" fill-opacity=".55"/>
+            <rect x="126" y="165" width="76" height="8" rx="4" fill="#1668DC" fill-opacity=".25"/>
+          </g>
+          <g class="fcard f2">
+            <rect x="404" y="76" width="264" height="96" rx="16" fill="#FFFFFF" fill-opacity=".92" stroke="#19B8C4" stroke-opacity=".4"/>
+            <rect x="430" y="100" width="40" height="40" rx="10" fill="#19B8C4" fill-opacity=".16"/>
+            <path d="M440 118a10 10 0 0 1 10-10h10a10 10 0 0 1 10 10v6a10 10 0 0 0-10 10h-10a10 10 0 0 1-10-10z" stroke="#19B8C4" stroke-width="2" fill="none"/>
+            <rect x="486" y="106" width="130" height="9" rx="4.5" fill="#19B8C4" fill-opacity=".55"/>
+            <rect x="486" y="125" width="84" height="8" rx="4" fill="#19B8C4" fill-opacity=".25"/>
+          </g>
+          <g class="fcard f3">
+            <rect x="96" y="556" width="272" height="96" rx="16" fill="#FFFFFF" fill-opacity=".92" stroke="#1668DC" stroke-opacity=".28"/>
+            <rect x="122" y="580" width="40" height="40" rx="10" fill="#1668DC" fill-opacity=".14"/>
+            <path d="M132 606l8-10 7 7 9-13" stroke="#1668DC" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <rect x="178" y="586" width="132" height="9" rx="4.5" fill="#1668DC" fill-opacity=".55"/>
+            <rect x="178" y="605" width="86" height="8" rx="4" fill="#1668DC" fill-opacity=".25"/>
+          </g>
+
+          <g>
+            <polygon points="190,420 265,545 265,615 190,490" fill="url(#a-side)" opacity=".45"/>
+            <polygon points="265,545 475,545 475,615 265,615" fill="url(#a-side)" opacity=".8"/>
+            <polygon points="550,420 475,545 475,615 550,490" fill="url(#a-side)"/>
+            <polygon points="190,420 265,295 475,295 550,420 475,545 265,545" fill="url(#a-top)" stroke="#1668DC" stroke-opacity=".35" stroke-width="1.5"/>
+            <g stroke="#1668DC" stroke-opacity=".18" stroke-width="1">
+              <line x1="265" y1="295" x2="265" y2="545"/>
+              <line x1="475" y1="295" x2="475" y2="545"/>
+              <line x1="190" y1="420" x2="550" y2="420"/>
+            </g>
+            <g>
+              <rect x="296" y="352" width="26" height="96" rx="6" fill="url(#a-bar)" opacity=".85"/>
+              <ellipse cx="309" cy="352" rx="13" ry="5" fill="#8FC0FF" class="pulse"/>
+              <rect x="352" y="318" width="26" height="130" rx="6" fill="url(#a-bar)"/>
+              <ellipse cx="365" cy="318" rx="13" ry="5" fill="#9FCBFF" class="pulse"/>
+              <rect x="408" y="368" width="26" height="80" rx="6" fill="url(#a-bar)" opacity=".85"/>
+              <ellipse cx="421" cy="368" rx="13" ry="5" fill="#8FC0FF" class="pulse"/>
+              <rect x="322" y="436" width="26" height="60" rx="6" fill="url(#a-bar)" opacity=".6"/>
+              <rect x="398" y="448" width="26" height="48" rx="6" fill="url(#a-bar)" opacity=".6"/>
+            </g>
+            <circle cx="360" cy="420" r="34" fill="#1668DC" opacity=".12"/>
+            <circle cx="360" cy="420" r="20" fill="#1668DC"/>
+            <circle cx="360" cy="420" r="34" stroke="#1668DC" stroke-opacity=".4" stroke-dasharray="2 6"/>
+          </g>
+
+          <circle cx="150" cy="240" r="4" fill="#1668DC" opacity=".5"/>
+          <circle cx="610" cy="560" r="5" fill="#19B8C4" opacity=".6"/>
+          <circle cx="640" cy="300" r="3.5" fill="#1668DC" opacity=".4"/>
+          <path d="M120 480h36M580 640h36" stroke="#1668DC" stroke-opacity=".3" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="statbar reveal">
+      <div class="stat"><b>8000+</b><span>政策数据信源</span></div>
+      <div class="stat"><b>2000万+</b><span>政策文件资讯</span></div>
+      <div class="stat"><b>500万+</b><span>获得政策企业</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 第 2 页 · 路演议程 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:90%;top:12%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="topright">Agenda</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">路演议程 · AGENDA</div>
+          <h2 class="reveal">本次路演回答<span class="grad">三个问题</span></h2>
+          <div class="psub reveal">为什么是现在、我们凭什么赢、如何规模化</div>
+        </div>
+        <div class="pnum reveal">00</div>
+      </div>
+
+      <div class="agenda">
+        <div class="acard reveal">
+          <div class="no">01</div>
+          <h3>现状与痛点</h3>
+          <ul>
+            <li>政策数据的规模与困局</li>
+            <li>企服行业的信息化洼地</li>
+            <li>为什么解决现在才成立</li>
+          </ul>
+        </div>
+        <div class="acard reveal">
+          <div class="no">02</div>
+          <h3>我们的解法</h3>
+          <ul>
+            <li>政策大脑数据底座</li>
+            <li>15 款标准化智能系统</li>
+            <li>合规机制与交付能力</li>
+          </ul>
+        </div>
+        <div class="acard reveal">
+          <div class="no">03</div>
+          <h3>商业化路径</h3>
+          <ul>
+            <li>三种付费方式</li>
+            <li>政府 · 企业 · 伙伴三类客户</li>
+            <li>团队背书与路线图</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">“</span>
+        <p>政策大脑 —— <em>让政策数据产生更大价值</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 3 页 · 现状：富矿沉睡 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:91%;top:60%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">01 · 现状与痛点</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">现状研判</div>
+          <h2 class="reveal">政策数据已成<span class="grad">富矿</span>，但价值仍在沉睡</h2>
+          <div class="psub reveal">我们面对的是一个规模足够、可用性极差的市场</div>
+        </div>
+        <div class="pnum reveal">01</div>
+      </div>
+
+      <div class="cards c3">
+        <div class="card reveal">
+          <div class="no">01</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+            </svg>
+          </div>
+          <h3>数据规模已具备</h3>
+          <p>政策文件数量庞大，覆盖中央到地方、多个行业与领域，构成了丰富的数据资源。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">02</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>
+            </svg>
+          </div>
+          <h3>红利传导受阻</h3>
+          <p>好的政策难以精准触达企业与个人，政策价值无法充分释放，市场潜力尚未转化。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">03</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <ellipse cx="12" cy="5" rx="8" ry="2.6"/><path d="M4 5v7c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6V5"/><path d="M4 12v7c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6v-7"/>
+            </svg>
+          </div>
+          <h3>信息化程度极低</h3>
+          <p>大量政策信息仍以非结构化形式存在，检索困难、标准不统一、难以高效利用。</p>
+        </div>
+      </div>
+
+      <div class="footbar reveal">
+        <div class="fl">
+          <span class="lab">政策数据类型</span>
+          <div class="tags">
+            <span class="tag">文件公告</span><span class="tag">政策解读</span>
+            <span class="tag">申报指南</span><span class="tag">地方细则</span>
+          </div>
+        </div>
+        <span class="txt">政策数据 · 已成富矿</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 4 页 · 有数据 ≠ 能用 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g2"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">01 · 现状与痛点</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">数据困局</div>
+          <h2 class="reveal">为什么「有数据」不等于「能用」</h2>
+          <div class="psub reveal">规模足够，可用性极差 —— 8000+ 信源、2000万+ 政策资讯、500万+ 受益企业，价值亟待释放</div>
+        </div>
+        <div class="pnum reveal">02</div>
+      </div>
+
+      <div class="cards c3">
+        <div class="card reveal">
+          <div class="no">01</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <circle cx="6" cy="6" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="12" cy="18" r="2.6"/>
+              <path d="M7.6 7.6 10.8 16M16.4 7.6 13.2 16M8.6 6h6.8"/>
+            </svg>
+          </div>
+          <h3>来源分散</h3>
+          <p>政策散布于 8000+ 个各级、各部委站点，发布口径与文件格式互不统一。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">02</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4.2"/>
+            </svg>
+          </div>
+          <h3>采集难度高</h3>
+          <p>从政府发布到平台可用，需跨越采集、判断、分析、结构化治理四道环节。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">03</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18.5" cy="16.5" r="2.6"/>
+            </svg>
+          </div>
+          <h3>缺少统一标准</h3>
+          <p>缺少统一入口与标准化字段，企业侧「查不到、读不懂、报不上」成为常态。</p>
+        </div>
+      </div>
+
+      <div class="reveal" style="margin-top:36px">
+        <div style="font-size:19px;font-weight:700;letter-spacing:3px;color:var(--ink2);margin-bottom:2px">全流程 AI 治理链路 —— 让政策数据真正可用、可理解、可服务</div>
+        <div class="flow" style="margin-top:18px">
+          <div class="step"><div class="no">01</div><h4>AI 采集</h4><p>多源异构数据智能抓取</p></div>
+          <div class="arr"></div>
+          <div class="step"><div class="no">02</div><h4>AI 判断</h4><p>政策有效性与适用性识别</p></div>
+          <div class="arr"></div>
+          <div class="step"><div class="no">03</div><h4>AI 分析</h4><p>语义理解与关联分析</p></div>
+          <div class="arr"></div>
+          <div class="step"><div class="no">04</div><h4>AI 标准化入库</h4><p>标准化字段与知识图谱构建</p></div>
+          <div class="arr"></div>
+          <div class="step"><div class="no">05</div><h4>AI 结构化治理</h4><p>形成可检索、可调用的政策数据库</p></div>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal" style="margin-top:30px">
+        <span class="qm">!</span>
+        <p>数据如果不能被调用，<em>就只是成本，而不是资产</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 5 页 · 企服行业的 Excel 时代 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:88%;top:14%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">01 · 现状与痛点</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">行业洼地</div>
+          <h2 class="reveal">企服行业的作业方式，仍停留在<span class="grad">「Excel 与微信群时代」</span></h2>
+          <div class="psub reveal">熟悉的工具，却承载着复杂的企业服务工作 —— 做得越久，越能感受到：越往后，效率差距越大</div>
+        </div>
+        <div class="pnum reveal">03</div>
+      </div>
+
+      <div class="cards c5" style="margin-top:44px">
+        <div class="mini reveal">
+          <div class="no">01</div><h4>前端获客</h4>
+          <p>短视频获客全靠人工一条条翻评论</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">02</div><h4>销售跟单</h4>
+          <p>销售靠 Excel 跟单，进度口径不一</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">03</div><h4>项目协同</h4>
+          <p>项目靠微信群同步，信息反复丢失</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">04</div><h4>资料管理</h4>
+          <p>文档散落在各个电脑里，难以复用</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">05</div><h4>政策申报</h4>
+          <p>高企申报材料要翻十几个文件夹</p>
+        </div>
+      </div>
+
+      <div class="reveal" style="font-size:19px;font-weight:700;letter-spacing:3px;color:var(--ink2);margin-top:40px">三层现实约束</div>
+      <div class="cards c3" style="margin-top:18px">
+        <div class="card reveal">
+          <div class="no">价格</div>
+          <h3>高端系统一次性投入高</h3>
+          <p>中小机构买不起。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">交付</div>
+          <h3>定制开发周期长</h3>
+          <p>业务等不起。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">适配</div>
+          <h3>通用软件不懂政策业务</h3>
+          <p>用不好。</p>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">!</span>
+        <p>工具没有变，业务复杂度在变 —— <em>越往后，效率差距越大</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 6 页 · 三重错配 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">01 · 现状与痛点</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">核心矛盾</div>
+          <h2 class="reveal">政策发得出、企业接不住、<span class="grad">服务商做不起</span></h2>
+          <div class="psub reveal">真正的机会，藏在三重错配的交汇处</div>
+        </div>
+        <div class="pnum reveal">04</div>
+      </div>
+
+      <div class="cards c3" style="margin-top:52px">
+        <div class="card reveal">
+          <div class="no">政策 · 发得出</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>
+            </svg>
+          </div>
+          <h3>01 数据侧分散</h3>
+          <p>政策数据分散在多个部门、口径不一，难以形成统一、可用的数据底座。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">企业 · 接不住</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/>
+            </svg>
+          </div>
+          <h3>02 企业侧无感</h3>
+          <p>企业信息化基础薄弱，对政策理解不足，缺乏主动申请和使用的能力。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">服务商 · 做不起</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+            </svg>
+          </div>
+          <h3>03 服务侧失控</h3>
+          <p>服务商面临数据获取难、合规成本高、交付周期长，难以形成可持续的商业模式。</p>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">◎</span>
+        <p>三重错配同时发生 —— <em>这就是我们要解决的问题</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 7 页 · 最后一公里 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g2"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">01 · 现状与痛点</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">问题结果</div>
+          <h2 class="reveal">政策红利传导的「最后一公里」，<span class="grad">始终没有被打通</span></h2>
+          <div class="psub reveal">数据侧分散、企业侧无感、服务侧交付成本失控，三重错配同时发生</div>
+        </div>
+        <div class="pnum reveal">05</div>
+      </div>
+
+      <div class="cards c3">
+        <div class="card reveal">
+          <div class="no">数据侧 · 分散</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <circle cx="6" cy="6" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="12" cy="18" r="2.6"/>
+              <path d="M7.6 7.6 10.8 16M16.4 7.6 13.2 16M8.6 6h6.8"/>
+            </svg>
+          </div>
+          <h3>无法形成结构化资产</h3>
+          <p>政策散布于 8000+ 个各级站点，口径与格式互不统一，无法直接形成可调用的结构化资产。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">企业侧 · 无感</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/><path d="M9 9.5a3 3 0 0 1 5.2 1.7c0 2-2.2 2.3-2.2 4"/><circle cx="12" cy="18" r=".4" fill="#1668DC"/>
+            </svg>
+          </div>
+          <h3>红利停在半路</h3>
+          <p>企业不知道自己符合哪条政策，不清楚申报路径、材料清单与时间窗口。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">服务侧 · 失控</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M3 17l5-5 4 3 8-8"/><path d="M15 7h5v5"/>
+            </svg>
+          </div>
+          <h3>规模化几乎不可能</h3>
+          <p>服务机构靠人工翻文件夹、拼材料，交付成本随客户数线性上升。</p>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">→</span>
+        <p>从「政策发布」到「企业受益」，中间隔着<em>数据治理与服务交付两道鸿沟</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 8 页 · 为什么是现在 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:90%;top:66%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">01 · 现状与痛点</div>
+
+    <div class="page" style="padding-top:118px">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">时机研判</div>
+          <h2 class="reveal">AI 使「非结构化政策文本 → 结构化数据 → <span class="grad">自动申报</span>」首次具备工程可行性</h2>
+          <div class="psub reveal">政策文本的非结构化特征，恰是大模型最擅长的任务类型</div>
+        </div>
+        <div class="pnum reveal">06</div>
+      </div>
+
+      <div class="vs">
+        <div class="row reveal">
+          <div class="k"><i>01</i>数据采集</div>
+          <div class="old">人工盯各级站点，易漏采、更新滞后</div>
+          <div class="go"></div>
+          <div class="new">AI 采集 + AI 判断，自动识别有效政策</div>
+        </div>
+        <div class="row reveal">
+          <div class="k"><i>02</i>政策解读</div>
+          <div class="old">依赖顾问逐条阅读与个人经验</div>
+          <div class="go"></div>
+          <div class="new">AI 分析 + 结构化治理，形成可计算字段</div>
+        </div>
+        <div class="row reveal">
+          <div class="k"><i>03</i>企业匹配</div>
+          <div class="old">人工比对资质与条款，效率受限</div>
+          <div class="go"></div>
+          <div class="new">企业匹配政策 / 政策匹配企业，双向自动匹配</div>
+        </div>
+        <div class="row reveal">
+          <div class="k"><i>04</i>材料撰写</div>
+          <div class="old">翻十几个文件夹手工拼装</div>
+          <div class="go"></div>
+          <div class="new">AI 生成申报书，一键产出整套申报资料</div>
+        </div>
+      </div>
+
+      <div class="cards c2" style="margin-top:34px">
+        <div class="card reveal">
+          <h3 style="font-size:25px">五库数据资产 + 政策大模型</h3>
+          <p>使「一次治理、多处复用」成立。</p>
+        </div>
+        <div class="card reveal">
+          <h3 style="font-size:25px">治理完成的 API 化数据</h3>
+          <p>可同时喂给自有标品与外部客户。</p>
+        </div>
+      </div>
+
+      <div class="footbar reveal" style="margin-top:26px">
+        <div class="fl"><span class="note">标注说明：本页为基于已核实技术栈与数据资产的能力推演，非第三方统计结论；对外前建议由业务负责人复核措辞。</span></div>
+        <span class="txt">让政策落地更简单</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 9 页 · 双引擎方案 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div><div class="geo g2"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 我们的解法</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">解决方案</div>
+          <h2 class="reveal">一个数据底座 × 一组标品 = <span class="grad">双引擎增长</span></h2>
+          <div class="psub reveal">R · Resolution —— 以数据为根基：用资产建立壁垒，用标品完成规模化</div>
+        </div>
+        <div class="pnum reveal">07</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0;align-items:center;margin-top:64px">
+        <div class="card reveal" style="padding:48px 42px">
+          <div class="no">引擎一 · 数据底座</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <ellipse cx="12" cy="5" rx="8" ry="2.6"/><path d="M4 5v7c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6V5"/><path d="M4 12v7c0 1.4 3.6 2.6 8 2.6s8-1.2 8-2.6v-7"/>
+            </svg>
+          </div>
+          <h3 style="font-size:30px">政策大脑数据底座</h3>
+          <p>汇聚多源政策数据，构建可持续的资产壁垒。</p>
+        </div>
+        <div class="reveal" style="font-family:'Sora',sans-serif;font-size:88px;font-weight:800;color:var(--blue);padding:0 26px">×</div>
+        <div class="card reveal" style="padding:48px 42px">
+          <div class="no">引擎二 · 标准产品</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/>
+              <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/>
+            </svg>
+          </div>
+          <h3 style="font-size:30px">15 款标准化标品</h3>
+          <p>覆盖政策全流程场景，标准化赋能快速复制。</p>
+        </div>
+        <div class="reveal" style="font-family:'Sora',sans-serif;font-size:88px;font-weight:800;color:var(--blue);padding:0 26px">=</div>
+        <div class="card reveal" style="padding:48px 42px;background:linear-gradient(135deg,rgba(22,104,220,.10),rgba(25,184,196,.08))">
+          <div class="no">增长结果</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M3 17l5-5 4 3 8-8"/><path d="M15 7h5v5"/>
+            </svg>
+          </div>
+          <h3 style="font-size:30px">双引擎增长</h3>
+          <p>扩大市场覆盖，提升客户价值，驱动业务持续增长。</p>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">◎</span>
+        <p>以标品为引擎，驱动业务持续增长 —— <em>资产建立壁垒，标品完成规模化</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 10 页 · 双引擎架构 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:90%;top:16%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 我们的解法</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">整体架构</div>
+          <h2 class="reveal">政策大脑做<span class="grad">壁垒与弹药</span>，15 款标品做规模化变现</h2>
+          <div class="psub reveal">从数据到底座、从能力到产品、从产品到客户，构建政策智能的全链路价值闭环</div>
+        </div>
+        <div class="pnum reveal">08</div>
+      </div>
+
+      <div class="layers">
+        <div class="layer reveal">
+          <div class="lt"><span class="no">01</span><h3>数据底座层</h3></div>
+          <div class="lc">
+            <span><b>8000+</b> 信源</span><span>五库：政策 / 资讯 / 企业 / 产业 / 知识</span><span>企业可信数据空间</span>
+          </div>
+        </div>
+        <div class="layer reveal">
+          <div class="lt"><span class="no">02</span><h3>能力层</h3></div>
+          <div class="lc">
+            <span><b>40</b> 个标准化 API</span><span>政策大模型</span><span>AI 采集 / 判断 / 分析</span><span>结构化治理</span><span>DaaS + SaaS</span>
+          </div>
+        </div>
+        <div class="layer reveal">
+          <div class="lt"><span class="no">03</span><h3>产品层</h3></div>
+          <div class="lc">
+            <span><b>15</b> 款标准化智能系统</span><span>机构端 7</span><span>政府端 3</span><span>高校端 2</span><span>企业端 3</span>
+          </div>
+        </div>
+        <div class="layer reveal">
+          <div class="lt"><span class="no">04</span><h3>客户层</h3></div>
+          <div class="lc">
+            <span>政府机构</span><span>科技企业</span><span>园区 / 孵化器</span><span>高校科研处</span><span>行业服务商</span><span>金融与投资机构</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footbar reveal">
+        <div class="fl">
+          <span class="lab">价值闭环</span>
+          <div class="tags">
+            <span class="tag">数据</span><span class="tag">底座</span><span class="tag">能力</span><span class="tag">产品</span><span class="tag">客户</span>
+          </div>
+        </div>
+        <span class="txt">数据 → 场景 → 价值</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 11 页 · 五库一体 + 政策大模型 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 我们的解法</div>
+
+    <div class="page" style="padding-top:118px">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">数据底座</div>
+          <h2 class="reveal">五库一体 + 政策大模型，构成<span class="grad">可对外调用的政策数据底座</span></h2>
+          <div class="psub reveal">按政策领域深度调优，服务于检索、匹配与自动撰写</div>
+        </div>
+        <div class="pnum reveal">09</div>
+      </div>
+
+      <div class="cards c5" style="margin-top:42px">
+        <div class="card reveal" style="padding:28px 24px">
+          <div class="no">库 01</div>
+          <h3 style="font-size:25px;margin-top:8px">政策库</h3>
+          <p style="font-size:17.5px">政策文件 · 法律 · 法规 · 规范性文件 · 通知</p>
+        </div>
+        <div class="card reveal" style="padding:28px 24px">
+          <div class="no">库 02</div>
+          <h3 style="font-size:25px;margin-top:8px">资讯库</h3>
+          <p style="font-size:17.5px">通知公告 · 热点动态 · 关键要闻</p>
+        </div>
+        <div class="card reveal" style="padding:28px 24px">
+          <div class="no">库 03</div>
+          <h3 style="font-size:25px;margin-top:8px">企业库</h3>
+          <p style="font-size:17.5px">工商信息 · 政策补贴 · 供应链信息</p>
+        </div>
+        <div class="card reveal" style="padding:28px 24px">
+          <div class="no">库 04</div>
+          <h3 style="font-size:25px;margin-top:8px">产业库</h3>
+          <p style="font-size:17.5px">产业图谱 · 产业目录 · 产业标签</p>
+        </div>
+        <div class="card reveal" style="padding:28px 24px">
+          <div class="no">库 05</div>
+          <h3 style="font-size:25px;margin-top:8px">知识库</h3>
+          <p style="font-size:17.5px">科研报告 · 专利商标 · 期刊文献（交易追溯 · 过程监管）</p>
+        </div>
+      </div>
+
+      <div class="cards c3" style="margin-top:30px">
+        <div class="card reveal" style="padding:30px 32px">
+          <h3 style="font-size:25px">政策大模型</h3>
+          <p>按政策领域深度调优，服务于检索、匹配与自动撰写。</p>
+        </div>
+        <div class="card reveal" style="padding:30px 32px">
+          <h3 style="font-size:25px">技术底座</h3>
+          <p>数据资源库 → 算法库 → 模型训练调优 → 大模型集成。</p>
+        </div>
+        <div class="card reveal" style="padding:30px 32px">
+          <h3 style="font-size:25px">交付形态</h3>
+          <p><b style="color:var(--blue)">DaaS</b>：按 API / 系统化应用两种方式对外输出；<b style="color:var(--blue)">SaaS</b>：场景化应用。</p>
+        </div>
+      </div>
+
+      <div class="footbar reveal" style="margin-top:26px">
+        <div class="fl">
+          <span class="lab">技术栈</span>
+          <div class="tags">
+            <span class="tag">云计算</span><span class="tag">AI</span><span class="tag">人工智能</span>
+            <span class="tag">大数据</span><span class="tag">区块链</span>
+          </div>
+        </div>
+        <span class="txt">五库一体 · 一体调用</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 12 页 · 全国独家 API ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g2"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 我们的解法</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">能力输出</div>
+          <h2 class="reveal">全国独家政策领域 API 接口，<span class="grad">是最难复制的资产</span></h2>
+          <div class="psub reveal">同类厂商多以「数据查询」形态提供政策信息，难以提供覆盖政策 / 企业 / 功能三类、可直接嵌入业务系统的标准化接口</div>
+        </div>
+        <div class="pnum reveal">10</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:430px 1fr;gap:44px;margin-top:52px;align-items:stretch">
+        <div class="card reveal" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 36px;
+          background:linear-gradient(150deg,rgba(22,104,220,.12),rgba(25,184,196,.08))">
+          <div style="font-family:'Sora',sans-serif;font-size:150px;font-weight:800;line-height:1;letter-spacing:-4px;
+            background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">40</div>
+          <div style="font-size:30px;font-weight:900;letter-spacing:3px;margin-top:6px">个标准化 API</div>
+          <div style="font-size:19px;color:var(--ink2);margin-top:12px;letter-spacing:2px">全国独家 · 政策领域</div>
+          <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;justify-content:center">
+            <span class="tag">精准对接各类应用软件</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:26px">
+          <div class="card reveal" style="padding:34px 30px">
+            <div style="font-family:'Sora',sans-serif;font-size:58px;font-weight:800;line-height:1;
+              background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">15</div>
+            <h3 style="font-size:26px;margin-top:14px">政策接口</h3>
+            <p>政策资讯、政策库数据等。</p>
+          </div>
+          <div class="card reveal" style="padding:34px 30px">
+            <div style="font-family:'Sora',sans-serif;font-size:58px;font-weight:800;line-height:1;
+              background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">20</div>
+            <h3 style="font-size:26px;margin-top:14px">企业接口</h3>
+            <p>企业获得政策和补贴数据等。</p>
+          </div>
+          <div class="card reveal" style="padding:34px 30px">
+            <div style="font-family:'Sora',sans-serif;font-size:58px;font-weight:800;line-height:1;
+              background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">5</div>
+            <h3 style="font-size:26px;margin-top:14px">功能接口</h3>
+            <p>企业匹配政策、政策匹配企业、政策 AI 申报等。</p>
+          </div>
+          <div class="card reveal" style="grid-column:1/-1;padding:26px 32px;display:flex;align-items:center;gap:22px">
+            <div class="icon" style="margin:0;flex:none">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+                <path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>
+              </svg>
+            </div>
+            <p style="font-size:20px">三类标准化接口，可直接嵌入客户业务系统 —— 这是竞品难以复制的<strong style="color:var(--blue)">数据护城河</strong>。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">★</span>
+        <p>治理完成的数据，一次生产、<em>多处复用</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 13 页 · 数据安全与可信 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:90%;top:60%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 我们的解法</div>
+
+    <div class="page" style="padding-top:118px">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">合规与交付</div>
+          <h2 class="reveal">数据可用性由<span class="grad">平台保障</span>，数据安全性由<span class="grad">机制保障</span></h2>
+          <div class="psub reveal">企业可信数据空间，解决最后一公里信任 —— 这是进入政府与大企业客户的前提</div>
+        </div>
+        <div class="pnum reveal">11</div>
+      </div>
+
+      <div class="cards c3" style="margin-top:42px">
+        <div class="card reveal">
+          <div class="no">公开数据</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.6 4 5.6 4 9s-1.2 6.4-4 9c-2.8-2.6-4-5.6-4-9s1.2-6.4 4-9z"/>
+            </svg>
+          </div>
+          <h3>平台统一采集与治理</h3>
+          <p>系统定期自动更新，数据持续同步，保持时效性。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">真实数据 · 申报侧</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M12 2.5 4.5 7v6c0 5 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.5 7.5-9.5V7L12 2.5Z"/><path d="M9 11.5l2.2 2.2L15.5 9.5"/>
+            </svg>
+          </div>
+          <h3>标准化治理 + 自动脱敏</h3>
+          <p>申报侧真实数据标准化治理；公开数据自动更新，申报数据脱敏；企业真实经营数据不出本地。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">独立机房</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <rect x="4" y="3" width="16" height="7" rx="1.8"/><rect x="4" y="14" width="16" height="7" rx="1.8"/>
+              <path d="M8 6.5h.01M8 17.5h.01"/>
+            </svg>
+          </div>
+          <h3>本地部署 · 物理隔离</h3>
+          <p>统一标准、规范格式；敏感信息自动处理，保障隐私；独立机房保管，安全可控。</p>
+        </div>
+      </div>
+
+      <div class="cards c2" style="margin-top:30px">
+        <div class="mini reveal" style="display:flex;align-items:center;gap:22px">
+          <div class="icon" style="margin:0;flex:none;width:52px;height:52px">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>
+            </svg>
+          </div>
+          <div><h4 style="margin:0 0 6px">智能文件管理</h4><p style="margin:0">规范存储，快速调用</p></div>
+        </div>
+        <div class="mini reveal" style="display:flex;align-items:center;gap:22px">
+          <div class="icon" style="margin:0;flex:none;width:52px;height:52px">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+            </svg>
+          </div>
+          <div><h4 style="margin:0 0 6px">清晰统计报表</h4><p style="margin:0">多维统计，支撑决策</p></div>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal" style="margin-top:28px">
+        <span class="qm">◎</span>
+        <p>可信数据空间 —— <em>数据可用 · 安全可信 · 合规可控</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 14 页 · AI 申报闭环 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 我们的解法</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">场景闭环</div>
+          <h2 class="reveal">AI 辅助申报形成完整闭环：<span class="grad">政策库 → 企业对比 → 一键成稿</span></h2>
+          <div class="psub reveal">一次数据治理，多处场景复用 —— 这是从「政策查询」走向「综合企业服务」的杠杆</div>
+        </div>
+        <div class="pnum reveal">12</div>
+      </div>
+
+      <div class="flow">
+        <div class="step reveal">
+          <div class="no">01</div><h4>构建惠企政策库</h4>
+          <p>汇聚政策文件与条款，形成可检索、可计算的政策基座。</p>
+        </div>
+        <div class="arr"></div>
+        <div class="step reveal">
+          <div class="no">02</div><h4>企业对比政策</h4>
+          <p>以企业画像比对政策条件，实现双向匹配。</p>
+        </div>
+        <div class="arr"></div>
+        <div class="step reveal">
+          <div class="no">03</div><h4>AI 生成申报书</h4>
+          <p>按材料清单自动生成整套申报资料。</p>
+        </div>
+      </div>
+
+      <div class="reveal" style="font-size:19px;font-weight:700;letter-spacing:3px;color:var(--ink2);margin-top:40px">基于同一批企业数据，服务可继续延伸</div>
+      <div class="cards c3" style="margin-top:18px">
+        <div class="card reveal">
+          <div class="no">延伸 01</div>
+          <h3 style="font-size:26px">产业服务</h3>
+          <p>构建全国各地产业链数据库，精准匹配同行及上下游。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">延伸 02</div>
+          <h3 style="font-size:26px">成果转化</h3>
+          <p>构建全国高校成果库和专家库，存量和新增成果报告即时推送。</p>
+        </div>
+        <div class="card reveal">
+          <div class="no">延伸 03</div>
+          <h3 style="font-size:26px">科技金融</h3>
+          <p>基于企业数据匹配银行科技金融产品，享受贴息政策。</p>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal" style="margin-top:30px">
+        <span class="qm">◎</span>
+        <p>让政策触手可及，让申报更高效 —— <em>一次治理，多处复用</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 15 页 · 15 款产品矩阵 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g2"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 我们的解法</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">产品矩阵</div>
+          <h2 class="reveal">15 款标准化产品一次成型，<span class="grad">覆盖四大客户场景</span></h2>
+          <div class="psub reveal">一套标准化智能系统，服务多元客户场景 —— 不是一两款试水的小工具</div>
+        </div>
+        <div class="pnum reveal">13</div>
+      </div>
+
+      <div class="cards c4" style="margin-top:48px">
+        <div class="card reveal" style="padding:34px 30px">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <span style="font-family:'Sora',sans-serif;font-size:56px;font-weight:800;line-height:1;
+              background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">7</span>
+            <h3 style="margin:0;font-size:28px">机构端</h3>
+          </div>
+          <p style="margin-top:16px">获客 · 跟单 · 文档 · 研发 · 申报，一套系统串起全业务链路。</p>
+          <span class="tagline" style="margin-top:16px">5 常规 + 2 高端</span>
+        </div>
+        <div class="card reveal" style="padding:34px 30px">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <span style="font-family:'Sora',sans-serif;font-size:56px;font-weight:800;line-height:1;
+              background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">3</span>
+            <h3 style="margin:0;font-size:28px">政府端</h3>
+          </div>
+          <p style="margin-top:16px">公文归档 · 流程节点 · 降本减错；培育 · 产业图谱 · 成果转化。</p>
+          <span class="tagline" style="margin-top:16px">精准服务区域产业</span>
+        </div>
+        <div class="card reveal" style="padding:34px 30px">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <span style="font-family:'Sora',sans-serif;font-size:56px;font-weight:800;line-height:1;
+              background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">2</span>
+            <h3 style="margin:0;font-size:28px">高校端</h3>
+          </div>
+          <p style="margin-top:16px">知识产权 · 成果转化，知识资产可管、转化线索自动评级。</p>
+          <span class="tagline" style="margin-top:16px">科技处 · 成果转化中心</span>
+        </div>
+        <div class="card reveal" style="padding:34px 30px">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <span style="font-family:'Sora',sans-serif;font-size:56px;font-weight:800;line-height:1;
+              background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent">3</span>
+            <h3 style="margin:0;font-size:28px">企业端</h3>
+          </div>
+          <p style="margin-top:16px">资质 · 研发 · 申报，研发留痕、资质台账、申报材料一套管起来。</p>
+          <span class="tagline" style="margin-top:16px">一次录入多处复用</span>
+        </div>
+      </div>
+
+      <div class="cards c4" style="margin-top:26px">
+        <div class="mini reveal"><h4 style="font-size:21px">完整业务链路</h4><p>从前端获客到后端管理全覆盖。</p></div>
+        <div class="mini reveal"><h4 style="font-size:21px">四类客户落地</h4><p>机构 / 政府 / 高校 / 企业均可落地。</p></div>
+        <div class="mini reveal"><h4 style="font-size:21px">灵活配置</h4><p>可简单定制；单款使用或多款搭配。</p></div>
+        <div class="mini reveal"><h4 style="font-size:21px">生态联动</h4><p>支持钉钉、企业微信等第三方系统。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 16 页 · 机构端 7 款 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:90%;top:14%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 产品矩阵 · 机构端</div>
+
+    <div class="page" style="padding-top:118px">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">产品矩阵 · 机构端</div>
+          <h2 class="reveal">机构端 7 款：一套系统串起<span class="grad">销售、项目、财务全闭环</span></h2>
+          <div class="psub reveal">5 常规 + 2 高端 · 适用对象：政策服务机构 · 咨询机构 · 财税公司 · 商协会 · 企业服务平台</div>
+        </div>
+        <div class="pnum reveal">14</div>
+      </div>
+
+      <div class="cards c4" style="margin-top:40px">
+        <div class="mini reveal">
+          <div class="no">01</div><h4>CRM 管理系统</h4>
+          <p>客户信息从跟单、合同、项目、回款、开票一条线全览。</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">02</div><h4>文档智能管理系统</h4>
+          <p>数据、文档、证书标准化管理，客户可同步查看服务进度。</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">03</div><h4>研发全流程管理系统</h4>
+          <p>研发活动日常化记录，智能生成立项 / 结项文件，缩短文档周期。</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">04</div><h4>政策申报 AI 辅助撰写系统</h4>
+          <p>高企材料复杂逻辑一键关联整理，一键生成整套申报资料。</p>
+        </div>
+      </div>
+      <div class="cards c3" style="margin-top:22px">
+        <div class="mini reveal">
+          <div class="no">05</div><h4>短视频平台精准智能获客系统</h4>
+          <p>自动读取本领域视频评论区，分析意向客户并自动关注、回复、私信。</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">06 · 高端</div><h4>专利流程 AI 替代人工系统</h4>
+          <p>自动下载整理官方文件分发给客户；自动提醒业务流程节点；降本减错。</p>
+        </div>
+        <div class="mini reveal">
+          <div class="no">07 · 高端</div><h4>集团业务宣传大屏</h4>
+          <p>纸质宣传册电子化生动展示；穿透客户真实数据；实时呈现客户政策动态。</p>
+        </div>
+      </div>
+
+      <div class="footbar reveal" style="margin-top:26px">
+        <div class="fl">
+          <span class="lab">闭环链路</span>
+          <div class="tags">
+            <span class="tag">跟单</span><span class="tag">合同</span><span class="tag">项目</span>
+            <span class="tag">回款</span><span class="tag">开票</span>
+          </div>
+        </div>
+        <span class="txt">客户全生命周期管理</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 17 页 · 政府端 3 款 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 产品矩阵 · 政府端</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">产品矩阵 · 政府端</div>
+          <h2 class="reveal">政府端 3 款：从「人找企业」到<span class="grad">「数据找企业」</span></h2>
+          <div class="psub reveal">以数据驱动政府精准服务，激活区域产业活力 · 适用对象：科技主管部门 · 高新区 / 经开区管委会 · 产业园区</div>
+        </div>
+        <div class="pnum reveal">15</div>
+      </div>
+
+      <div class="cards c3" style="margin-top:52px">
+        <div class="card reveal">
+          <div class="no">01</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/>
+            </svg>
+          </div>
+          <h3>科技企业管理、培育系统</h3>
+          <p>存量企业全量管理；辖区有知识产权企业自动打捞，潜在科小、高企、专精特新自动分析入表。</p>
+          <span class="tagline">存量企业 · 培育入表</span>
+        </div>
+        <div class="card reveal">
+          <div class="no">02</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="2.6"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/>
+              <circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M6.8 6.8 10 10M17.2 6.8 14 10M6.8 17.2 10 14M17.2 17.2 14 14"/>
+            </svg>
+          </div>
+          <h3>本地企业产业分析、产业图谱系统</h3>
+          <p>自动分析本地企业产业，绘制产业图谱，为招商引资提供决策支撑。</p>
+          <span class="tagline">产业图谱 · 招商决策</span>
+        </div>
+        <div class="card reveal">
+          <div class="no">03</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M12 3l2.4 5.2 5.6.7-4.2 3.8 1.1 5.5L12 15.7 7.1 18.2l1.1-5.5L4 8.9l5.6-.7z"/>
+            </svg>
+          </div>
+          <h3>高校成果、专家及成果转化管理系统</h3>
+          <p>AI 智能分析本地高校专利成果，与企业自动匹配，生成可评级的成果转化线索。</p>
+          <span class="tagline">线索评级</span>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">◎</span>
+        <p>客户价值：<em>辖区底数、潜力企业、招商线索一屏掌握</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 18 页 · 高校端 2 款 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g2"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 产品矩阵 · 高校端</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">产品矩阵 · 高校端</div>
+          <h2 class="reveal">高校端 2 款：专利家底自动盘点，<span class="grad">转化线索自动评级</span></h2>
+          <div class="psub reveal">让高校知识资产可管、成果转化更高效、优质线索自动识别 · 适用对象：高校科技处 · 成果转化中心</div>
+        </div>
+        <div class="pnum reveal">16</div>
+      </div>
+
+      <div class="cards c2" style="margin-top:52px">
+        <div class="card reveal" style="padding:42px 38px">
+          <div class="no">01</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M9 11h6M9 15h4"/>
+            </svg>
+          </div>
+          <h3 style="font-size:30px">高校知识产权管理系统</h3>
+          <p>基于高校名称自动采集专利、软著、版权数据；基于发明人信息自动绘制专家库。</p>
+          <div class="tags" style="margin-top:20px"><span class="tag">专利</span><span class="tag">软著</span><span class="tag">版权</span><span class="tag">专家库</span></div>
+        </div>
+        <div class="card reveal" style="padding:42px 38px">
+          <div class="no">02</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="2.6"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/>
+              <circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M6.8 6.8 10 10M17.2 6.8 14 10M6.8 17.2 10 14M17.2 17.2 14 14"/>
+            </svg>
+          </div>
+          <h3 style="font-size:30px">高校成果转化管理系统</h3>
+          <p>成果自动匹配可转化企业，穿透企业详情；智能标注转化优先级；专家与企业直接匹配。</p>
+          <div class="tags" style="margin-top:20px"><span class="tag">成果匹配</span><span class="tag">企业穿透</span><span class="tag">转化优先级</span></div>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">◎</span>
+        <p>客户价值：<em>专利家底自动盘点，专家库自动绘制，转化优先级自动标注</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 19 页 · 企业端 3 款 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:90%;top:60%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">02 · 产品矩阵 · 企业端</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">产品矩阵 · 企业端</div>
+          <h2 class="reveal">企业端 3 款：研发留痕、资质台账、<span class="grad">申报材料一套管起来</span></h2>
+          <div class="psub reveal">覆盖研发、知识产权、申报全流程，让合规更简单、让资料更完整、让复用更高效 · 适用对象：有研发 / 知识产权需求的企业</div>
+        </div>
+        <div class="pnum reveal">17</div>
+      </div>
+
+      <div class="cards c3" style="margin-top:52px">
+        <div class="card reveal">
+          <div class="no">01</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M12 2.5 4.5 7v6c0 5 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.5 7.5-9.5V7L12 2.5Z"/><path d="M9 11.5l2.2 2.2L15.5 9.5"/>
+            </svg>
+          </div>
+          <h3>企业资质政策知识产权管理系统</h3>
+          <p>多维度数据、文档、证书标准化管理，智能化、可视化管理，资料随时随地上传下载。</p>
+          <span class="tagline">数据 · 文档 · 证书</span>
+        </div>
+        <div class="card reveal">
+          <div class="no">02</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4.2"/>
+            </svg>
+          </div>
+          <h3>企业研发项目管理系统</h3>
+          <p>研发活动日常化记录，智能生成标准化立项 / 结项文件，自动匹配研发项目规范。</p>
+          <span class="tagline">立项 · 结项 · 规范匹配</span>
+        </div>
+        <div class="card reveal">
+          <div class="no">03</div>
+          <div class="icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1668DC" stroke-width="2" stroke-linecap="round">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>
+            </svg>
+          </div>
+          <h3>政策申报 AI 辅助撰写系统</h3>
+          <p>高企材料复杂逻辑一键关联整理，一键生成整套申报资料。</p>
+          <span class="tagline">高企申报 · 一键成稿</span>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">◎</span>
+        <p>客户价值：<em>研发留痕、资质台账、申报材料，一次录入多处复用</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 20 页 · 三种付费路径 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">03 · 商业化路径</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">付费模式</div>
+          <h2 class="reveal">三种付费路径并行，<span class="grad">免费试用 1 个月</span>作为获客入口</h2>
+          <div class="psub reveal">满足不同客户的采购习惯，让标准产品触手可及</div>
+        </div>
+        <div class="pnum reveal">18</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:48px;flex:1">
+        <div>
+          <div class="reveal" style="font-size:19px;font-weight:700;letter-spacing:3px;color:var(--ink2);margin-bottom:18px">三种付费方式</div>
+          <div class="cards c3" style="margin-top:0;gap:20px">
+            <div class="mini reveal" style="padding:28px 24px">
+              <div class="no" style="font-size:22px">SaaS</div>
+              <h4 style="font-size:23px;margin-top:8px">即开即用</h4>
+              <p>标准产品可直接上手，支持 SaaS 方式使用，开通即用。</p>
+            </div>
+            <div class="mini reveal" style="padding:28px 24px">
+              <div class="no" style="font-size:22px">买断</div>
+              <h4 style="font-size:23px;margin-top:8px">独立部署</h4>
+              <p>支持买断独立部署，数据自主可控。</p>
+            </div>
+            <div class="mini reveal" style="padding:28px 24px">
+              <div class="no" style="font-size:22px">年费</div>
+              <h4 style="font-size:23px;margin-top:8px">独立部署</h4>
+              <p>支持按年费独立部署，投入节奏更灵活。</p>
+            </div>
+          </div>
+          <div class="note reveal" style="margin-top:22px">客户要求超出标品范围时，走组合 / 定制路径延伸。</div>
+        </div>
+
+        <div>
+          <div class="reveal" style="font-size:19px;font-weight:700;letter-spacing:3px;color:var(--ink2);margin-bottom:18px">标品获客漏斗</div>
+          <div class="funnel" style="margin-top:0">
+            <div class="fs reveal">
+              <div class="no">01</div>
+              <div><h4>免费试用 1 个月</h4><p>即开即用，标准产品可直接上手。</p></div>
+            </div>
+            <div class="fs reveal">
+              <div class="no">02</div>
+              <div><h4>按最痛的场景切入，验证效果</h4><p>从真实业务痛点开始，效果可衡量。</p></div>
+            </div>
+            <div class="fs reveal">
+              <div class="no">03</div>
+              <div><h4>采购 SaaS 使用</h4><p>单款使用 / 多款搭配，数据打通，形成组合价值。</p></div>
+            </div>
+            <div class="fs reveal">
+              <div class="no">04</div>
+              <div><h4>组合 / 定制延伸</h4><p>客户要求超出标品范围时走定制路径。</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal">
+        <span class="qm">◎</span>
+        <p>从试用到付费，<em>让更多客户成为长期用户</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 21 页 · 三类客户 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g2"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">03 · 商业化路径</div>
+
+    <div class="page" style="padding-top:118px">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">客户结构</div>
+          <h2 class="reveal">三类付费主体，形成<span class="grad">交叉销售网络</span></h2>
+          <div class="psub reveal">政府要治理、企业要效率、伙伴要弹药</div>
+        </div>
+        <div class="pnum reveal">19</div>
+      </div>
+
+      <div class="cards c3" style="margin-top:42px">
+        <div class="card reveal" style="padding:34px 30px">
+          <div class="no">01 · 服务政府</div>
+          <h3 style="font-size:26px">以数据驱动治理与产业发展</h3>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:10px;font-size:17.5px;color:var(--ink2);line-height:1.6">
+            <li>· 构建全域企业数据库，形成统一企业画像</li>
+            <li>· 政策精准推送、免申即享与政策效果评估</li>
+            <li>· 绘制全区产业图谱，辅助产业决策与招商引资</li>
+            <li>· 联动区域高校成果与企业需求，自动匹配对接</li>
+            <li>· 打通区域金融机构，一站提供科技金融服务</li>
+          </ul>
+        </div>
+        <div class="card reveal" style="padding:34px 30px">
+          <div class="no">02 · 服务企业</div>
+          <h3 style="font-size:26px">从数据管理到业务增长的全链路支持</h3>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:10px;font-size:17.5px;color:var(--ink2);line-height:1.6">
+            <li>· 大型企业定制知识管理、证书管理、研发管理、AI 辅助申报</li>
+            <li>· 覆盖分子公司及投资企业，数据留存在企业</li>
+            <li>· 打通全国产业上下游，监控竞品及上下游动态，拓展研发成果应用</li>
+            <li>· 实时获悉全国高校和科研院所相关产业最新专利成果</li>
+          </ul>
+        </div>
+        <div class="card reveal" style="padding:34px 30px">
+          <div class="no">03 · 服务行业伙伴</div>
+          <h3 style="font-size:26px">提供数据与能力，放大服务价值</h3>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:10px;font-size:17.5px;color:var(--ink2);line-height:1.6">
+            <li>· 服务对象：咨询机构、财税公司、商协会、服务平台等各类企业服务群体</li>
+            <li>· 赋能方式：提供数据和功能支持，让伙伴充分服务自己的企业客户</li>
+            <li>· 标准产品：行业数据 + AI 的 CRM、企业知识与研发全流程管理、服务流程可视化系统等</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footbar reveal" style="margin-top:30px">
+        <div class="fl">
+          <span class="lab">价值网络</span>
+          <div class="tags">
+            <span class="tag">数据赋能</span><span class="tag">连接生态</span><span class="tag">协同共赢</span>
+            <span class="tag">多方协同</span><span class="tag">价值倍增</span>
+          </div>
+        </div>
+        <span class="txt">数据 × 政策 × 生态</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 22 页 · 公司概况 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g3" style="left:90%;top:16%"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">03 · 团队与背书</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">公司概况</div>
+          <h2 class="reveal">「政策宝」原班人马，<span class="grad">打造政策数据智能新基建</span></h2>
+          <div class="psub reveal">以 AI 和大数据的科技力量，重塑政策公共数据价值链，打造数据服务生态新模式，实现对企业服务垂直赛道的 AI 智能化升级</div>
+        </div>
+        <div class="pnum reveal">20</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.05fr .95fr;gap:40px;margin-top:48px;flex:1">
+        <div class="card reveal" style="padding:38px 40px">
+          <div class="no">工商信息</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px 30px;margin-top:22px">
+            <div>
+              <div style="font-size:16px;color:var(--ink3);letter-spacing:2px;margin-bottom:6px">公司成立</div>
+              <div style="font-family:'Sora',sans-serif;font-size:27px;font-weight:800;color:var(--ink)">2026.08.18</div>
+            </div>
+            <div>
+              <div style="font-size:16px;color:var(--ink3);letter-spacing:2px;margin-bottom:6px">运营地址</div>
+              <div style="font-size:24px;font-weight:700">郑州市高新区</div>
+            </div>
+            <div>
+              <div style="font-size:16px;color:var(--ink3);letter-spacing:2px;margin-bottom:6px">运营主体</div>
+              <div style="font-size:22px;font-weight:700;line-height:1.4">河南智策数字科技有限公司</div>
+            </div>
+            <div>
+              <div style="font-size:16px;color:var(--ink3);letter-spacing:2px;margin-bottom:6px">股东结构</div>
+              <div style="font-size:19px;font-weight:700;line-height:1.45">北京云政智科数字科技有限公司 100% 投资</div>
+            </div>
+          </div>
+          <div class="tags" style="margin-top:28px">
+            <span class="tag">愿景：重塑政策公共数据价值链</span>
+            <span class="tag">定位：数据服务生态新模式</span>
+          </div>
+        </div>
+
+        <div class="card reveal" style="padding:38px 40px;background:linear-gradient(150deg,rgba(22,104,220,.10),rgba(25,184,196,.07))">
+          <div class="no">核心团队</div>
+          <h3 style="font-size:29px;margin-top:12px">前「政策宝」创始人 王润政</h3>
+          <p style="font-size:20px">带领原班人马重新创业；9 年政策平台、产品和运营经验，行业积淀深厚。</p>
+          <div style="display:flex;gap:14px;margin-top:26px;flex-wrap:wrap">
+            <div style="flex:1;min-width:130px;background:rgba(255,255,255,.65);border:1px solid var(--line);border-radius:14px;padding:16px 18px">
+              <div style="font-family:'Sora',sans-serif;font-size:34px;font-weight:800;color:var(--blue)">9 年</div>
+              <div style="font-size:16px;color:var(--ink2);margin-top:2px">政策平台经验</div>
+            </div>
+            <div style="flex:1;min-width:130px;background:rgba(255,255,255,.65);border:1px solid var(--line);border-radius:14px;padding:16px 18px">
+              <div style="font-family:'Sora',sans-serif;font-size:34px;font-weight:800;color:var(--blue)">前三</div>
+              <div style="font-size:16px;color:var(--ink2);margin-top:2px">「政策宝」品牌全国排名</div>
+            </div>
+            <div style="flex:1;min-width:130px;background:rgba(255,255,255,.65);border:1px solid var(--line);border-radius:14px;padding:16px 18px">
+              <div style="font-family:'Sora',sans-serif;font-size:34px;font-weight:800;color:var(--blue)">100%</div>
+              <div style="font-size:16px;color:var(--ink2);margin-top:2px">云政智科投资</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footbar reveal" style="margin-top:26px">
+        <div class="fl">
+          <span class="lab">背书</span>
+          <div class="tags">
+            <span class="tag">9 年行业积淀</span><span class="tag">原班人马</span><span class="tag">云政智科股东背书</span>
+          </div>
+        </div>
+        <span class="txt">AI × 大数据 · 重塑政策服务</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 23 页 · 路线图与合作 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div>
+    <div class="hairline"></div>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">政策大脑<small>POLICY BRAIN</small></div>
+    </div>
+    <div class="part">03 · 路线图</div>
+
+    <div class="page">
+      <div class="phead">
+        <div>
+          <div class="pkick reveal">路线图与合作方式</div>
+          <h2 class="reveal">26 年底移动端上线，<span class="grad">三条合作路径向伙伴开放</span></h2>
+          <div class="psub reveal">下一阶段：APP 与微信小程序预计上线，政策服务入口延伸至移动场景</div>
+        </div>
+        <div class="pnum reveal">21</div>
+      </div>
+
+      <div class="timeline">
+        <div class="tnode reveal">
+          <div class="date">2026.08</div>
+          <h4>公司成立</h4>
+          <p>河南智策数字科技在郑州高新区成立，承载 9 年团队经验。</p>
+        </div>
+        <div class="tnode reveal">
+          <div class="date">2026 年底</div>
+          <h4>移动端上线</h4>
+          <p>APP 与微信小程序预计上线，政策服务入口延伸至移动场景。</p>
+        </div>
+        <div class="tnode todo reveal">
+          <div class="date">待补充</div>
+          <h4>下一阶段</h4>
+          <p>城市复制、渠道网络与产品线扩展节奏需确认后写入。</p>
+        </div>
+      </div>
+
+      <div class="cards c3" style="margin-top:44px">
+        <div class="card reveal" style="padding:32px 30px">
+          <div class="no">路径 01</div>
+          <h3 style="font-size:26px">生态渠道伙伴</h3>
+          <p>面向咨询机构、财税公司、商协会、服务平台，提供数据与功能支持，共同服务其他企业客户。</p>
+        </div>
+        <div class="card reveal" style="padding:32px 30px">
+          <div class="no">路径 02</div>
+          <h3 style="font-size:26px">区域独立部署</h3>
+          <p>面向政府与园区，平台本地化部署，数据留存本地，支撑区域治理与招商。</p>
+        </div>
+        <div class="card reveal" style="padding:32px 30px">
+          <div class="no">路径 03</div>
+          <h3 style="font-size:26px">数据与 API 合作</h3>
+          <p>面向应用开发商，开放 40 个标准化 API，嵌入自有产品体系。</p>
+        </div>
+      </div>
+
+      <div class="quote-bar reveal" style="margin-top:28px">
+        <span class="qm">◎</span>
+        <p>与伙伴共建政策服务生态 —— <em>数据 × 政策 × 生态，形成持续价值网络</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 第 24 页 · 感谢页 ================= -->
+  <section class="slide s-a">
+    <div class="dots"></div>
+    <div class="geo g1"></div><div class="geo g2"></div><div class="geo g3" style="left:46%;top:12%"></div>
+    <div class="hairline"></div>
+
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 2.5 4.5 7v10L12 21.5 19.5 17V7L12 2.5Z"/><path d="M12 7.5v9M8 9.5v5M16 9.5v5"/>
+        </svg>
+      </div>
+      <div class="name">河南智策数字科技有限公司<small>HENAN ZHICE DIGITAL TECHNOLOGY</small></div>
+    </div>
+    <div class="topright">Thanks</div>
+
+    <div class="end">
+      <div class="ek reveal">POLICY BRAIN · ROADSHOW 2026</div>
+      <h1 class="reveal">感谢观看，<span class="grad">期待合作</span></h1>
+      <div class="esub reveal">让政策数据产生更大价值</div>
+      <div class="ecomp reveal">河南智策数字科技有限公司 · 郑州市高新区</div>
+      <div class="qr reveal">
+        <img src="data:image/jpeg;base64,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GMOPevhD9vj9gD40fHb9p7xL4y8HeH7PUNAvoLNIbibU7eBi0dtHG4KO4I+ZT25r6c/4Jj/s5eOv2afhL4p0Hx9pkGl6lfa4b63jgu47gNEbeJM7o2IHzI3B54oA+xa+Tv8Agqd/yY58QT/0103/ANONtX1jXgH7d/wk8S/HP9lzxf4K8I2kd94h1F7Jra3mnSFW8u8hlfLuQB8iMeT2oA/nWyafG21wTzg5r68/4dP/ALSP/Qo6f/4O7T/45R/w6f8A2kf+hR07/wAHdp/8cp9QPr/w3/wWh+Gmi+HdL0+TwN4rkktbWKBmU220lECkjMmccVpf8PtPhl/0Ifiv/vq2/wDjlfF3/Dp/9pH/AKFHTv8Awd2n/wAco/4dP/tI/wDQo6d/4O7T/wCOUwP2S/Zq/aC0j9pz4WWXjrQ9MvtK0+6uJ7cW2obPNVo32knYSMHtzXzj/wAFAv2B/Fn7XnjbwrrXh3xDo2iwaTp72cqap5xZ2aQuCuxG4x6mvT/+CevwY8V/AL9m3TfB3jOxi0/Xra/u55IIbiOdQkkhZTvQkdPevpakB8C/sC/8E8PGX7JPxi1jxd4g8S6FrNle6FNpSQaYJvMWR7i3lDHegG3EBHXOSK++qKKQGX4n1yPwz4d1PV5YpJ4bC2lunjjxuZUQsQM9zjH41+fZ/wCC2PwyU8eA/FZ/4Fbf/HK++vHml3OueB/EOnWaCS7vNOuLeFCwUM7xMqjJ4HJHNfht/wAOn/2kf+hR0/8A8Hdp/wDHKAPs7/h9n8Mu/gPxX+dt/wDHK/MH9p74q6d8b/j14y8daTZ3Nhp+t3n2mG2u9vmxjYq4baSM5U9Ca9v/AOHT/wC0j/0KOnf+Du0/+OUf8Onv2kf+hR07/wAHdp/8coA/Qr/gj3/yZ7F/2H77+UdeE/8ABcsnb8F/rrX8rCvrT/gnT8DvF/7PX7OqeEfG9hFpuuLq11dmGG4jnXy32bTuQkfwnjNeV/8ABUn9k/4j/tP/APCtB8PtKt9UOhnUzffaL2K28vzvsnl48xhuz5L9OmKAPxLr0P8AZ9+I9l8IfjZ4J8aahbT3tjoWqwX81va7fMkVGyQu4gZ+pFe/f8Onf2kP+hT07/wdWv8A8XR/w6d/aQ/6FPTv/B1a/wDxdAH2zpn/AAWj+Gmqapa2UfgfxUj3EqwqzG2xliAP+WnvX6Grnbz1r8KfDv8AwSr/AGi9N8QaXdz+FNPEMF1FK5XWbUkKrgk/f9BX7rKcjNAC0UUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/Z" alt="王润政二维码">
+        <div class="qt"><b>扫码交流</b>王润政 · 政策大脑<br>数据合作 / 渠道伙伴 / 区域部署</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<button id="intro-close" type="button" aria-label="关闭">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+    <path d="M4 4l8 8M12 4l-8 8"/>
+  </svg>
+  关闭
+</button>
+<div id="dots"></div>
+<div id="hint">← / → 翻页 · 点击右侧前进 · Esc 关闭</div>
+
+<script>
+/* === 舞台缩放：铺满视口，裁切不超过标题和底栏外侧的留白 === */
+function fit(){
+  const vw = innerWidth;
+  const vh = innerHeight;
+  const maxCropY = 6;
+  const maxCropX = 72;
+  const contain = Math.min(vw / 1920, vh / 1080);
+  const cover = Math.max(vw / 1920, vh / 1080);
+  const cropY = (1080 * cover - vh) / (2 * cover);
+  const cropX = (1920 * cover - vw) / (2 * cover);
+  let s = contain;
+  if (cropY <= maxCropY + 0.5 && cropX <= maxCropX + 0.5) {
+    s = cover;
+  } else {
+    const fitCrop = Math.min(vh / (1080 - maxCropY * 2), vw / (1920 - maxCropX * 2));
+    s = Math.max(contain, fitCrop);
+  }
+  document.getElementById('stage').style.transform =
+    'translate(-50%, -50%) scale(' + s + ')';
+  const offsetX = Math.max(0, (vw - 1920 * s) / 2);
+  const clear = Math.max(96, (128 - offsetX) / s);
+  document.documentElement.style.setProperty('--chrome-clear', clear.toFixed(1) + 'px');
+}
+addEventListener('resize', fit); fit();
+
+/* === 翻页 === */
+const slides = document.querySelectorAll('.slide');
+const dotsBox = document.getElementById('dots');
+let cur = 0;
+slides.forEach((_,i)=>{
+  const d = document.createElement('i');
+  d.addEventListener('click', ()=> go(i));
+  dotsBox.appendChild(d);
+});
+const dots = dotsBox.querySelectorAll('i');
+slides.forEach((sl,i)=>{
+  if(i===0 || i===slides.length-1) return;
+  const p = document.createElement('div');
+  p.className = 'pageno';
+  p.innerHTML = '<b>' + String(i+1).padStart(2,'0') + '</b> / ' + slides.length;
+  sl.appendChild(p);
+});
+function go(n){
+  cur = Math.max(0, Math.min(slides.length-1, n));
+  slides.forEach((sl,i)=> sl.classList.toggle('active', i===cur));
+  dots.forEach((d,i)=> d.classList.toggle('on', i===cur));
+}
+go(0);
+/* 支持 #页码 直达（如 #8 打开第 8 页），便于分享与打印 */
+function syncHash(){
+  const n = parseInt((location.hash||'').replace('#',''), 10);
+  if(!isNaN(n) && n>=1 && n<=slides.length && n!==cur+1) go(n-1);
+}
+addEventListener('hashchange', syncHash);
+syncHash();
+function closeIntro(){
+  const home = location.pathname.replace(/product-intro\.html$/, '') || '/';
+  try {
+    if (document.referrer) {
+      const ref = new URL(document.referrer);
+      if (ref.origin === location.origin && !/product-intro\.html$/.test(ref.pathname)) {
+        history.back();
+        return;
+      }
+    }
+  } catch (err) {}
+  location.href = home;
+}
+document.getElementById('intro-close').addEventListener('click', closeIntro);
+addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    e.preventDefault();
+    if(editing){
+      editing=false;
+      document.body.classList.remove('editing');
+      document.querySelectorAll('.slide [contenteditable]').forEach(el=>{ el.contentEditable=false; });
+      return;
+    }
+    closeIntro();
+    return;
+  }
+  if(editing && (e.key==='ArrowRight'||e.key==='ArrowLeft'||e.key===' ')) return;
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown') { e.preventDefault(); go(cur+1); }
+  if(e.key==='ArrowLeft'||e.key==='PageUp') { e.preventDefault(); go(cur-1); }
+});
+let tx=0;
+addEventListener('touchstart', e=> tx=e.touches[0].clientX, {passive:true});
+addEventListener('touchend', e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(dx<-60) go(cur+1); if(dx>60) go(cur-1);
+}, {passive:true});
+document.getElementById('stage').addEventListener('click', e=>{
+  if(editing) return;
+  const r=e.target.getBoundingClientRect();
+  if(e.clientX - r.left > r.width*0.72) go(cur+1);
+});
+
+/* === 内联文本编辑（按 E 进入 / 退出） === */
+let editing=false;
+addEventListener('keydown', e=>{
+  if(e.key==='e'||e.key==='E'){
+    editing=!editing;
+    document.body.classList.toggle('editing', editing);
+    document.querySelectorAll('.slide h1,.slide h2,.slide h3,.slide h4,.slide p,.slide b,.slide span,.slide li,.slide div').forEach(el=>{
+      if(el.children.length===0 && el.textContent.trim()) el.contentEditable = editing;
+    });
+  }
+});
+</script>
+</body>
+</html>

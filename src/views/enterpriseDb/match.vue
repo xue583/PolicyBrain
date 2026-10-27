@@ -9,12 +9,12 @@ import type { BreadcrumbItem } from '@/components/BreadcrumbNav.vue'
 import PageState from '@/components/PageState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { useFollowable } from '@/composables/useFollowable'
-import { usePagination } from '@/composables/usePagination'
 import { useAuthStore } from '@/stores/auth'
 import { triggerNeedLogin } from '@/utils/auth'
 import { downloadCsv } from '@/utils/downloadCsv'
-import { fetchEnterpriseRaw } from '@/api/enterprises'
+import { fetchEnterprisePage, fetchEnterpriseRaw } from '@/api/enterprises'
 import { fetchEntToPolicy } from '@/api/match'
 import { mapEnterpriseDetail, readIpCounts } from '@/api/mapPortal'
 import { toErrorMessage } from '@/utils/apiError'
@@ -31,11 +31,14 @@ import matchIcon from '../../assets/enterpriseDb/match/icon-match.png'
 import publisherIcon from '../../assets/enterpriseDb/match/icon-publisher.png'
 import starIcon from '../../assets/enterpriseDb/match/icon-star.png'
 import amountIcon from '../../assets/enterpriseDb/match/icon-amount.png'
+import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'EnterprisePolicyMatch' })
 
 const FOLLOW_KEY = 'pb_followed_enterprise_db'
 const PAGE_SIZE = 8
+/** 实测 PageSize 超过 200 会被截断，与 Swagger 的 MaxPageSize 一致 */
+const SEARCH_PAGE_SIZE = 200
 
 const statusColor: Record<MatchPolicyStatus, string> = {
   expired: 'error',
@@ -48,72 +51,97 @@ const router = useRouter()
 const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 
-const enterpriseId = computed(() => Number(route.params.id))
+const enterpriseId = computed(() => {
+  const id = Number(route.params.id)
+  return Number.isFinite(id) && id > 0 ? id : 0
+})
 const enterprise = ref<EnterpriseDetail | null>(null)
 const policies = ref<MatchPolicy[]>([])
 const loading = ref(false)
 const error = ref('')
+const currentPage = ref(1)
+const total = ref(0)
+const pageSize = PAGE_SIZE
 const ipCounts = ref({ patent: 0, brand: 0, software: 0, work: 0, policy: 0 })
 const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, enterpriseId)
 
 const keywordDraft = ref('')
-const keyword = ref('')
 const followedPolicyIds = ref<number[]>([])
+
+let loadSeq = 0
+
+const loadEnterprise = async (id: number) => {
+  const raw = await fetchEnterpriseRaw(id)
+  ipCounts.value = {
+    ...readIpCounts(raw),
+    policy: ipCounts.value.policy,
+  }
+  enterprise.value = mapEnterpriseDetail(raw, {
+    policyCount: ipCounts.value.policy,
+  })
+}
+
+const loadPolicies = async (id: number) => {
+  if (!isLoggedIn.value) {
+    policies.value = []
+    total.value = 0
+    error.value = '登录后可查看匹配政策'
+    return
+  }
+  const page = await fetchEntToPolicy(id, {
+    pageIndex: currentPage.value,
+    pageSize: PAGE_SIZE,
+  })
+  policies.value = page.items
+  total.value = page.totalElements
+  ipCounts.value = { ...ipCounts.value, policy: page.totalElements }
+  if (enterprise.value) enterprise.value.policyCount = page.totalElements
+}
 
 const load = async () => {
   const id = enterpriseId.value
-  if (!id) return
+  if (!id) {
+    enterprise.value = null
+    policies.value = []
+    total.value = 0
+    error.value = ''
+    loading.value = false
+    return
+  }
+  const seq = ++loadSeq
   loading.value = true
   error.value = ''
   try {
-    const raw = await fetchEnterpriseRaw(id)
-    ipCounts.value = {
-      ...readIpCounts(raw),
-      policy: 0,
-    }
-    enterprise.value = mapEnterpriseDetail(raw, {
-      policyCount: 0,
-    })
-    if (!isLoggedIn.value) {
-      policies.value = []
-      error.value = '登录后可查看匹配政策'
-      return
-    }
-    const page = await fetchEntToPolicy(id, { pageIndex: 1, pageSize: 200 })
-    policies.value = page.items
-    ipCounts.value = { ...ipCounts.value, policy: page.totalElements }
-    if (enterprise.value) enterprise.value.policyCount = page.totalElements
+    if (enterprise.value?.id !== id) await loadEnterprise(id)
+    if (seq !== loadSeq) return
+    await loadPolicies(id)
   } catch (err) {
-    enterprise.value = null
+    if (seq !== loadSeq) return
     policies.value = []
+    total.value = 0
+    if (!enterprise.value || enterprise.value.id !== id) enterprise.value = null
     error.value = toErrorMessage(err, '匹配结果加载失败')
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
-
-const filtered = computed(() => {
-  const query = keyword.value.trim()
-  if (!query) return policies.value
-  return policies.value.filter((item) => item.name.includes(query))
-})
-
-const { currentPage, pagedList, total, pageSize, resetPage } = usePagination(
-  filtered,
-  { pageSize: PAGE_SIZE },
-)
 
 watch(
   [enterpriseId, isLoggedIn],
   () => {
-    keywordDraft.value = ''
-    keyword.value = ''
     followedPolicyIds.value = []
-    resetPage()
+    if (currentPage.value !== 1) {
+      currentPage.value = 1
+      return
+    }
     void load()
   },
   { immediate: true },
 )
+
+watch(currentPage, () => {
+  void load()
+})
 
 const stats = computed(() => {
   if (!enterprise.value) return []
@@ -159,9 +187,40 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   return items
 })
 
-const applySearch = () => {
-  keyword.value = keywordDraft.value.trim()
-  resetPage()
+const applySearch = async () => {
+  const keyword = keywordDraft.value.trim()
+  if (!keyword) {
+    message.info('请输入企业关键词进行搜索')
+    return
+  }
+  loading.value = true
+  error.value = ''
+  try {
+    const page = await fetchEnterprisePage({
+      keyword,
+      pageIndex: 1,
+      pageSize: 10,
+    })
+    const target =
+      page.items.find((item) => item.name === keyword) ?? page.items[0]
+    if (!target) {
+      message.warning('未找到该企业')
+      return
+    }
+    if (target.id === enterpriseId.value) {
+      currentPage.value = 1
+      await load()
+      return
+    }
+    await router.push({
+      name: 'enterprise-db-match',
+      params: { id: String(target.id) },
+    })
+  } catch (err) {
+    message.warning(toErrorMessage(err, '企业查询失败，请稍后重试'))
+  } finally {
+    if (!enterpriseId.value) loading.value = false
+  }
 }
 
 const isPolicyFollowed = (id: number) => followedPolicyIds.value.includes(id)
@@ -176,10 +235,25 @@ const togglePolicyFollow = (item: MatchPolicy) => {
     : [...followedPolicyIds.value, item.id]
 }
 
-const exportReport = () => {
+const exportReport = async () => {
   const current = enterprise.value
   if (!current) return
-  if (!filtered.value.length) {
+  if (!isLoggedIn.value) {
+    triggerNeedLogin()
+    return
+  }
+  let page
+  try {
+    page = await fetchEntToPolicy(current.id, {
+      pageIndex: 1,
+      pageSize: SEARCH_PAGE_SIZE,
+    })
+  } catch (err) {
+    message.error(toErrorMessage(err, '导出失败'))
+    return
+  }
+  const rows = page.items
+  if (!rows.length) {
     message.warning('暂无可导出的匹配政策')
     return
   }
@@ -192,7 +266,7 @@ const exportReport = () => {
       '政策状态',
       '最高金额(万元)',
     ],
-    ...filtered.value.map((item) => [
+    ...rows.map((item) => [
       item.name,
       item.grade,
       String(item.score),
@@ -209,68 +283,80 @@ const exportReport = () => {
   <div class="match-page">
     <section class="hero-stage">
       <div class="hero-inner">
-        <BreadcrumbNav :items="breadcrumbItems" @back="goDetail" />
-        <template v-if="enterprise">
-          <div class="hero-copy">
-            <div class="hero-heading">
-              <h1>企业找政策（匹配政策）</h1>
-              <p>
-                目前已有22条国家级政策、397条省级政策、809条市级政策加入匹配
-              </p>
-            </div>
-            <form class="search-box" @submit.prevent="applySearch">
-              <input
-                v-model="keywordDraft"
-                type="search"
-                aria-label="搜索政策"
-                autocomplete="off"
-              />
-              <button type="submit" class="search-btn">
-                <SearchOutlined />
-                搜索
-              </button>
-            </form>
+        <BreadcrumbNav
+          :items="breadcrumbItems"
+          @back="enterprise ? goDetail() : goList()"
+        />
+        <div class="hero-copy">
+          <div class="hero-heading">
+            <h1>企业找政策（匹配政策）</h1>
+            <p>目前已有22条国家级政策、397条省级政策、809条市级政策加入匹配</p>
           </div>
+          <form class="search-box" @submit.prevent="applySearch">
+            <input
+              v-model="keywordDraft"
+              type="search"
+              placeholder="请输入企业关键词进行搜索"
+              aria-label="搜索企业"
+              autocomplete="off"
+            />
+            <button type="submit" class="search-btn">
+              <SearchOutlined />
+              搜索
+            </button>
+          </form>
+        </div>
 
-          <article class="company-card">
-            <div class="company-top">
-              <h2>
-                <img :src="buildingIcon" alt="" />
-                {{ enterprise.name }}
-              </h2>
-              <div class="company-actions">
-                <button type="button" class="export-btn" @click="exportReport">
-                  <img :src="exportImg" alt="导出报告" />
-                </button>
-                <button
-                  type="button"
-                  class="follow-chip"
-                  :class="{ on: followed }"
-                  @click="toggleFollow"
-                >
-                  {{ followed ? '已关注' : '+ 关注' }}
-                </button>
-              </div>
+        <article v-if="enterprise" class="company-card">
+          <div class="company-top">
+            <h2>
+              <img :src="buildingIcon" alt="" />
+              {{ enterprise.name }}
+            </h2>
+            <div class="company-actions">
+              <button type="button" class="export-btn" @click="exportReport">
+                <img :src="exportImg" alt="导出报告" />
+              </button>
+              <button
+                type="button"
+                class="follow-chip"
+                :class="{ on: followed }"
+                @click="toggleFollow"
+              >
+                {{ followed ? '已关注' : '+ 关注' }}
+              </button>
             </div>
-            <div class="stats">
-              <span v-for="item in stats" :key="item.label">
-                {{ item.label }}：<em :class="{ hot: item.hot }">{{
-                  item.value
-                }}</em>
-              </span>
-            </div>
-          </article>
-        </template>
+          </div>
+          <div class="stats">
+            <span v-for="item in stats" :key="item.label">
+              {{ item.label }}：<em :class="{ hot: item.hot }">{{
+                item.value
+              }}</em>
+            </span>
+          </div>
+        </article>
       </div>
     </section>
 
     <PageState
-      :loading="loading && !enterprise"
-      :error="!enterprise ? error : ''"
-      :empty="!loading && !error && !enterprise ? '未找到该企业' : ''"
+      :loading="Boolean(enterpriseId) && loading && !enterprise"
+      :error="enterpriseId && !enterprise ? error : ''"
+      :empty="
+        enterpriseId && !loading && !error && !enterprise ? '未找到该企业' : ''
+      "
       @retry="load"
     >
-      <section v-if="enterprise" class="result-card">
+      <section v-if="!enterpriseId" class="result-card">
+        <div v-if="loading" class="result-empty">加载中...</div>
+        <EmptyState
+          v-else
+          class="match-empty"
+          :image="emptyNews"
+          :image-width="202"
+          text="请输入企业关键词进行搜索"
+        />
+      </section>
+      <section v-else-if="enterprise" class="result-card">
         <ResultCountBar
           class="result-head"
           prefix="共查到"
@@ -282,12 +368,17 @@ const exportReport = () => {
         <div v-if="error" class="result-empty">
           {{ error }}
         </div>
-        <div v-else-if="!pagedList.length" class="result-empty">
-          未找到匹配的政策
-        </div>
+        <div v-else-if="loading" class="result-empty">加载中...</div>
+        <EmptyState
+          v-else-if="!policies.length"
+          class="match-empty"
+          :image="emptyNews"
+          :image-width="202"
+          text="暂无匹配政策"
+        />
 
         <article
-          v-for="item in pagedList"
+          v-for="item in policies"
           :key="item.id"
           class="policy-row"
           :class="{ highlight: item.highlight }"
@@ -424,6 +515,11 @@ const exportReport = () => {
     background: transparent;
     font-size: 14px;
     color: #262626;
+    padding: 0 16px;
+
+    &::placeholder {
+      color: #bfbfbf;
+    }
 
     &::-webkit-search-cancel-button {
       appearance: none;
@@ -567,6 +663,14 @@ const exportReport = () => {
   padding: 48px 16px;
   color: #8c8c8c;
   text-align: center;
+}
+
+.match-empty {
+  --empty-gap: 12px;
+  --empty-padding: 24px 0 32px;
+  --empty-text-size: 16px;
+  --empty-text-weight: 400;
+  --empty-text-color: #8c8c8c;
 }
 
 .policy-row {

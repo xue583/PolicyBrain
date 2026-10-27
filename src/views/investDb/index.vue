@@ -28,12 +28,12 @@ const stripRegionSuffix = (name: string) =>
     '',
   )
 
-/** 省名对应投资库编码，如「北京市」→ beijing；没有对应编码时原样传给接口 */
+/** 省名对应投资库编码，如「北京市」→ beijing；全国传 national */
 const resolveInvestProvince = (
   regions: InvestRegion[],
   provinceName: string,
 ) => {
-  if (!provinceName) return undefined
+  if (!provinceName || provinceName === '全国') return 'national'
   const normalized = stripRegionSuffix(provinceName)
   const matched = regions.find((item) => {
     if (item.key === 'national' || item.label === '全国') return false

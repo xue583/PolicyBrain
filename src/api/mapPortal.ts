@@ -687,30 +687,185 @@ export const mapInvestProject = (raw: unknown, region = ''): InvestProject => {
   }
 }
 
+const matchStatus = (value: unknown): MatchPolicyStatus => {
+  if (typeof value === 'number' || value == null || value === '') return 'idle'
+  const text = String(value)
+  if (/过期|expired/i.test(text)) return 'expired'
+  if (/公示|public/i.test(text)) return 'public'
+  return 'idle'
+}
+
+const matchAmountLines = (record: Record<string, unknown>) => {
+  const raw = pick(record, ['amountLines', 'amounts', 'subsidyLines'])
+  if (!Array.isArray(raw)) return undefined
+  const lines = raw
+    .map((item) => {
+      if (typeof item === 'string') return item.trim()
+      const row = asRecord(item)
+      const region = pickString(row, ['region', 'regionName', 'grade', 'name'])
+      const amount = pick(row, ['amount', 'maxAmount', 'subsidyAmount'])
+      if (region && amount != null && amount !== '') {
+        return `${region}：最高${amount}万元`
+      }
+      return pickString(row, ['text', 'label'])
+    })
+    .filter(Boolean)
+  return lines.length ? lines : undefined
+}
+
+const matchBadge = (record: Record<string, unknown>) => {
+  const raw = pick(record, ['badge', 'tag'])
+  if (raw && typeof raw === 'object') {
+    const row = asRecord(raw)
+    const text = pickString(row, ['text', 'name', 'label'])
+    if (!text) return undefined
+    return {
+      text,
+      tone: pickString(row, ['tone']) === 'green' ? 'green' : 'blue',
+    } as MatchPolicy['badge']
+  }
+  if (typeof raw !== 'string' || !raw.trim()) return undefined
+  return {
+    text: raw.trim(),
+    tone: /常年/.test(raw) ? 'green' : 'blue',
+  }
+}
+
+/** 企→政匹配列表项。Swagger 的 200 未给出字段，按政策名片与匹配分数字段兼容读取。 */
 export const mapMatchPolicy = (raw: unknown): MatchPolicy => {
   const record = asRecord(raw)
-  const statusText = pickString(record, [
-    'status',
-    'dynamicState',
-    'newsStatus',
+  const levelValue = pick(record, ['policyLevel'])
+  const amount = pick(record, [
+    'maxAmount',
+    'amount',
+    'subsidyAmount',
+    'maxSubsidy',
   ])
-  let status: MatchPolicyStatus = 'idle'
-  if (/过期|expired/i.test(statusText)) status = 'expired'
-  else if (/公示|public/i.test(statusText)) status = 'public'
-  const amount = pick(record, ['maxAmount', 'amount'])
+  const amountNumber = Number(amount)
+  const note = pickString(record, [
+    'incubatorNote',
+    'reexamineDesc',
+    'listMeaning',
+    'matchNote',
+  ])
   return {
     id: pickNumber(record, ['policyId', 'id']),
-    name: pickString(record, ['policyCardName', 'name', 'title']),
+    name: pickString(record, [
+      'policyCardName',
+      'name',
+      'title',
+      'depotName',
+      'policyName',
+    ]),
+    badge: matchBadge(record),
     grade:
-      pickString(record, ['grade']) ||
-      levelLabel(mapPolicyLevel(pick(record, ['policyLevel']))),
-    score: pickNumber(record, ['score']),
-    department: pickString(record, ['department', 'issuingAuthority'], '-'),
-    status,
+      pickString(record, ['grade', 'depotLevel', 'listLevel']) ||
+      (typeof levelValue === 'number'
+        ? levelLabel(mapPolicyLevel(levelValue))
+        : ''),
+    score: pickNumber(record, ['score', 'fraction', 'matchScore']),
+    department: pickString(
+      record,
+      ['department', 'issuingAuthority', 'depotDepartment', 'authorityName'],
+      '-',
+    ),
+    status: matchStatus(
+      pick(record, ['status', 'statusType', 'newsStatus', 'dynamicState']),
+    ),
     maxAmount:
-      amount === undefined
+      amount === undefined || !Number.isFinite(amountNumber)
         ? undefined
-        : pickNumber(record, ['maxAmount', 'amount']),
+        : amountNumber,
+    amountLines: matchAmountLines(record),
+    highlight: record.highlight === true || record.isHighlight === true,
+    incubatorNote: note || undefined,
+  }
+}
+
+export type MatchedEnterprise = {
+  id: number
+  name: string
+  score: number | null
+  totalAmount: string
+  legalRep: string
+  foundedDate: string
+  subsidyText: string
+  address: string
+  province: string
+  city: string
+  district: string
+  regionLine: string
+}
+
+const moneyText = (value: unknown) => {
+  if (value === undefined || value === null || value === '') return ''
+  const text = String(value).trim()
+  if (!text || text === '-' || text === 'null') return ''
+  if (/[万亿]/.test(text)) return text
+  const num = Number(text.replace(/,/g, ''))
+  if (!Number.isFinite(num)) return text
+  const display = Number.isInteger(num)
+    ? String(num)
+    : String(Number(num.toFixed(2)))
+  return `${display}万元`
+}
+
+const wanText = (value: unknown) => moneyText(value).replace(/万元$/, '万')
+
+/** 政→企匹配列表项。接口字段未在文档中声明，兼容企业名片与匹配分。 */
+export const mapMatchedEnterprise = (raw: unknown): MatchedEnterprise => {
+  const record = asRecord(raw)
+  const enterprise = asRecord(record.enterprise ?? record.ent ?? record.company)
+  const industry = asRecord(record.industry)
+  const flat = { ...record, ...industry, ...enterprise }
+  const scoreRaw = pick(flat, [
+    'score',
+    'fraction',
+    'matchScore',
+    'matchingDegree',
+  ])
+  const scoreNum = Number(scoreRaw)
+  const score =
+    scoreRaw === undefined || !Number.isFinite(scoreNum) ? null : scoreNum
+  const province = pickString(flat, ['provinceName', 'province'])
+  const city = pickString(flat, ['cityName', 'city'])
+  const district = pickString(flat, ['districtName', 'district'])
+  const totalAmount = moneyText(
+    pick(flat, ['totalAmount', 'maxAmount', 'amount', 'subsidyAmount']),
+  )
+  const lines = matchAmountLines(flat)
+  const regionLine =
+    lines?.[0] ||
+    (province && totalAmount ? `${province}：最高${totalAmount}` : '')
+  const id =
+    pickNumber(enterprise, ['id', 'enterpriseId']) ||
+    pickNumber(record, ['enterpriseId', 'entId', 'id'])
+  return {
+    id,
+    name: pickString(flat, ['enterpriseName', 'name', 'companyName']),
+    score,
+    totalAmount,
+    legalRep: pickString(flat, [
+      'legalPerson',
+      'legalRep',
+      'legalRepresentative',
+    ]),
+    foundedDate: formatDate(
+      pick(flat, ['establishTime', 'foundedDate', 'establishDate']),
+    ),
+    subsidyText: wanText(
+      pick(flat, [
+        'publicityAmount',
+        'publicSubsidy',
+        'subsidyAmount',
+        'amount',
+      ]),
+    ),
+    address: pickString(flat, ['address', 'registerAddress']),
+    province,
+    city,
+    district,
+    regionLine,
   }
 }
 
