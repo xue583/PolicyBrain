@@ -125,16 +125,18 @@ watch(regionOpen, (open) => {
   if (open) void syncColumnsWithSelection()
 })
 
+const blankHref = (name: string) =>
+  router.resolve({ name, query: route.query }).href
+
 const menuItems = computed(() =>
   navItems.map((item) => {
     if (!item.newWindow) return { key: item.key, label: item.label }
-    const { href } = router.resolve({ name: item.key })
     return {
       key: item.key,
       label: h(
         'a',
         {
-          href,
+          href: blankHref(item.key),
           target: '_blank',
           rel: 'noopener noreferrer',
           class: 'nav-blank',
@@ -145,12 +147,12 @@ const menuItems = computed(() =>
   }),
 )
 
-/** 数据洞察在新标签页打开驾驶舱，当前页保持不动 */
+/** 数据洞察在新标签页打开驾驶舱，并带上当前地区，当前页保持不动 */
 const openInNewTab = (name: string) => {
-  const { href } = router.resolve({ name })
+  const { href } = router.resolve({ name, query: route.query })
   const tab = window.open(href, '_blank')
   if (tab) tab.opener = null
-  else void router.push({ name })
+  else void router.push({ name, query: route.query })
 }
 
 const onNavClick = ({

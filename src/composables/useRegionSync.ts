@@ -58,9 +58,25 @@ export const useRegionSync = () => {
     })
   }
 
+  let regionWriteSeq = 0
+
+  /**
+   * 只给当前页补省市区参数。
+   * 数据洞察等页面是异步组件，首屏导航完成前 currentRoute 仍是 `/`。
+   * 这时若只 replace query，会被解析成首页并取消正在进入的页面。
+   */
   const writeRegionQuery = (ids: RegionIds) => {
-    if (regionQueryMatches(route.query, ids)) return
-    void router.replace({ query: withRegionIds(route.query, ids) })
+    const seq = ++regionWriteSeq
+    void router.isReady().then(() => {
+      if (seq !== regionWriteSeq) return
+      const current = router.currentRoute.value
+      if (regionQueryMatches(current.query, ids)) return
+      return router.replace({
+        path: current.path,
+        query: withRegionIds(current.query, ids),
+        hash: current.hash,
+      })
+    })
   }
 
   const applySelection = (next: {

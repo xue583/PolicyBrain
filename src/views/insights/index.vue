@@ -168,10 +168,10 @@ onUnmounted(() => {
       <div class="hero-meta">
         <span>{{ clockText }}</span>
         <span class="meta-split" />
-        <span class="weather">
+        <!-- <span class="weather">
           <CloudOutlined />
           {{ weatherCity }} 18-26℃
-        </span>
+        </span> -->
       </div>
     </header>
 

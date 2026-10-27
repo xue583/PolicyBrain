@@ -54,7 +54,7 @@ const toggleExpanded = () => {
 .filter-row {
   display: flex;
   margin-top: 18px;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 22px;
 }
 
