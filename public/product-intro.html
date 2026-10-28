@@ -6,13 +6,15 @@
 <title>政策大脑 · 双引擎驱动的政企数据智能平台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* === 基础重置 === */
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { width:100%; height:100%; overflow:hidden;
-  background:linear-gradient(180deg,#F4F8FF 0%,#E7EFFF 100%); }
-body { font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif; -webkit-font-smoothing:antialiased; }
+  background-color:#F0F2F5;
+  background-image:linear-gradient(180deg,#F4F8FF 0%,#E7EFFF 100%); }
+body { font-family:"Alibaba PuHuiTi 2.0","PingFang SC","Microsoft YaHei",sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+:focus-visible { outline:2px solid #1668DC; outline-offset:2px; }
 
 /* === 固定 16:9 舞台：按视口等比缩放铺满，只裁外圈留白，内容不变形 === */
 #stage {
@@ -73,7 +75,7 @@ body { font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif; -w
   background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line) 82%,transparent); }
 
 /* 顶部品牌标识 */
-.s-a .brand { position:absolute; top:50px; left:96px; display:flex; align-items:center; gap:16px; z-index:5; }
+.s-a .brand { position:absolute; top:50px; left:96px; display:flex; align-items:center; gap:16px; z-index:5; cursor:pointer; }
 .s-a .brand .mark { width:46px; height:46px; border-radius:12px;
   background:linear-gradient(135deg,var(--blue),var(--blue2));
   display:flex; align-items:center; justify-content:center;
@@ -270,7 +272,7 @@ body { font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif; -w
 /* === 结束页 === */
 .s-a .end { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
 .s-a .end .ek { font-size:24px; letter-spacing:10px; color:var(--ink2); margin-bottom:18px; }
-.s-a .end h1 { font-size:120px; }
+.s-a .end h2 { margin:0; font-size:120px; font-weight:900; line-height:1.06; letter-spacing:4px; }
 .s-a .end .esub { font-size:30px; font-weight:700; letter-spacing:6px; color:var(--ink); margin-top:8px; }
 .s-a .end .ecomp { font-size:21px; color:var(--ink3); letter-spacing:4px; margin-top:14px; }
 .s-a .end .qr { margin-top:44px; display:flex; align-items:center; gap:26px;
@@ -287,18 +289,43 @@ body { font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif; -w
 
 /* === 导航与提示 === */
 #dots { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); display:flex; gap:9px; z-index:50; }
-#dots i { width:9px; height:9px; border-radius:50%; background:rgba(12,30,60,.22); cursor:pointer; transition:all .3s; }
-#dots i.on { background:#1668DC; width:26px; border-radius:5px; }
+#dots button { display:block; flex:none; width:9px; height:9px; padding:0; border:none; border-radius:50%; background:rgba(12,30,60,.22); line-height:0; cursor:pointer; transition:all .3s; }
+#dots button.on { background:#1668DC; width:26px; border-radius:5px; }
 #hint { position:fixed; left:22px; bottom:18px; z-index:50; font-family:'Sora',sans-serif;
   font-size:12px; letter-spacing:1.5px; color:rgba(12,30,60,.42); }
-#intro-close { position:fixed; top:18px; right:22px; z-index:80; display:inline-flex; align-items:center; gap:6px;
-  height:36px; padding:0 14px 0 10px; border:1px solid rgba(22,104,220,.22); border-radius:999px;
+#intro-crumb, #toc-toggle, #intro-close { font-family:inherit; }
+#intro-crumb { position:fixed; top:18px; left:22px; z-index:80; display:inline-flex; align-items:center; gap:8px;
+  height:36px; padding:0 14px; border:1px solid rgba(22,104,220,.22); border-radius:999px;
+  background:rgba(255,255,255,.92); color:#3D5A80; font-size:14px;
+  box-shadow:0 8px 24px rgba(12,30,60,.12); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+#intro-crumb a { color:#1668DC; text-decoration:none; }
+#toc-toggle, #intro-close { position:fixed; top:18px; z-index:80; display:inline-flex; align-items:center; gap:6px;
+  height:36px; padding:0 14px; border:1px solid rgba(22,104,220,.22); border-radius:999px;
   background:rgba(255,255,255,.92); color:#0C1E3C; cursor:pointer;
-  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
   font-size:14px; font-weight:500; letter-spacing:1px;
   box-shadow:0 8px 24px rgba(12,30,60,.12); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+#toc-toggle { right:118px; }
+#intro-close { right:22px; padding-left:10px; }
+#toc-toggle:hover, #intro-close:hover { color:#1668DC; border-color:#1668DC; background:#fff; }
+#slide-toc { position:fixed; top:64px; right:22px; z-index:90; width:min(360px, calc(100vw - 44px));
+  max-height:calc(100vh - 96px); overflow:auto; padding:8px; border:1px solid rgba(22,104,220,.16);
+  border-radius:12px; background:#fff; box-shadow:0 16px 40px rgba(12,30,60,.16); }
+#slide-toc button { display:block; width:100%; margin:0; padding:8px 10px; border:none; border-radius:8px;
+  background:transparent; color:#0C1E3C; font:inherit; font-size:13px; line-height:1.45; text-align:left; cursor:pointer; }
+#slide-toc button.on, #slide-toc button:hover { background:#EAF3FF; color:#1668DC; }
 #intro-close svg { width:16px; height:16px; }
 #intro-close:hover { color:#1668DC; border-color:#1668DC; background:#fff; }
+.slide-nav { position:fixed; top:50%; z-index:80; width:52px; height:52px; margin-top:-26px;
+  display:inline-flex; align-items:center; justify-content:center; padding:0;
+  border:1px solid rgba(22,104,220,.22); border-radius:50%;
+  background:rgba(255,255,255,.92); color:#0C1E3C; cursor:pointer;
+  box-shadow:0 8px 24px rgba(12,30,60,.12); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  transition:color .2s, border-color .2s, background .2s, opacity .25s, transform .2s; }
+.slide-nav svg { width:22px; height:22px; }
+.slide-nav.prev { left:22px; }
+.slide-nav.next { right:22px; }
+.slide-nav:hover { color:#1668DC; border-color:#1668DC; background:#fff; transform:scale(1.06); }
+.slide-nav.is-hidden { opacity:0; pointer-events:none; }
 body.editing [contenteditable] { outline:1px dashed rgba(22,104,220,.55); outline-offset:4px; border-radius:4px; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2008,7 +2035,7 @@ body.editing [contenteditable] { outline:1px dashed rgba(22,104,220,.55); outlin
 
     <div class="end">
       <div class="ek reveal">POLICY BRAIN · ROADSHOW 2026</div>
-      <h1 class="reveal">感谢观看，<span class="grad">期待合作</span></h1>
+      <h2 class="reveal">感谢观看，<span class="grad">期待合作</span></h2>
       <div class="esub reveal">让政策数据产生更大价值</div>
       <div class="ecomp reveal">河南智策数字科技有限公司 · 郑州市高新区</div>
       <div class="qr reveal">
@@ -2020,14 +2047,31 @@ body.editing [contenteditable] { outline:1px dashed rgba(22,104,220,.55); outlin
 
 </div>
 
+<nav id="intro-crumb" aria-label="面包屑">
+  <a id="intro-home" href="/">首页</a>
+  <span aria-hidden="true">›</span>
+  <span aria-current="page">产品介绍</span>
+</nav>
+<button id="toc-toggle" type="button" aria-expanded="false" aria-controls="slide-toc">目录</button>
+<nav id="slide-toc" hidden aria-label="章节目录"></nav>
 <button id="intro-close" type="button" aria-label="关闭">
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
     <path d="M4 4l8 8M12 4l-8 8"/>
   </svg>
   关闭
 </button>
+<button id="nav-prev" class="slide-nav prev" type="button" aria-label="上一页">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 5 8 12l7 7"/>
+  </svg>
+</button>
+<button id="nav-next" class="slide-nav next" type="button" aria-label="下一页">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9 5 7 7-7 7"/>
+  </svg>
+</button>
 <div id="dots"></div>
-<div id="hint">← / → 翻页 · 点击右侧前进 · Esc 关闭</div>
+<div id="hint">← / → 翻页 · 目录跳转 · Esc 关闭</div>
 
 <script>
 /* === 舞台缩放：铺满视口，裁切不超过标题和底栏外侧的留白 === */
@@ -2060,11 +2104,13 @@ const slides = document.querySelectorAll('.slide');
 const dotsBox = document.getElementById('dots');
 let cur = 0;
 slides.forEach((_,i)=>{
-  const d = document.createElement('i');
+  const d = document.createElement('button');
+  d.type = 'button';
+  d.setAttribute('aria-label', '第' + (i + 1) + '页');
   d.addEventListener('click', ()=> go(i));
   dotsBox.appendChild(d);
 });
-const dots = dotsBox.querySelectorAll('i');
+const dots = dotsBox.querySelectorAll('button');
 slides.forEach((sl,i)=>{
   if(i===0 || i===slides.length-1) return;
   const p = document.createElement('div');
@@ -2072,11 +2118,46 @@ slides.forEach((sl,i)=>{
   p.innerHTML = '<b>' + String(i+1).padStart(2,'0') + '</b> / ' + slides.length;
   sl.appendChild(p);
 });
+const navPrev = document.getElementById('nav-prev');
+const navNext = document.getElementById('nav-next');
+const slideToc = document.getElementById('slide-toc');
+const tocToggle = document.getElementById('toc-toggle');
+const homeHref = location.pathname.replace(/product-intro\.html$/, '') || '/';
+document.getElementById('intro-home').setAttribute('href', homeHref);
+document.querySelectorAll('.brand').forEach((el)=>{
+  el.setAttribute('role', 'link');
+  el.tabIndex = 0;
+  el.setAttribute('aria-label', '返回首页');
+  const openHome = ()=>{ location.href = homeHref; };
+  el.addEventListener('click', (e)=>{ e.stopPropagation(); openHome(); });
+  el.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openHome(); }
+  });
+});
+slides.forEach((sl,i)=>{
+  const heading = sl.querySelector('h1, h2');
+  const text = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : ('第' + (i + 1) + '页');
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = String(i + 1).padStart(2, '0') + '  ' + text;
+  btn.addEventListener('click', ()=>{ go(i); setToc(false); });
+  slideToc.appendChild(btn);
+});
+function setToc(open){
+  slideToc.hidden = !open;
+  tocToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+tocToggle.addEventListener('click', ()=> setToc(slideToc.hidden));
 function go(n){
   cur = Math.max(0, Math.min(slides.length-1, n));
   slides.forEach((sl,i)=> sl.classList.toggle('active', i===cur));
   dots.forEach((d,i)=> d.classList.toggle('on', i===cur));
+  slideToc.querySelectorAll('button').forEach((btn,i)=> btn.classList.toggle('on', i===cur));
+  navPrev.classList.toggle('is-hidden', cur===0);
+  navNext.classList.toggle('is-hidden', cur===slides.length-1);
 }
+navPrev.addEventListener('click', ()=> go(cur-1));
+navNext.addEventListener('click', ()=> go(cur+1));
 go(0);
 /* 支持 #页码 直达（如 #8 打开第 8 页），便于分享与打印 */
 function syncHash(){

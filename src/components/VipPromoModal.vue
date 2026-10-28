@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onUnmounted, watch } from 'vue'
-import { triggerNeedLogin } from '@/utils/auth'
+import { useRouter } from 'vue-router'
 import promoBg from '@/assets/home/vip-promo-bg.png'
 
 defineOptions({ name: 'VipPromoModal' })
 
 const open = defineModel<boolean>('open', { default: false })
+const router = useRouter()
 
 const emit = defineEmits<{
   dismissToday: []
@@ -22,7 +23,7 @@ const dismissToday = () => {
 
 const explore = () => {
   close()
-  triggerNeedLogin()
+  void router.push({ name: 'membership' })
 }
 
 const onKeydown = (e: KeyboardEvent) => {
@@ -103,7 +104,7 @@ onUnmounted(() => {
           </div>
 
           <button type="button" class="vip-promo-cta" @click="explore">
-            立即探索功能
+            立即开通会员
           </button>
         </div>
       </div>

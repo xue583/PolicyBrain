@@ -317,9 +317,10 @@ const openDetail = (item: PolicyItem) => {
 
 <style scoped lang="scss">
 .filter-panel {
+  --filter-font-size: 14px;
   padding: 0 0 8px;
   margin-bottom: 12px;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .filter-label {
@@ -327,7 +328,7 @@ const openDetail = (item: PolicyItem) => {
 }
 
 .filter-options :global(.ant-checkbox-wrapper) {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .tabs-divider {
@@ -339,7 +340,7 @@ const openDetail = (item: PolicyItem) => {
   position: relative;
   padding-left: 12px;
   margin-bottom: 16px;
-  font-size: 18px;
+  font-size: 14px;
   color: #343434;
 
   &::before {
@@ -349,7 +350,7 @@ const openDetail = (item: PolicyItem) => {
     bottom: 0;
     left: 0;
     width: 3px;
-    height: 18px;
+    height: 14px;
     background: var(--pb-primary);
   }
 }
@@ -363,7 +364,7 @@ const openDetail = (item: PolicyItem) => {
 .news-empty {
   --empty-padding: 72px 0 48px;
   --empty-gap: 16px;
-  --empty-text-size: 16px;
+  --empty-text-size: 14px;
   --empty-text-weight: 400;
   --empty-text-color: #8c8c8c;
 }
@@ -406,7 +407,7 @@ const openDetail = (item: PolicyItem) => {
 
 .item-title {
   flex: 1;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 600;
   color: #1f1f1f;
   line-height: 1.4;
@@ -418,7 +419,7 @@ const openDetail = (item: PolicyItem) => {
   right: 0;
   min-width: 64px;
   padding: 4px 14px 4px 20px;
-  font-size: 16px;
+  font-size: 13px;
   line-height: 22px;
   text-align: center;
   clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%);
@@ -437,14 +438,14 @@ const openDetail = (item: PolicyItem) => {
 
   :deep(.ant-tag) {
     margin-inline-end: 10px;
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 
 .item-desc {
   margin: 0 0 12px;
   color: #8c8c8c;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.7;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -459,7 +460,7 @@ const openDetail = (item: PolicyItem) => {
   gap: var(--pb-gap);
   margin-bottom: 10px;
   color: #8c8c8c;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .item-remain {

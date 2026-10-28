@@ -57,7 +57,7 @@ defineEmits<{ search: [] }>()
 
   :deep(input) {
     height: 100%;
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 

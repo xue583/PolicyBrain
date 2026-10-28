@@ -259,7 +259,7 @@ const toggleBank = (bank: FinanceBank) => {
 
 .bank-detail {
   padding: 14px 15px 6px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 

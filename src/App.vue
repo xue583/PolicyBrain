@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
@@ -26,6 +26,8 @@ useRegionSync()
 const VIP_PROMO_DISMISS_KEY = 'pb_vip_promo_dismiss_date'
 
 const promoOpen = ref(false)
+const PROMO_DELAY_MS = 3000
+let promoTimer = 0
 
 const isPromoDismissedToday = () => {
   try {
@@ -46,16 +48,24 @@ const dismissPromoToday = () => {
   }
 }
 
-onMounted(() => {
-  if (
-    !isCockpit.value &&
-    !isLoggedIn.value &&
-    route.name !== 'membership' &&
-    !route.query.invite &&
-    !isPromoDismissedToday()
-  ) {
-    promoOpen.value = true
-  }
+const canShowPromo = () =>
+  !isCockpit.value &&
+  !isLoggedIn.value &&
+  route.name !== 'membership' &&
+  !route.query.invite &&
+  !isPromoDismissedToday()
+
+const armPromo = () => {
+  window.clearTimeout(promoTimer)
+  if (!canShowPromo()) return
+  promoTimer = window.setTimeout(() => {
+    if (canShowPromo()) promoOpen.value = true
+  }, PROMO_DELAY_MS)
+}
+
+onMounted(armPromo)
+onUnmounted(() => {
+  window.clearTimeout(promoTimer)
 })
 
 watch(isLoggedIn, (loggedIn) => {

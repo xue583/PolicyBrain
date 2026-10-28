@@ -64,6 +64,13 @@ const weatherCity = computed(() =>
     ? areaLabel.value
     : '洛阳市',
 )
+const cockpitLead = computed(() => {
+  const province = mapOverview.find((item) => item.key === 'province')
+  const city = mapOverview.find((item) => item.key === 'city')
+  const scope = `实时追踪全国 ${province?.value ?? ''} 个省级、${city?.value ?? ''} 个地市的政策发布与申报数据`
+  if (regionStore.provinceId) return `当前地区 ${areaLabel.value}。${scope}`
+  return `${scope}。返回首页选择地区后，可对照该区域政策热度。`
+})
 const trendPoints = computed(() => getTrend(trendRange.value))
 const headline = computed(() => trendHeadline[trendRange.value])
 const fundPoints = computed(() => getFundTrend(fundRange.value))
@@ -153,17 +160,22 @@ onUnmounted(() => {
 <template>
   <div class="insights-page">
     <header class="cockpit-head">
-      <div class="brand">
+      <router-link class="brand" to="/" aria-label="返回首页">
         <img :src="logoImg" alt="政策大脑" />
         <p>数据驱动政策落地 · AI赋能产业发展</p>
-      </div>
+      </router-link>
       <div class="cockpit-title">
+        <nav class="cockpit-crumb" aria-label="面包屑">
+          <router-link to="/">首页</router-link>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page">数据洞察</span>
+        </nav>
         <h1>
           <i class="title-wing" />
           全国政策数据驾驶舱
           <i class="title-wing is-right" />
         </h1>
-        <p>用数据透视政策，让企业更好发展</p>
+        <p>{{ cockpitLead }}</p>
       </div>
       <div class="hero-meta">
         <span>{{ clockText }}</span>
@@ -382,6 +394,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
 
   img {
     display: block;
@@ -400,6 +414,22 @@ onUnmounted(() => {
   }
 }
 
+.cockpit-crumb {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+  color: #7f97b5;
+  font-size: 12px;
+  line-height: 1.5;
+
+  a {
+    color: #1677ff;
+    text-decoration: none;
+  }
+}
+
 .cockpit-title {
   text-align: center;
 
@@ -411,17 +441,18 @@ onUnmounted(() => {
     margin: 0;
     color: #163a6b;
     font-family: var(--pb-font-display);
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     line-height: 36px;
     letter-spacing: 2px;
   }
 
   p {
-    margin: 2px 0 0;
+    max-width: 640px;
+    margin: 2px auto 0;
     color: #7f97b5;
     font-size: 13px;
-    line-height: 20px;
+    line-height: 1.6;
   }
 }
 

@@ -943,7 +943,7 @@ onMounted(() => {
 
 .hero-copy h1 {
   margin: 21px 0 16px;
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.3;
   color: var(--pb-primary);

@@ -21,6 +21,7 @@ import logoLightImg from '@/assets/logo-light.png'
 import robotImg from '@/assets/home/robot.png'
 import mobileImg from '@/assets/home/container-1.png'
 import vipEntryImg from '@/assets/home/vip-entry.png'
+import qrMini from '@/assets/home/qr-miniprogram.png'
 import LoginModal from './LoginModal.vue'
 import UserAccountMenu from './UserAccountMenu.vue'
 
@@ -176,22 +177,6 @@ const onNavClick = ({
   }
 }
 
-const goHome = () => {
-  void router.push({ name: 'home' })
-}
-
-const goMembership = () => {
-  if (route.name !== 'membership') {
-    void router.push({ name: 'membership' })
-  }
-}
-
-const goWorkbench = () => {
-  if (route.name !== 'workspace') {
-    void router.push({ name: 'workspace' })
-  }
-}
-
 const openLogin = () => {
   loginOpen.value = true
 }
@@ -253,13 +238,13 @@ onUnmounted(() => {
   >
     <div class="header-inner">
       <div class="header-left">
-        <div class="logo" @click="goHome">
+        <router-link class="logo" :to="{ name: 'home' }" aria-label="返回首页">
           <img
             :src="headerLogo"
             alt="政策大脑 POLICY BRAIN"
             fetchpriority="high"
           />
-        </div>
+        </router-link>
 
         <a-dropdown
           v-model:open="regionOpen"
@@ -336,26 +321,38 @@ onUnmounted(() => {
       />
 
       <div class="header-right">
-        <a class="ai-link" @click.prevent="goWorkbench">
+        <router-link class="ai-link" :to="{ name: 'workspace' }">
           <img :src="robotImg" alt="" class="ai-icon" />
           <span class="ai-link-text">AI政策大脑</span>
-        </a>
+        </router-link>
         <a class="intro-link" :href="productIntroHref">
           <FundProjectionScreenOutlined class="intro-icon" />
           <span>产品介绍</span>
         </a>
-        <a class="mobile-link">
-          <img :src="mobileImg" alt="" class="mobile-icon" />
-          <span>移动端</span>
-        </a>
-        <a
+        <a-popover placement="bottomRight" trigger="click">
+          <template #content>
+            <div class="mobile-pop">
+              <img :src="qrMini" alt="政策大脑小程序码" />
+              <p>微信扫码使用小程序</p>
+            </div>
+          </template>
+          <button type="button" class="mobile-link">
+            <img :src="mobileImg" alt="" class="mobile-icon" />
+            <span>移动端</span>
+          </button>
+        </a-popover>
+        <router-link
           class="vip-link"
+          :to="{ name: 'membership' }"
           :style="{ backgroundImage: `url(${vipEntryImg})` }"
-          @click.prevent="goMembership"
         >
           开通会员
-        </a>
-        <a class="mobile-link message-link" @click.prevent="goMessages">
+        </router-link>
+        <button
+          type="button"
+          class="mobile-link message-link"
+          @click="goMessages"
+        >
           <a-badge
             class="message-badge"
             :count="unreadCount"
@@ -365,7 +362,7 @@ onUnmounted(() => {
             <BellFilled />
           </a-badge>
           <span>消息</span>
-        </a>
+        </button>
         <UserAccountMenu v-if="isLoggedIn" />
         <a-button v-else type="primary" class="login-btn" @click="openLogin">
           登录/注册
@@ -477,6 +474,7 @@ onUnmounted(() => {
   align-items: center;
   line-height: 1;
   cursor: pointer;
+  text-decoration: none;
 
   img {
     display: block;
@@ -615,7 +613,7 @@ onUnmounted(() => {
 
   :deep(.ant-menu-item-selected) {
     color: var(--pb-primary);
-    font-weight: 500;
+    font-weight: 600;
 
     &::after {
       border-bottom-color: var(--pb-primary);
@@ -634,10 +632,18 @@ onUnmounted(() => {
   .mobile-link {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    min-height: 44px;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: #666;
+    font: inherit;
     white-space: nowrap;
     line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
 
     &:hover {
       color: var(--pb-primary);
@@ -647,12 +653,12 @@ onUnmounted(() => {
   .intro-link {
     flex-shrink: 0;
     color: #666666;
-    font-size: 16px;
+    font-size: 15px;
     text-decoration: none;
   }
 
   .intro-icon {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .ai-link {
@@ -666,11 +672,12 @@ onUnmounted(() => {
   }
 
   .mobile-link {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .message-link {
     cursor: pointer;
+    min-width: 44px;
   }
 
   .message-badge {
@@ -681,7 +688,7 @@ onUnmounted(() => {
       min-width: 16px;
       height: 16px;
       padding: 0 4px;
-      font-size: 10px;
+      font-size: 12px;
       line-height: 16px;
       box-shadow: none;
     }
@@ -689,7 +696,7 @@ onUnmounted(() => {
 
   .ai-link-text {
     font-weight: 500;
-    font-size: 16px;
+    font-size: 15px;
     font-style: italic;
     text-transform: none;
     background: linear-gradient(0deg, #2151a2 0%, #2fabe0 100%);
@@ -743,6 +750,28 @@ onUnmounted(() => {
     font-size: 13px;
     font-weight: 500;
     box-shadow: 0 4px 10px rgba(22, 119, 255, 0.28);
+  }
+}
+
+.mobile-pop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 148px;
+
+  img {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+  }
+
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
   }
 }
 

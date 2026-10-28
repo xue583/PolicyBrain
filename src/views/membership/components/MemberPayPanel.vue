@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import iconCheck from '@/assets/membership/icon-check.png'
 
 defineOptions({ name: 'MemberPayPanel' })
@@ -15,8 +16,17 @@ withDefaults(
   { variant: 'personal', tone: 'gold' },
 )
 
-/** 伪二维码格子（视觉占位，非真实码） */
-const qrCells = (() => {
+type PayChannel = 'alipay' | 'wechatpay'
+
+const channel = ref<PayChannel>('alipay')
+
+const payMethods: Array<{ id: PayChannel; label: string; icon: string }> = [
+  { id: 'alipay', label: '支付宝支付', icon: 'icon-zhifubao' },
+  { id: 'wechatpay', label: '微信支付', icon: 'icon-weixin' },
+]
+
+/** 伪二维码格子（视觉占位，非真实码；随支付方式换一套图案） */
+function buildQrCells(seed: number) {
   const size = 29
   const cells: Array<[number, number]> = []
   const set = (x: number, y: number) => cells.push([x, y])
@@ -43,34 +53,38 @@ const qrCells = (() => {
       const inFinder =
         (x < 9 && y < 9) || (x >= size - 9 && y < 9) || (x < 9 && y >= size - 9)
       if (inFinder) continue
-      const n = (x * 17 + y * 13 + x * y) % 7
+      const n = (x * 17 + y * 13 + x * y + seed) % 7
       if (n === 0 || n === 3) set(x, y)
     }
   }
   return cells
-})()
+}
+
+const qrCells = computed(() => buildQrCells(channel.value === 'alipay' ? 2 : 5))
+
+function selectChannel(next: PayChannel) {
+  channel.value = next
+}
 </script>
 
 <template>
   <aside class="pay-panel" :class="[`is-${variant}`, `tone-${tone}`]">
     <div class="pay-price"><em>¥</em>{{ price }}</div>
-    <p class="pay-scan">
-      <svg class="pay-brand" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="12" fill="#09bb07" />
-        <path
-          fill="#fff"
-          d="M9.2 11.1c-.5 0-.9-.4-.9-.8s.4-.8.9-.8.9.4.9.8-.4.8-.9.8zm5.6 0c-.5 0-.9-.4-.9-.8s.4-.8.9-.8.9.4.9.8-.4.8-.9.8zM12 6.2c-3.6 0-6.5 2.4-6.5 5.3 0 1.7.9 3.2 2.3 4.2l-.6 1.8 2-.9c.8.2 1.6.4 2.8.4 3.6 0 6.5-2.4 6.5-5.3S15.6 6.2 12 6.2z"
-        />
-      </svg>
-      <svg class="pay-brand" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="12" fill="#1677ff" />
-        <path
-          fill="#fff"
-          d="M17.4 14.2c-.9.8-2.3 1.4-3.8 1.6l-1.6-3.8c.7-.2 1.3-.6 1.8-1.1.7.6 1.4 1.4 1.9 2.3.6-.4 1.1-.8 1.7-1.1-.4-.7-1-1.5-1.7-2.2 1.1-.9 1.8-2.1 2-3.4H9.4v1.1h3.3c-.1.7-.4 1.4-.9 2H9.4v1.1h2.1c-.6.6-1.4 1-2.3 1.2v1.2c1.5-.2 2.8-.8 3.7-1.6l1.3 3.2c-.2 0-.4.1-.6.1H9.4v1.2h8z"
-        />
-      </svg>
-      扫码支付
-    </p>
+    <div class="pay-switch" role="tablist" aria-label="支付方式">
+      <button
+        v-for="item in payMethods"
+        :key="item.id"
+        type="button"
+        role="tab"
+        class="pay-switch-btn"
+        :class="[`is-${item.id}`, { 'is-active': channel === item.id }]"
+        :aria-selected="channel === item.id"
+        @click="selectChannel(item.id)"
+      >
+        <IconFont class="pay-brand" :name="item.icon" :size="16" />
+        {{ item.label }}
+      </button>
+    </div>
     <div class="qr-box" :style="{ backgroundImage: `url(${qrFrame})` }">
       <svg class="qr-code" viewBox="0 0 29 29" aria-hidden="true">
         <rect width="29" height="29" fill="#fff" />
@@ -138,19 +152,58 @@ const qrCells = (() => {
   color: #e24b3a;
 }
 
-.pay-scan {
+.pay-switch {
   display: flex;
+  width: 100%;
+  margin: 12px 0;
+  padding: 3px;
+  border-radius: 8px;
+  background: #f6f1ea;
+  gap: 2px;
+}
+
+.tone-blue .pay-switch,
+.tone-red .pay-switch {
+  background: #f3f6fb;
+}
+
+.pay-switch-btn {
+  flex: 1;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin: 8px 0 12px;
-  font-size: 13px;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: #8a7a66;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &.is-active {
+    background: #fff;
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(29, 43, 58, 0.08);
+  }
+
+  &.is-alipay.is-active {
+    color: #1677ff;
+  }
+
+  &.is-wechatpay.is-active {
+    color: #07a83a;
+  }
 }
 
 .pay-brand {
-  width: 16px;
-  height: 16px;
   flex-shrink: 0;
+  font-weight: 400;
+  line-height: 1;
 }
 
 .qr-box {

@@ -112,21 +112,21 @@ const heroFeatures = [
 .hero-title {
   margin: 20px 0 14px;
   font-family: var(--pb-font-display);
-  font-size: 48px;
+  font-size: 42px;
   font-weight: 700;
   letter-spacing: 0.2em;
   line-height: 1.25;
 
   span {
     color: #f2c36b;
-    font-size: 60px;
+    font-size: 52px;
   }
 }
 
 .hero-sub {
   margin: 25px 0 50px;
   font-family: var(--pb-font-slogan);
-  font-size: 24px;
+  font-size: 22px;
   color: rgba(255, 255, 255, 0.82);
 }
 
@@ -143,7 +143,7 @@ const heroFeatures = [
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 24px;
+    font-size: 22px;
     color: rgba(255, 255, 255, 0.92);
   }
 
@@ -160,7 +160,7 @@ const heroFeatures = [
   }
 
   .hero-title {
-    font-size: 28px;
+    font-size: 26px;
   }
 }
 </style>

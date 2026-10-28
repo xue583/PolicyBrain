@@ -1,44 +1,74 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useServerPage } from '@/composables/useServerPage'
 import { useCollapsedList } from '@/composables/useCollapsedList'
-import { BankOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import { BankOutlined, DownOutlined, EyeOutlined } from '@ant-design/icons-vue'
 import FilterRow from '@/components/common/FilterRow.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import SelectedConditionsBar from '@/components/common/SelectedConditionsBar.vue'
+import { type PolicyDbItem } from '../../mock/policyDb'
 import {
-  policyDepartments,
-  policyGrades,
-  policyIndustryTags,
-  type PolicyDbItem,
-} from '../../mock/policyDb'
-import { infoTypes } from '../../mock/filters'
-import { fetchPolicyPage } from '@/api/policies'
+  industries as fallbackIndustries,
+  infoTypes,
+  policyLevels,
+} from '../../mock/filters'
+import {
+  fetchIssuingAuthorityOptions,
+  fetchPolicyPage,
+  type IssuingAuthorityOption,
+} from '@/api/policies'
 import { fetchIndustryTree, type IndustryNode } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
+import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
+import { useRegionStore } from '@/stores/region'
+import { clearRegionSelection } from '@/utils/regionActions'
 
 defineOptions({ name: 'PolicyDb' })
 
 const COLLAPSED_COUNT = 10
 
 const keyword = useRouteKeyword()
-
-const levels = ref<string[]>([])
+const region = useRegionStore()
+const { selectedLabel: regionLabel } = storeToRefs(region)
 
 const toIndustryNodes = (names: string[]): IndustryNode[] =>
   names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
 
-const industryTree = ref<IndustryNode[]>(toIndustryNodes(policyIndustryTags))
+const industryTree = ref<IndustryNode[]>(toIndustryNodes(fallbackIndustries))
 
 const filters = reactive({
-  grade: '',
+  departmentId: '',
   department: '',
+  levels: [] as string[],
   industryTags: [] as string[],
   infoTypes: [] as string[],
+})
+
+/** 与后端发布单位等级一致：0 国家 / 1 省 / 2 市 / 3 区县 */
+const POLICY_LEVEL_CODE: Record<string, number> = {
+  national: 0,
+  provincial: 1,
+  municipal: 2,
+  district: 3,
+}
+
+const departments = ref<IssuingAuthorityOption[]>([])
+const departmentsLoading = ref(false)
+
+const departmentReady = computed(
+  () => filters.levels.length > 0 && region.provinceId != null,
+)
+
+const departmentHint = computed(() => {
+  if (!departmentReady.value) return '请先选择政策等级和省市地区'
+  if (departmentsLoading.value) return '加载中...'
+  if (!departments.value.length) return '暂无发布单位'
+  return ''
 })
 
 const statusText: Record<PolicyDbItem['status'], string> = {
@@ -70,8 +100,8 @@ const rowLinks = (record: PolicyDbItem) => [
 
 const selectedConditions = computed(() => {
   const list: { key: string; label: string }[] = []
-  if (filters.grade) {
-    list.push({ key: 'grade', label: `政策等级：${filters.grade}` })
+  if (regionLabel.value) {
+    list.push({ key: 'region', label: `省市地区：${regionLabel.value}` })
   }
   if (filters.department) {
     list.push({
@@ -82,6 +112,12 @@ const selectedConditions = computed(() => {
   filters.industryTags.forEach((tag) => {
     list.push({ key: `industry:${tag}`, label: `产业标签：${tag}` })
   })
+  filters.levels.forEach((value) => {
+    const found = policyLevels.find((level) => level.value === value)
+    if (found) {
+      list.push({ key: `level:${value}`, label: `政策等级：${found.label}` })
+    }
+  })
   filters.infoTypes.forEach((value) => {
     const found = infoTypes.find((t) => t.value === value)
     if (found)
@@ -90,12 +126,67 @@ const selectedConditions = computed(() => {
   return list
 })
 
-const { showMore: showMoreGrades, visibleList: visibleGrades } =
-  useCollapsedList(policyGrades, COLLAPSED_COUNT, { initialExpanded: true })
 const { showMore: showMoreDepartments, visibleList: visibleDepartments } =
-  useCollapsedList(policyDepartments, COLLAPSED_COUNT)
-const { showMore: showMoreTags, visibleList: visibleIndustryTags } =
-  useCollapsedList(industryTree, COLLAPSED_COUNT)
+  useCollapsedList(departments, COLLAPSED_COUNT)
+
+let departmentSeq = 0
+const loadDepartments = async () => {
+  const seq = ++departmentSeq
+  const levels = filters.levels
+    .map((item) => POLICY_LEVEL_CODE[item])
+    .filter((item): item is number => item !== undefined)
+  const provinceId = region.provinceId
+  if (!levels.length || provinceId == null) {
+    departments.value = []
+    departmentsLoading.value = false
+    return
+  }
+  departments.value = []
+  departmentsLoading.value = true
+  showMoreDepartments.value = false
+  try {
+    const lists = await Promise.all(
+      levels.map((level) =>
+        fetchIssuingAuthorityOptions({
+          level,
+          provinceId,
+          cityId: region.cityId,
+          districtId: region.districtId,
+        }).catch(() => [] as IssuingAuthorityOption[]),
+      ),
+    )
+    if (seq !== departmentSeq) return
+    const seen = new Set<string>()
+    const merged: IssuingAuthorityOption[] = []
+    for (const list of lists) {
+      for (const item of list) {
+        if (seen.has(item.id)) continue
+        seen.add(item.id)
+        merged.push(item)
+      }
+    }
+    departments.value = merged
+  } finally {
+    if (seq === departmentSeq) departmentsLoading.value = false
+  }
+}
+
+watch(
+  () =>
+    [
+      [...filters.levels].sort().join(','),
+      region.provinceId ?? '',
+      region.cityId ?? '',
+      region.districtId ?? '',
+    ].join('|'),
+  () => {
+    filters.departmentId = ''
+    filters.department = ''
+    void loadDepartments()
+  },
+)
+const { showMore: showMoreIndustries, visibleList: visibleIndustries } =
+  useCollapsedList(industryTree, 8)
 
 const {
   currentPage,
@@ -109,32 +200,48 @@ const {
   (pageIndex, pageSize) =>
     fetchPolicyPage({
       keyword: keyword.value,
-      grade: filters.grade,
-      department: filters.department,
+      provinceId: region.provinceId,
+      cityId: region.cityId,
+      districtId: region.districtId,
+      issuingAuthorityId: filters.departmentId || undefined,
       industryTag: filters.industryTags.join(','),
       infoTypes: filters.infoTypes,
-      levels: levels.value,
+      levels: filters.levels,
       pageIndex,
       pageSize,
     }),
   () =>
     JSON.stringify({
       keyword: keyword.value,
-      grade: filters.grade,
-      department: filters.department,
+      provinceId: region.provinceId,
+      cityId: region.cityId,
+      districtId: region.districtId,
+      departmentId: filters.departmentId,
       industryTag: filters.industryTags.join(','),
       infoTypes: filters.infoTypes,
-      levels: levels.value,
+      levels: filters.levels,
     }),
 )
 
-const selectFilter = (key: 'grade' | 'department', value: string) => {
-  filters[key] = filters[key] === value ? '' : value
+const selectDepartment = (item: IssuingAuthorityOption) => {
+  if (filters.departmentId === item.id) {
+    filters.departmentId = ''
+    filters.department = ''
+    return
+  }
+  filters.departmentId = item.id
+  filters.department = item.name
 }
 
 const removeCondition = (key: string) => {
-  if (key === 'grade' || key === 'department') {
-    filters[key] = ''
+  if (key === 'region') {
+    clearRegionSelection()
+  } else if (key === 'department') {
+    filters.departmentId = ''
+    filters.department = ''
+  } else if (key.startsWith('level:')) {
+    const value = key.slice('level:'.length)
+    filters.levels = filters.levels.filter((item) => item !== value)
   } else if (key.startsWith('industry:')) {
     const value = key.slice('industry:'.length)
     filters.industryTags = filters.industryTags.filter((item) => item !== value)
@@ -145,8 +252,10 @@ const removeCondition = (key: string) => {
 }
 
 const clearConditions = () => {
-  filters.grade = ''
+  clearRegionSelection()
+  filters.departmentId = ''
   filters.department = ''
+  filters.levels = []
   filters.industryTags = []
   filters.infoTypes = []
 }
@@ -202,48 +311,53 @@ const columns = [
     <div class="policy-db">
       <div class="filter-panel">
         <a-card class="pb-card-lg">
-          <FilterRow
-            label="政策等级："
-            v-model:expanded="showMoreGrades"
-            collapsible
-          >
-            <a
-              v-for="grade in visibleGrades"
-              :key="grade"
-              class="option-link"
-              :class="{ active: filters.grade === grade }"
-              @click="selectFilter('grade', grade)"
-            >
-              {{ grade }}
-            </a>
-          </FilterRow>
+          <RegionCascadeFilter label="省市地区：" :collapsed-count="12" />
+
+          <div class="filter-row">
+            <span class="filter-label">政策等级：</span>
+            <div class="filter-options">
+              <a-checkbox-group
+                v-model:value="filters.levels"
+                :options="policyLevels"
+              />
+            </div>
+          </div>
 
           <FilterRow
             label="发布单位："
             v-model:expanded="showMoreDepartments"
-            collapsible
+            :collapsible="departments.length > COLLAPSED_COUNT"
           >
+            <span v-if="departmentHint" class="dept-hint">
+              {{ departmentHint }}
+            </span>
             <a
               v-for="dept in visibleDepartments"
-              :key="dept"
+              :key="dept.id"
               class="option-link"
-              :class="{ active: filters.department === dept }"
-              @click="selectFilter('department', dept)"
+              :class="{ active: filters.departmentId === dept.id }"
+              @click="selectDepartment(dept)"
             >
-              {{ dept }}
+              {{ dept.name }}
             </a>
           </FilterRow>
 
-          <FilterRow
-            label="产业标签："
-            v-model:expanded="showMoreTags"
-            collapsible
-          >
-            <IndustryCascadeFilter
-              v-model="filters.industryTags"
-              :options="visibleIndustryTags"
-            />
-          </FilterRow>
+          <div class="filter-row">
+            <span class="filter-label">产业标签：</span>
+            <div class="filter-options">
+              <IndustryCascadeFilter
+                v-model="filters.industryTags"
+                :options="visibleIndustries"
+              />
+              <a
+                class="more-link"
+                @click="showMoreIndustries = !showMoreIndustries"
+              >
+                {{ showMoreIndustries ? '收起' : '更多' }}
+                <DownOutlined :class="{ rotated: showMoreIndustries }" />
+              </a>
+            </div>
+          </div>
 
           <div class="filter-row">
             <span class="filter-label">资讯类型：</span>
@@ -267,13 +381,6 @@ const columns = [
         <div class="db-panel">
           <div class="toolbar">
             <ResultCountBar :total="total" unit="项政策" />
-            <!-- <div class="level-filter">
-              <span class="level-label">政策级别:</span>
-              <a-checkbox-group
-                v-model:value="levels"
-                :options="policyDbLevels"
-              />
-            </div> -->
           </div>
 
           <a-config-provider :locale="listLocale">
@@ -356,13 +463,14 @@ const columns = [
 
 <style scoped lang="scss">
 .filter-panel {
+  --filter-font-size: 14px;
   padding: 0 0 8px;
   margin-bottom: 12px;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .filter-options :global(.ant-checkbox-wrapper) {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .db-panel {
@@ -378,22 +486,8 @@ const columns = [
   padding: 0 0 12px;
 }
 
-.level-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 18px;
-
-  :deep(.ant-checkbox-wrapper) {
-    font-size: 16px;
-    color: #262626;
-  }
-}
-
-.level-label {
-  color: #8c8c8c;
-  white-space: nowrap;
+.policy-db {
+  --db-table-font-size: 14px;
 }
 
 .policy-db
@@ -443,7 +537,7 @@ const columns = [
 }
 
 .policy-table {
-  --db-table-font-size: 15px;
+  --db-table-font-size: 14px;
   --db-table-cell-padding: 11px 20px;
 
   :deep(.db-table) {
@@ -506,7 +600,7 @@ const columns = [
 
 .name-link {
   color: var(--pb-primary);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 20px;
   white-space: nowrap;
 
@@ -533,6 +627,11 @@ const columns = [
   }
 }
 
+.dept-hint {
+  color: #999;
+  line-height: 32px;
+}
+
 .dept-name {
   display: block;
   overflow: hidden;
@@ -556,7 +655,7 @@ const columns = [
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   white-space: nowrap;
 

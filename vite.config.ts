@@ -81,6 +81,7 @@ export default defineConfig(({ mode }) => {
             '/match',
             '/kb',
             '/home',
+            '/issuingAuthority',
           ].map((prefix) => [
             prefix,
             {

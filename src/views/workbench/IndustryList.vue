@@ -223,7 +223,7 @@ const tableColumns = [
 .serve-title {
   margin: 0;
   color: #1f1f1f;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
 }
@@ -282,7 +282,7 @@ const tableColumns = [
   }
 
   .serve-title {
-    font-size: 17px;
+    font-size: 16px;
   }
 }
 </style>

@@ -32,7 +32,7 @@ const activeKey = defineModel<K>('activeKey', { required: true })
 
     .ant-tabs-tab-btn {
       color: #1f1f1f;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
 
       &:hover {

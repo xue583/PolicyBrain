@@ -44,30 +44,44 @@ const onContentClick = (event: MouseEvent) => {
 
 <template>
   <div class="about-page">
-    <nav class="about-menu" aria-label="关于我们">
-      <router-link
-        v-for="item in aboutSections"
-        :key="item.key"
-        class="menu-item"
-        :class="{ active: item.key === current.key }"
-        :to="aboutPath(item.key)"
+    <nav class="about-crumb" aria-label="面包屑">
+      <router-link to="/">首页</router-link>
+      <span class="crumb-sep" aria-hidden="true">›</span>
+      <router-link v-if="current.key !== 'about'" to="/about"
+        >关于我们</router-link
       >
-        {{ item.label }}
-      </router-link>
+      <span v-if="current.key !== 'about'" class="crumb-sep" aria-hidden="true"
+        >›</span
+      >
+      <span aria-current="page">{{ current.label }}</span>
     </nav>
 
-    <section class="about-main">
-      <h2 class="about-title">
-        <i class="title-mark" aria-hidden="true" />
-        {{ current.label }}
-      </h2>
-      <div
-        ref="bodyRef"
-        class="about-body"
-        @click="onContentClick"
-        v-html="safeHtml"
-      />
-    </section>
+    <div class="about-layout">
+      <nav class="about-menu" aria-label="关于我们">
+        <router-link
+          v-for="item in aboutSections"
+          :key="item.key"
+          class="menu-item"
+          :class="{ active: item.key === current.key }"
+          :to="aboutPath(item.key)"
+        >
+          {{ item.label }}
+        </router-link>
+      </nav>
+
+      <section class="about-main">
+        <h1 class="about-title">
+          <i class="title-mark" aria-hidden="true" />
+          {{ current.label }}
+        </h1>
+        <div
+          ref="bodyRef"
+          class="about-body"
+          @click="onContentClick"
+          v-html="safeHtml"
+        />
+      </section>
+    </div>
 
     <div class="handbook-fab-wrap">
       <a-tooltip title="用户手册" placement="left">
@@ -89,11 +103,44 @@ const onContentClick = (event: MouseEvent) => {
 .about-page {
   display: flex;
   flex: 1;
-  align-items: stretch;
+  flex-direction: column;
   gap: 12px;
   width: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+.about-crumb {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 36px;
+  color: #595959;
+  font-size: 14px;
+  line-height: 1.5;
+
+  a {
+    color: var(--pb-primary);
+    text-decoration: none;
+
+    &:hover {
+      color: #4096ff;
+    }
+  }
+}
+
+.crumb-sep {
+  color: #bfbfbf;
+}
+
+.about-layout {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  gap: 12px;
+  min-height: 0;
 }
 
 .about-menu,
@@ -154,13 +201,13 @@ const onContentClick = (event: MouseEvent) => {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  height: 50px;
+  min-height: 56px;
   margin: 0;
   border-bottom: 1px solid #e7e7e7;
   color: #1a1a1a;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1;
+  font-size: var(--pb-fs-h2);
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .title-mark {
@@ -180,12 +227,21 @@ const onContentClick = (event: MouseEvent) => {
   padding: 18px 30px 40px;
   overflow-y: auto;
   color: #333;
-  font-size: 15px;
-  line-height: 1.8;
+  font-size: var(--pb-fs-body);
+  line-height: 1.75;
+  letter-spacing: 0.02em;
   word-break: break-word;
 
   :deep(p) {
-    margin: 0 0 8px;
+    margin: 1em 0;
+  }
+
+  :deep(h2) {
+    margin: 1.4em 0 0.6em;
+    color: #1a1a1a;
+    font-size: var(--pb-fs-h2);
+    font-weight: 700;
+    line-height: 1.4;
   }
 
   :deep(a) {
@@ -229,7 +285,7 @@ const onContentClick = (event: MouseEvent) => {
 }
 
 @include below-lg {
-  .about-page {
+  .about-layout {
     flex-direction: column;
     min-height: 0;
   }

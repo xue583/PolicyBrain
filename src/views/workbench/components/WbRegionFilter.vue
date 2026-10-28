@@ -152,7 +152,7 @@ const clear = () => {
 
 .city-item {
   color: #333;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 20px;
   white-space: nowrap;
   cursor: pointer;
@@ -179,7 +179,7 @@ const clear = () => {
   gap: 8px;
   padding: 2px 10px;
   color: var(--pb-primary);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 20px;
   background: #fff;
   border: 1px solid #8ab6f5;

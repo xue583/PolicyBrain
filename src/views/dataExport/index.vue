@@ -414,7 +414,7 @@ const onBatchUploaded = (name: string) => {
 }
 
 .export-count {
-  --rc-font-size: 16px;
+  --rc-font-size: 14px;
   --rc-em-margin: 4px;
 }
 

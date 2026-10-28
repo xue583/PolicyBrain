@@ -105,7 +105,7 @@ const AUTH_SKIP_RE =
 
 /** 文档路由在根路径，不要再拼 VITE_BASE_API=/api */
 const SKIP_API_PREFIX_RE =
-  /^\/(auth|account|health|system|meta|invest|policies|news|enterprises|search|match|kb|home)(\/|$|\?)/i
+  /^\/(auth|account|health|system|meta|invest|policies|news|enterprises|search|match|kb|home|issuingAuthority)(\/|$|\?)/i
 
 export const shouldSkipApiPrefix = (url?: string) => {
   return SKIP_API_PREFIX_RE.test(url || '')

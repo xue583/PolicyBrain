@@ -41,7 +41,7 @@ withDefaults(
   h2 {
     margin: 0;
     color: #1f1f1f;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 600;
     line-height: 1.4;
   }
@@ -49,7 +49,7 @@ withDefaults(
   p {
     margin: 6px 0 0;
     color: #999;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.5;
   }
 }

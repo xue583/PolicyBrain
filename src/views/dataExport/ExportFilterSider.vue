@@ -232,7 +232,7 @@ const toggleGroup = (key: FilterKey | 'province') => {
     padding: 0 0 10px;
     background: none;
     border: none;
-    font-size: 20px;
+    font-size: 16px;
     color: #8c8c8c;
     cursor: pointer;
 
@@ -264,7 +264,7 @@ const toggleGroup = (key: FilterKey | 'province') => {
 .field-label {
   display: block;
   margin: 12px 0 8px;
-  font-size: 16px;
+  font-size: 14px;
   color: #333333;
 }
 
@@ -338,7 +338,7 @@ const toggleGroup = (key: FilterKey | 'province') => {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: right;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--pb-primary);
 }
 

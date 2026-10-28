@@ -637,7 +637,7 @@ const taskRowIcon = (task: TaskItem) =>
   gap: 10px;
   padding: 9px 14px;
   color: #333;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.4;
   border-radius: 8px;
   cursor: pointer;
@@ -679,7 +679,7 @@ const taskRowIcon = (task: TaskItem) =>
 
 .section-label {
   color: var(--pb-muted);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -936,7 +936,7 @@ const taskRowIcon = (task: TaskItem) =>
   margin-bottom: 24px;
   padding: 11px 16px;
   color: #1f1f1f;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
   background: #cfe2fc;
@@ -967,7 +967,7 @@ const taskRowIcon = (task: TaskItem) =>
 
 .ai-content {
   color: #333;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.9;
 
   p {
@@ -977,7 +977,7 @@ const taskRowIcon = (task: TaskItem) =>
   .ai-heading {
     margin: 14px 0 8px;
     color: #1f1f1f;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
 
     &:first-child {
@@ -1119,7 +1119,7 @@ const taskRowIcon = (task: TaskItem) =>
 
 .chat-textarea {
   padding: 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -1135,7 +1135,7 @@ const taskRowIcon = (task: TaskItem) =>
   align-items: center;
   gap: 8px;
   color: var(--pb-primary);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .quota-icon {

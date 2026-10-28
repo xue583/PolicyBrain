@@ -276,7 +276,7 @@ const serviceSections = computed(() =>
 
 .group-name {
   color: #1f1f1f;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -493,7 +493,7 @@ const serviceSections = computed(() =>
   h3 {
     margin: 0;
     color: #1f1f1f;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
   }
 

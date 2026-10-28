@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import IconFont from './IconFont.vue'
 
-const STYLE_HREF = 'https://at.alicdn.com/t/c/font_5222789_ybgcryd314.css'
+const STYLE_HREF = 'https:////at.alicdn.com/t/c/font_5222789_v4vjg3rijil.css'
 
 describe('IconFont', () => {
   it('renders the iconfont class and loads the stylesheet once', () => {

@@ -427,7 +427,7 @@ const tableColumns = [
 
     .item-txt {
       color: #333;
-      font-size: 13px;
+      font-size: 14px;
       line-height: 20px;
       white-space: nowrap;
       transition: color 0.2s ease;

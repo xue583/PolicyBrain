@@ -215,6 +215,7 @@ const goDetail = (id: number) => {
   border-radius: var(--pb-radius-lg);
   box-shadow: var(--pb-shadow-card);
   --filter-row-border: none;
+  --filter-font-size: 14px;
   --filter-label-width: 80px;
   --filter-options-gap: 4px 18px;
   --pagination-padding: 20px 0 8px;
@@ -244,7 +245,7 @@ const goDetail = (id: number) => {
 }
 
 :deep(.filter-options .ant-checkbox-wrapper) {
-  font-size: 16px;
+  font-size: 14px;
   color: #262626;
   margin-inline-end: 0;
 }
@@ -303,7 +304,7 @@ const goDetail = (id: number) => {
   align-items: center;
   padding: 48px 0 32px;
   color: #8c8c8c;
-  font-size: 15px;
+  font-size: 14px;
 
   .empty-illustration {
     width: 202px;
@@ -327,7 +328,7 @@ const goDetail = (id: number) => {
   min-width: 0;
   overflow: hidden;
   color: var(--pb-primary);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
@@ -341,7 +342,7 @@ const goDetail = (id: number) => {
 .ent-location {
   flex-shrink: 0;
   color: #8c8c8c;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 22px;
   white-space: nowrap;
 }
@@ -381,7 +382,7 @@ const goDetail = (id: number) => {
 .ent-policy {
   flex-shrink: 0;
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   color: #595959;
 }
 
@@ -427,7 +428,7 @@ const goDetail = (id: number) => {
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   color: #8c8c8c;
   line-height: 1.6;
 }

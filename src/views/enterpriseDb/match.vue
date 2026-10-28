@@ -483,7 +483,7 @@ const exportReport = async () => {
 
   h1 {
     margin: 0;
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     line-height: 1.3;
     color: var(--pb-primary);

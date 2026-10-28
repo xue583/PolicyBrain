@@ -151,44 +151,6 @@ const openBeian = () => {
               </svg>
               <span>关于我们</span>
             </router-link>
-            <router-link to="/about/member">
-              <svg
-                class="footer-nav-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="3.8" r="1.2" />
-                <path d="M5.2 16.8v-5.4l3.1 2.3L12 6.6l3.7 7.1 3.1-2.3v5.4z" />
-                <circle cx="12" cy="12.2" r="1.1" />
-              </svg>
-              <span>会员协议</span>
-            </router-link>
-            <router-link to="/about/agreement">
-              <svg
-                class="footer-nav-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="7" r="2.9" />
-                <path d="M7.6 20v-2.4a4.4 4.4 0 0 1 8.8 0V20" />
-                <path d="M5.4 20h13.2" />
-              </svg>
-              <span>用户协议</span>
-            </router-link>
-            <router-link to="/about/privacy">
-              <svg
-                class="footer-nav-icon"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  d="M6.8 4.2h10.4a2.4 2.4 0 0 1 2.4 2.4v10.8a2.4 2.4 0 0 1-2.4 2.4H6.8a2.4 2.4 0 0 1-2.4-2.4V6.6a2.4 2.4 0 0 1 2.4-2.4z"
-                />
-                <path d="M8.4 9.2h5.2M8.4 12.6h7.2" />
-                <path d="M13.4 20.4l5-5" />
-              </svg>
-              <span>隐私政策</span>
-            </router-link>
           </div>
         </div>
 
@@ -339,14 +301,14 @@ const openBeian = () => {
 
   .hero-slogan {
     margin: 0 0 8px;
-    font-size: 30px;
+    font-size: 26px;
     color: #3d5a80;
     letter-spacing: 1px;
   }
 
   h1 {
     margin: 0 0 15px;
-    font-size: 48px;
+    font-size: 40px;
     font-weight: 700;
     color: var(--pb-primary);
     line-height: 1.2;
@@ -354,7 +316,7 @@ const openBeian = () => {
 
   .hero-desc {
     margin: 0 0 20px;
-    font-size: 16px;
+    font-size: 15px;
     color: #343434;
   }
 }
@@ -452,10 +414,9 @@ const openBeian = () => {
 // 限宽使四项在 logo 右侧均匀铺开，同时不顶到页脚右边缘
 .footer-nav {
   display: flex;
-  justify-content: space-between;
-  width: 520px;
+  justify-content: flex-end;
   max-width: 100%;
-  margin: 0 auto;
+  margin: 0;
 
   a {
     display: inline-flex;
@@ -523,7 +484,7 @@ const openBeian = () => {
   }
 
   .hero-copy h1 {
-    font-size: 32px;
+    font-size: 30px;
   }
 
   .search-bar {

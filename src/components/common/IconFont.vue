@@ -2,7 +2,8 @@
 defineOptions({ name: 'IconFont' })
 
 /** 阿里矢量图标库（iconfont font-class，含彩色图标） */
-const ICON_FONT_HREF = 'https://at.alicdn.com/t/c/font_5222789_ybgcryd314.css'
+const ICON_FONT_HREF =
+  'https:////at.alicdn.com/t/c/font_5222789_v4vjg3rijil.css'
 const ICON_FONT_STYLE_ID = 'pb-iconfont-stylesheet'
 
 function ensureIconFontStylesheet() {

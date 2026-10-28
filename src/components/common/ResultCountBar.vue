@@ -21,7 +21,7 @@ withDefaults(
 
 <style scoped lang="scss">
 .result-count-bar {
-  font-size: var(--rc-font-size, 15px);
+  font-size: var(--rc-font-size, 14px);
   color: var(--rc-color, #595959);
 
   em {

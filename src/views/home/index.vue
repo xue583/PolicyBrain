@@ -9,6 +9,7 @@ import {
   ArrowRightOutlined,
   CommentOutlined,
   InfoCircleOutlined,
+  SearchOutlined,
 } from '@ant-design/icons-vue'
 import {
   featureCards,
@@ -57,6 +58,11 @@ const {
 } = storeToRefs(regionStore)
 const searchType = ref<'policy' | 'enterprise'>('policy')
 const keyword = ref('')
+const searchPlaceholder = computed(() =>
+  searchType.value === 'enterprise'
+    ? '搜索企业名称'
+    : '搜索政策名称、文号或关键词',
+)
 const hotKeywordGroups = ref<HotKeywordGroups>({
   policies: [],
   enterprises: [],
@@ -378,25 +384,26 @@ const openBeian = () => {
               v-model="keyword"
               class="search-input"
               type="text"
-              placeholder="请输入政策、企业名称"
+              :placeholder="searchPlaceholder"
               @keyup.enter="onSearch"
             />
             <button type="button" class="search-btn" @click="onSearch">
+              <SearchOutlined />
               立即检索
-              <span class="search-arrow">›</span>
             </button>
           </div>
 
           <div v-if="visibleHotKeywords.length" class="hot-keywords">
-            <span class="hot-label">热门：</span>
-            <a
+            <span class="hot-label">热门检索：</span>
+            <button
               v-for="item in visibleHotKeywords"
               :key="item.keyword"
+              type="button"
               class="hot-word"
               @click="applyHot(item.keyword)"
             >
               {{ item.keyword }}
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -404,9 +411,10 @@ const openBeian = () => {
 
     <div class="home-body">
       <div class="feature-row">
-        <a
+        <button
           v-for="card in featureCards"
           :key="card.key"
+          type="button"
           class="feature-card"
           :style="{ backgroundImage: `url(${featureCardBg})` }"
           @click="onFeatureCard(card)"
@@ -418,7 +426,7 @@ const openBeian = () => {
             <h3>{{ card.title }}</h3>
             <p>{{ card.desc }}</p>
           </div>
-        </a>
+        </button>
       </div>
 
       <a class="promo-banner">
@@ -545,9 +553,6 @@ const openBeian = () => {
               <h4>关于公司</h4>
               <div class="info-links">
                 <router-link to="/about">关于我们</router-link>
-                <router-link to="/about/member">会员协议</router-link>
-                <router-link to="/about/agreement">用户协议</router-link>
-                <router-link to="/about/privacy">隐私政策</router-link>
               </div>
             </div>
 
@@ -585,11 +590,8 @@ const openBeian = () => {
   min-height: calc(100vh - 64px);
   margin-top: -64px;
   overflow-x: clip;
-  background: #f0f2f5;
+  background: var(--pb-bg);
   color: var(--pb-text);
-  font-family:
-    'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
 }
 
 .hero {
@@ -667,7 +669,7 @@ const openBeian = () => {
 
   .line1 {
     display: block;
-    font-size: 36px;
+    font-size: 32px;
     font-weight: bold;
     color: var(--pb-title);
     letter-spacing: 3px;
@@ -676,7 +678,7 @@ const openBeian = () => {
   .line2 {
     display: block;
     margin-top: 8px;
-    font-size: 48px;
+    font-size: 40px;
     font-weight: 700;
     color: var(--pb-primary);
     letter-spacing: 2px;
@@ -703,7 +705,7 @@ const openBeian = () => {
   border: none;
   background: transparent;
   padding: 0 0 8px;
-  font-size: 24px;
+  font-size: 22px;
   color: var(--pb-text);
   cursor: pointer;
   font-family: inherit;
@@ -734,6 +736,13 @@ const openBeian = () => {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(22, 119, 255, 0.16);
+  transition: box-shadow var(--pb-dur-fast) var(--pb-ease);
+
+  &:focus-within {
+    box-shadow:
+      0 0 0 2px var(--pb-primary),
+      0 8px 24px rgba(22, 119, 255, 0.16);
+  }
 }
 
 .search-input {
@@ -742,7 +751,7 @@ const openBeian = () => {
   border: none;
   outline: none;
   padding: 0 20px;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--pb-text);
   background: transparent;
   font-family: inherit;
@@ -766,17 +775,10 @@ const openBeian = () => {
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.2s;
+  transition: background var(--pb-dur-fast) var(--pb-ease);
 
   &:hover {
     background: #4096ff;
-  }
-
-  .search-arrow {
-    font-size: 20px;
-    line-height: 1;
-    font-weight: 400;
-    transform: translateY(-1px);
   }
 }
 
@@ -796,7 +798,13 @@ const openBeian = () => {
   }
 
   .hot-word {
+    border: none;
+    background: transparent;
+    padding: 0;
     color: var(--pb-sub);
+    font: inherit;
+    line-height: inherit;
+    cursor: pointer;
 
     &:hover {
       color: var(--pb-primary);
@@ -827,8 +835,12 @@ const openBeian = () => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
   min-height: 96px;
   padding: 20px 18px;
+  border: none;
+  font: inherit;
+  text-align: left;
   background-color: var(--pb-card);
   background-repeat: no-repeat;
   background-position: top center;
@@ -836,13 +848,15 @@ const openBeian = () => {
   border-radius: var(--pb-radius);
   box-shadow: var(--pb-shadow);
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
   transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+    transform var(--pb-dur-base) var(--pb-ease),
+    box-shadow var(--pb-dur-base) var(--pb-ease);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(22, 119, 255, 0.14);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -1393,7 +1407,7 @@ const openBeian = () => {
   }
 
   .hero-title .line2 {
-    font-size: 30px;
+    font-size: 28px;
   }
 
   .search-block {
@@ -1418,7 +1432,7 @@ const openBeian = () => {
   }
 
   .hero-title .line2 {
-    font-size: 26px;
+    font-size: 24px;
   }
 }
 </style>

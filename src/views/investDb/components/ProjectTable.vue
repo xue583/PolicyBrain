@@ -169,7 +169,7 @@ a.project-name {
   gap: 4px;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   white-space: nowrap;
 
