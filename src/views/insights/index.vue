@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { storeToRefs } from 'pinia'
 import dayjs from 'dayjs'
 import {
   BankOutlined,
-  CloudOutlined,
   EnvironmentOutlined,
   FileTextOutlined,
   PayCircleOutlined,
@@ -12,7 +10,6 @@ import {
   SolutionOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue'
-import { useRegionStore } from '@/stores/region'
 import {
   feedTabs,
   getFundTrend,
@@ -43,9 +40,6 @@ import PolicyFeed from './components/PolicyFeed.vue'
 
 defineOptions({ name: 'DataInsights' })
 
-const regionStore = useRegionStore()
-const { areaLabel } = storeToRefs(regionStore)
-
 const now = ref(dayjs())
 const trendRange = ref<TrendRange>('30d')
 const fundRange = ref<TrendRange>('12m')
@@ -58,11 +52,6 @@ const kpiValues = ref(insightKpis.map(() => 0))
 
 const clockText = computed(() =>
   now.value.format('YYYY年MM月DD日 dddd HH:mm:ss'),
-)
-const weatherCity = computed(() =>
-  areaLabel.value && areaLabel.value !== '请选择地区'
-    ? areaLabel.value
-    : '洛阳市',
 )
 const trendPoints = computed(() => getTrend(trendRange.value))
 const headline = computed(() => trendHeadline[trendRange.value])
