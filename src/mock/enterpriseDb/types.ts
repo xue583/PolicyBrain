@@ -149,6 +149,26 @@ export interface EnterpriseBusinessInfo {
   addressChangeDate: string
 }
 
+/** 企业详情「企业画像」页签。缺数据时为「未知」。 */
+export interface EnterprisePortrait {
+  staffCount: string
+  siteArea: string
+  location: string
+  industry: string
+  yearsEstablished: string
+  revenue: string
+  assetLiabilityRatio: string
+  rdRatio: string
+  inventionPatents: string
+  utilityPatents: string
+  softwareCopyrights: string
+  trademarks: string
+  rdEquipmentValue: string
+  standards: string
+  systemLicenses: string
+  infoSoftware: string
+}
+
 export interface EnterpriseDetail extends EnterpriseItem {
   shortName: string
   district: string
@@ -179,4 +199,5 @@ export interface EnterpriseDetail extends EnterpriseItem {
   industryChains: EnterpriseIndustryChain[]
   productBasis: string
   productCredibility: ProductCredibility | ''
+  portrait: EnterprisePortrait
 }

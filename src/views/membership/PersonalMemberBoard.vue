@@ -15,124 +15,67 @@ import svipTech from '@/assets/membership/svip-tech.png'
 import svipIndustry from '@/assets/membership/svip-industry.png'
 import MemberCrownIcon from './components/MemberCrownIcon.vue'
 import MemberPayPanel from './components/MemberPayPanel.vue'
+import {
+  benefitsForPersonalTab,
+  type MembershipBenefitCard,
+} from './membershipBenefits'
+import { personalPlansForTab, type MembershipPlanCard } from './membershipPlans'
 import { usePlanSelection } from './usePlanSelection'
 
 defineOptions({ name: 'PersonalMemberBoard' })
 
+const props = withDefaults(
+  defineProps<{
+    plans?: MembershipPlanCard[]
+    benefits?: MembershipBenefitCard[]
+    emptyText?: string
+    benefitEmptyText?: string
+  }>(),
+  {
+    plans: () => [],
+    benefits: () => [],
+    emptyText: '暂无在售套餐',
+    benefitEmptyText: '暂无会员权益',
+  },
+)
+
 type Tier = 'vip' | 'svip'
 
-type Plan = {
-  id: string
-  tag: string
-  featured: boolean
-  price: number
-  name?: string
-  unit?: string
-  daily?: string
-  capacity?: string
-  desc?: string
+const tier = ref<Tier>('vip')
+const selectedPlan = ref('')
+
+const vipIcons = [
+  benefitSearch,
+  benefitExport,
+  benefitBatch,
+  benefitMatch,
+  benefitQuery,
+]
+const svipIcons = [svipData, svipMatch, svipTech, svipIndustry]
+
+const benefitIcon = (name: string, index: number) => {
+  if (/导出/.test(name)) return benefitExport
+  if (/批量/.test(name)) return benefitBatch
+  if (/匹配/.test(name)) return benefitMatch
+  if (/科技|成果/.test(name)) return svipTech
+  if (/产业|上下游/.test(name)) return svipIndustry
+  if (/申报|材料/.test(name)) return svipMatch
+  if (/数据/.test(name)) return svipData
+  if (/查询|搜索/.test(name)) return benefitSearch
+  const pool = tier.value === 'svip' ? svipIcons : vipIcons
+  return pool[index % pool.length] ?? benefitSearch
 }
 
-const tier = ref<Tier>('vip')
-const selectedPlan = ref('year')
-
-const vipPlans: Plan[] = [
-  {
-    id: 'month',
-    name: '月度',
-    price: 398,
-    unit: '/人',
-    daily: '1.27',
-    tag: '适合先试用',
-    featured: false,
-  },
-  {
-    id: 'year',
-    name: '年度',
-    price: 698,
-    unit: '/人',
-    daily: '0.98',
-    tag: '限时8折',
-    featured: true,
-  },
-  {
-    id: 'three',
-    name: '三年',
-    price: 980,
-    unit: '/人',
-    daily: '0.65',
-    tag: '',
-    featured: false,
-  },
-]
-
-const svipPlans: Plan[] = [
-  {
-    id: 'trial',
-    price: 998,
-    capacity: '3个企业/年',
-    tag: '体验，仅可买一次',
-    desc: '适合刚接手第一批客户，先把服务流程跑通',
-    featured: false,
-  },
-  {
-    id: 'rec',
-    price: 4998,
-    capacity: '10个企业/年',
-    tag: '推荐',
-    desc: '覆盖中小服务机构的常规客户量，单价最优',
-    featured: true,
-  },
-  {
-    id: 'org',
-    price: 9980,
-    capacity: '30个企业/年',
-    tag: '',
-    desc: '客户量稳定的机构，超出部分可继续增购席位',
-    featured: false,
-  },
-]
-
-const vipBenefits = [
-  { icon: benefitSearch, label: '高级搜索' },
-  { icon: benefitExport, label: '导出数据' },
-  { icon: benefitBatch, label: '批量查询' },
-  { icon: benefitMatch, label: '匹配政策' },
-  { icon: benefitQuery, label: '查询数据' },
-]
-
-const vipBullets = [
-  '您管理的每个企业，都拥有一套资质、知产、研发、政策、人员、资产等数据的标准化管理系统，公开数据数据自动更新，资质证书AI识别一键对应上传，客户的文件再也不会找不到了；',
-  '基于您管理的每个企业的真实数据提供更精准的政策匹配方案，并通过AI为您辅助生成各类重点政策的材料，政策申报从此如此简单；',
-  '基于您管理的每个企业的产品或服务为您提供最新的全国相关科技成果信息，我们联合全国高校和科研院所推动最新技术落地转化；',
-  '基于您管理的每个企业的产品或服务以及对应产业链位置，为您推荐本地及全国的同行及上下游企业，为您的客户提供更多供应链信息和拓展业务的服务。',
-]
-
-const svipBenefits = [
-  {
-    icon: svipData,
-    title: '数据资产标准化管理',
-    desc: '您将拥有一套企业的资质、知产、研发、政策、人员、资产等数据的标准化管理系统，公开数据自动更新，资质证书AI识别一键上传。',
-  },
-  {
-    icon: svipMatch,
-    title: '精准政策匹配与AI材料生成',
-    desc: '基于企业的真实数据提供更精准的政策匹配方案，并通过AI为您辅助生成各类重点政策的材料，从此看懂政策申报不再多花冤枉钱。',
-  },
-  {
-    icon: svipTech,
-    title: '全国科技成果对接',
-    desc: '基于您企业所从事的产品或服务，为您提供最新的全国相关科技成果信息，我们联合全国高校和科研院所推动最新技术在您这里落地转化。',
-  },
-  {
-    icon: svipIndustry,
-    title: '产业链上下游推荐',
-    desc: '基于您企业所从事的产品或服务以及对应产业链位置，为您推荐本地及全国的同行及上下游企业，为您稳定供应链、拓展业务提供帮助。',
-  },
-]
-
 const currentPlans = computed(() =>
-  tier.value === 'vip' ? vipPlans : svipPlans,
+  personalPlansForTab(props.plans, tier.value),
+)
+
+const currentBenefits = computed(() =>
+  benefitsForPersonalTab(props.benefits, tier.value),
+)
+
+const benefitNotes = computed(() =>
+  currentBenefits.value.filter((item) => item.description),
 )
 
 const { currentPlan, selectPlan } = usePlanSelection(currentPlans, selectedPlan)
@@ -140,7 +83,7 @@ const { currentPlan, selectPlan } = usePlanSelection(currentPlans, selectedPlan)
 const selectTier = (next: Tier) => {
   if (tier.value === next) return
   tier.value = next
-  selectedPlan.value = next === 'vip' ? 'year' : 'rec'
+  selectedPlan.value = ''
 }
 </script>
 
@@ -169,17 +112,18 @@ const selectTier = (next: Tier) => {
       </button>
     </div>
 
-    <div class="board-body">
+    <div class="board-body" :class="{ 'is-single': !currentPlan }">
       <div class="board-main">
-        <div class="plan-row">
+        <p v-if="!currentPlans.length" class="bind-note">{{ emptyText }}</p>
+        <div v-else class="plan-row">
           <button
             v-for="plan in currentPlans"
             :key="plan.id"
             type="button"
             class="plan-card"
-            :class="{ selected: selectedPlan === plan.id }"
+            :class="{ selected: currentPlan?.id === plan.id }"
             :style="
-              selectedPlan === plan.id
+              currentPlan?.id === plan.id
                 ? {
                     backgroundImage: `url(${
                       tier === 'vip' ? planHighlight : svipPlanHighlight
@@ -187,7 +131,7 @@ const selectTier = (next: Tier) => {
                   }
                 : undefined
             "
-            :aria-pressed="selectedPlan === plan.id"
+            :aria-pressed="currentPlan?.id === plan.id"
             @click="selectPlan(plan.id)"
           >
             <span
@@ -197,14 +141,11 @@ const selectTier = (next: Tier) => {
             >
               {{ plan.tag }}
             </span>
-            <span v-if="plan.name" class="plan-name">{{ plan.name }}</span>
+            <span class="plan-name">{{ plan.name }}</span>
             <span class="plan-price">
-              <em>¥</em>{{ plan.price
-              }}<small v-if="plan.unit">{{ plan.unit }}</small>
+              <em>¥</em>{{ plan.price }}
+              <del v-if="plan.original">¥{{ plan.original }}</del>
             </span>
-            <span v-if="plan.capacity" class="plan-capacity">{{
-              plan.capacity
-            }}</span>
             <span v-if="plan.daily" class="plan-daily"
               >折合每天¥{{ plan.daily }}</span
             >
@@ -222,34 +163,47 @@ const selectTier = (next: Tier) => {
             尊享VIP基础能力权益
             <small>沿用现有能力，覆盖个人日常的数据查询与批量处理</small>
           </h2>
-          <ul class="benefit-list">
-            <li v-for="item in vipBenefits" :key="item.label">
-              <img :src="item.icon" :alt="item.label" />
-              <span>{{ item.label }}</span>
-            </li>
-          </ul>
-          <ul class="bullet-list">
-            <li v-for="(text, index) in vipBullets" :key="index">
-              {{ text }}
-            </li>
-          </ul>
+          <p v-if="!currentBenefits.length" class="bind-note">
+            {{ benefitEmptyText }}
+          </p>
+          <template v-else>
+            <ul class="benefit-list">
+              <li v-for="(item, index) in currentBenefits" :key="item.id">
+                <img :src="benefitIcon(item.name, index)" :alt="item.name" />
+                <span>{{ item.name }}</span>
+              </li>
+            </ul>
+            <ul v-if="benefitNotes.length" class="bullet-list">
+              <li v-for="item in benefitNotes" :key="item.id">
+                {{ item.name }}：{{ item.description }}
+              </li>
+            </ul>
+          </template>
         </section>
 
         <section v-else class="svip-benefits">
           <h2>尊享SVIP专属权益，在VIP之上，多出一整套企业级能力</h2>
-          <ul>
-            <li v-for="item in svipBenefits" :key="item.title">
-              <img :src="item.icon" alt="" />
+          <p v-if="!currentBenefits.length" class="bind-note">
+            {{ benefitEmptyText }}
+          </p>
+          <ul v-else>
+            <li v-for="(item, index) in currentBenefits" :key="item.id">
+              <img :src="benefitIcon(item.name, index)" alt="" />
               <div>
-                <strong>{{ item.title }}</strong>
-                <p>{{ item.desc }}</p>
+                <strong>{{ item.name }}</strong>
+                <p v-if="item.description">{{ item.description }}</p>
               </div>
             </li>
           </ul>
         </section>
       </div>
 
-      <MemberPayPanel :price="currentPlan.price" :qr-frame="qrFrame" />
+      <MemberPayPanel
+        v-if="currentPlan"
+        :price="currentPlan.price"
+        :plan-code="currentPlan.id"
+        :qr-frame="qrFrame"
+      />
     </div>
   </div>
 </template>
@@ -404,6 +358,10 @@ const selectTier = (next: Tier) => {
 .board-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
+
+  &.is-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .board-main {
@@ -474,11 +432,16 @@ const selectTier = (next: Tier) => {
     font-weight: 600;
   }
 
-  small {
-    margin-left: 2px;
+  small,
+  del {
+    margin-left: 4px;
     font-size: 12px;
     font-weight: 400;
     color: #8b95a4;
+  }
+
+  del {
+    text-decoration: line-through;
   }
 }
 

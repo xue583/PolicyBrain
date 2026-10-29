@@ -17,6 +17,7 @@ import type {
   EnterpriseItem,
   EnterprisePatent,
   EnterprisePolicyRecord,
+  EnterprisePortrait,
   EnterpriseProduct,
   EnterpriseQualification,
   EnterpriseSoftwareCopyright,
@@ -416,6 +417,132 @@ const industryLevelsOf = (value: unknown): string[] => {
   ).filter(Boolean)
 }
 
+const PORTRAIT_UNKNOWN = '未知'
+
+const portraitText = (record: Record<string, unknown>, keys: string[]) => {
+  const text = pickString(record, keys).trim()
+  if (!text || text === '-' || text === 'null') return ''
+  return text
+}
+
+const portraitOrUnknown = (text: string) => text || PORTRAIT_UNKNOWN
+
+/** 数量缓存：0 也要展示；已带单位的原文保持不动。 */
+const portraitCount = (record: Record<string, unknown>, keys: string[]) => {
+  const value = pick(record, keys)
+  if (value === undefined || value === null || value === '')
+    return PORTRAIT_UNKNOWN
+  const text = String(value).trim()
+  if (!text) return PORTRAIT_UNKNOWN
+  if (/[项件个]/.test(text)) return text
+  const num = Number(text)
+  return Number.isFinite(num) ? `${num}项` : text
+}
+
+const portraitAge = (value: unknown, now: Date) => {
+  const num = Number(value)
+  if (!Number.isFinite(num) || num <= 0) return ''
+  if (num >= 1900 && num <= 2100) {
+    const years = now.getFullYear() - num
+    return years >= 0 ? `${years}年` : ''
+  }
+  if (num < 200) return `${Math.floor(num)}年`
+  return ''
+}
+
+const portraitYears = (record: Record<string, unknown>, now: Date) => {
+  const explicit = portraitText(record, ['yearsEstablished', 'foundingYears'])
+  if (explicit)
+    return explicit.includes('年') ? explicit : portraitAge(explicit, now)
+  const fromYear = portraitAge(pick(record, ['establishYear']), now)
+  if (fromYear) return fromYear
+  const dateText = formatDate(pick(record, ['establishTime']))
+  if (dateText === '-') return PORTRAIT_UNKNOWN
+  const date = new Date(`${dateText}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return PORTRAIT_UNKNOWN
+  let years = now.getFullYear() - date.getFullYear()
+  const month = now.getMonth() - date.getMonth()
+  if (month < 0 || (month === 0 && now.getDate() < date.getDate())) years -= 1
+  return years >= 0 ? `${years}年` : PORTRAIT_UNKNOWN
+}
+
+const portraitStaff = (record: Record<string, unknown>) => {
+  const social = pick(record, ['socialSecurityNum'])
+  const socialNum = Number(social)
+  if (Number.isFinite(socialNum) && socialNum > 0) return `${socialNum}人`
+  const staff = portraitText(record, ['staffNumber', 'employeeCount'])
+  if (!staff || staff === '0') return PORTRAIT_UNKNOWN
+  return staff.includes('人') ? staff : `${staff}人`
+}
+
+const portraitLocation = (record: Record<string, unknown>) => {
+  const ready = portraitText(record, ['location', 'regionPath'])
+  if (ready) return ready
+  const parts = ['provinceName', 'cityName', 'districtName']
+    .map((key) => portraitText(record, [key]))
+    .filter(Boolean)
+  return parts.length ? parts.join('-') : PORTRAIT_UNKNOWN
+}
+
+/** GET /enterprises/{id} → 企业画像。接口没有的项显示「未知」。 */
+export const mapEnterprisePortrait = (
+  raw: unknown,
+  now = new Date(),
+): EnterprisePortrait => {
+  const root = asRecord(raw)
+  const enterprise = asRecord(root.enterprise)
+  const industry = asRecord(root.industry)
+  const industryExt = asRecord(root.industryExt)
+  const extra = asRecord(root.portrait ?? root.enterprisePortrait)
+  const flat = { ...industryExt, ...industry, ...enterprise, ...extra }
+  const industryName =
+    industryLevelsOf(pick(flat, ['companyIndustryDetail']))[0] ||
+    portraitText(flat, ['companyIndustry', 'industry'])
+  return {
+    staffCount: portraitStaff(flat),
+    siteArea: portraitOrUnknown(
+      portraitText(flat, ['siteArea', 'floorArea', 'venueArea']),
+    ),
+    location: portraitLocation(flat),
+    industry: industryName || PORTRAIT_UNKNOWN,
+    yearsEstablished: portraitYears(flat, now),
+    revenue: portraitOrUnknown(
+      portraitText(flat, ['annualTurnover', 'operatingRevenue', 'revenue']),
+    ),
+    assetLiabilityRatio: portraitOrUnknown(
+      portraitText(flat, ['assetLiabilityRatio', 'debtAssetRatio']),
+    ),
+    rdRatio: portraitOrUnknown(
+      portraitText(flat, ['rdRatio', 'researchExpenseRatio']),
+    ),
+    inventionPatents: portraitCount(flat, [
+      'inventionPatentNum',
+      'inventionPatentCount',
+    ]),
+    utilityPatents: portraitCount(flat, [
+      'utilityPatentNum',
+      'utilityModelNum',
+    ]),
+    softwareCopyrights: portraitCount(flat, [
+      'softrightNum',
+      'softwareCopyrightNum',
+    ]),
+    trademarks: portraitCount(flat, ['brandNum', 'trademarkNum']),
+    rdEquipmentValue: portraitOrUnknown(
+      portraitText(flat, ['rdEquipmentValue', 'rdEquipmentOriginalValue']),
+    ),
+    standards: portraitOrUnknown(
+      portraitText(flat, ['standardConstruction', 'standards']),
+    ),
+    systemLicenses: portraitOrUnknown(
+      portraitText(flat, ['systemLicense', 'systemPermits']),
+    ),
+    infoSoftware: portraitOrUnknown(
+      portraitText(flat, ['informationSoftware', 'infoSoftware']),
+    ),
+  }
+}
+
 export type EnterpriseExtras = {
   policyRecords?: EnterprisePolicyRecord[]
   patents?: EnterprisePatent[]
@@ -504,6 +631,7 @@ export const mapEnterpriseDetail = (
     industryChains: chains,
     productBasis: pickString(industryExt, ['products']),
     productCredibility: '',
+    portrait: mapEnterprisePortrait(raw),
   }
 }
 

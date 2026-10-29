@@ -37,6 +37,10 @@ export const getEnterpriseDetail = (
   const district = districtOf(item)
   const staffCount = item.id === 1 ? 42 : 20 + item.policyCount * 3
   const ipCounts = ipCountsOf(item)
+  const foundedDate =
+    item.id === 1
+      ? '2016-10-24'
+      : `201${(item.id % 8) + 1}-0${(item.id % 8) + 1}-18`
 
   return {
     ...item,
@@ -54,10 +58,7 @@ export const getEnterpriseDetail = (
     phone,
     email:
       item.id === 1 ? '345299876@163.com' : `contact${item.id}@example.com`,
-    foundedDate:
-      item.id === 1
-        ? '2016-10-24'
-        : `201${(item.id % 8) + 1}-0${(item.id % 8) + 1}-18`,
+    foundedDate,
     staffScale: item.id === 1 ? '0' : String(staffCount),
     website:
       item.id === 1
@@ -100,5 +101,33 @@ export const getEnterpriseDetail = (
     qualificationReviews: buildQualReviews(item),
     contacts: buildContacts(item),
     ...buildProductIndustry(item),
+    portrait: {
+      staffCount: `${staffCount}人`,
+      siteArea: '未知',
+      location: [item.province, item.city, district].filter(Boolean).join('-'),
+      industry: item.industry || item.businessIndustry || '未知',
+      yearsEstablished: yearsSince(foundedDate),
+      revenue: '未知',
+      assetLiabilityRatio: '未知',
+      rdRatio: '未知',
+      inventionPatents: '未知',
+      utilityPatents: '未知',
+      softwareCopyrights: `${ipCounts.software}项`,
+      trademarks: `${ipCounts.trademark}项`,
+      rdEquipmentValue: '未知',
+      standards: '未知',
+      systemLicenses: '未知',
+      infoSoftware: '未知',
+    },
   }
+}
+
+const yearsSince = (foundedDate: string) => {
+  const date = new Date(`${foundedDate}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return '未知'
+  const now = new Date()
+  let years = now.getFullYear() - date.getFullYear()
+  const month = now.getMonth() - date.getMonth()
+  if (month < 0 || (month === 0 && now.getDate() < date.getDate())) years -= 1
+  return years >= 0 ? `${years}年` : '未知'
 }

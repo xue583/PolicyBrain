@@ -7,10 +7,11 @@ export function usePlanSelection<T extends { id: string; featured?: boolean }>(
 ) {
   const currentPlan = computed(() => {
     const list = toValue(plans)
+    if (!list.length) return undefined
     return (
       list.find((item) => item.id === selectedId.value) ??
       list.find((item) => item.featured) ??
-      list[0]!
+      list[0]
     )
   })
 

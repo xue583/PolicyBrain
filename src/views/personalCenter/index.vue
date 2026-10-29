@@ -33,6 +33,7 @@ import ServicePanel from './ServicePanel.vue'
 import UploadAvatarModal from './UploadAvatarModal.vue'
 import IdentityAuthModal from './IdentityAuthModal.vue'
 import NicknameModal from './NicknameModal.vue'
+import RenewMembershipModal from './RenewMembershipModal.vue'
 
 defineOptions({ name: 'PersonalCenter' })
 
@@ -140,6 +141,11 @@ const membership = ref<AccountMembership | null>(null)
 const membershipPeriod = computed(() =>
   formatMembershipPeriod(membership.value),
 )
+const hasMembershipPlan = computed(() => {
+  const code = membership.value?.planCode
+  return typeof code === 'string' && code.trim().length > 0
+})
+const renewOpen = ref(false)
 
 const loadMembership = () => {
   if (!auth.isLoggedIn) return
@@ -288,7 +294,21 @@ onMounted(() => {
             <span v-if="membershipPeriod" class="member-period">
               {{ membershipPeriod }}
             </span>
-            <a-button type="primary" class="vip-btn" @click="goMembership">
+            <a-button
+              v-if="hasMembershipPlan"
+              type="primary"
+              class="vip-btn"
+              @click="renewOpen = true"
+            >
+              <template #icon><CrownOutlined /></template>
+              续费
+            </a-button>
+            <a-button
+              v-else
+              type="primary"
+              class="vip-btn"
+              @click="goMembership"
+            >
               <template #icon><CrownOutlined /></template>
               开通会员
             </a-button>
@@ -316,6 +336,7 @@ onMounted(() => {
     <UploadAvatarModal v-model:open="uploadAvatarOpen" />
     <IdentityAuthModal v-model:open="identityAuthOpen" />
     <NicknameModal v-model:open="nicknameOpen" />
+    <RenewMembershipModal v-model:open="renewOpen" />
   </div>
 </template>
 

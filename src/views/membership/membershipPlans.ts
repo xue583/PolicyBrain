@@ -67,24 +67,32 @@ export const asMembershipPlans = (raw: unknown): MembershipPlan[] => {
 
 const toCard = (plan: MembershipPlan, index: number): MembershipPlanCard => {
   const level = num(plan.level)
-  const payFen = plan.currentPrice ?? plan.price ?? 0
+  // 售价取 price（标准售价，单位分）；接口未返回该字段时才回退 currentPrice
+  const payFen = plan.price ?? plan.currentPrice ?? 0
+  // 划线价取 originalPrice，为 0 表示不展示
   const listFen =
-    plan.originalPrice && plan.originalPrice > 0
-      ? plan.originalPrice
-      : plan.price && plan.price > payFen
-        ? plan.price
-        : 0
+    plan.originalPrice && plan.originalPrice > 0 ? plan.originalPrice : 0
   const price = fenToYuan(num(payFen))
   const original = listFen > payFen ? fenToYuan(num(listFen)) : undefined
   const durationDays = Math.max(0, num(plan.durationDays))
   const description = (plan.description ?? '').trim()
   const name = (plan.name ?? '').trim() || '会员套餐'
   const code = (plan.code ?? '').trim()
+  // 企业套餐角标取描述首句（如「买二送一」），个人卡片维持按长度取整句的规则
+  const orgMarked =
+    ORG_CODE.test(code) || ORG_MARK.test(`${name} ${description}`)
+  const lead = description.match(/^[^。！？!?]+/)?.[0]?.trim() ?? ''
   let tag: string | undefined
   let desc: string | undefined
-  if (description && description.length <= 12) tag = description
-  else if (description) desc = description
-  if (!tag && num(plan.purchaseLimit) === 1) tag = '仅可买一次'
+  if (orgMarked) {
+    // 企业套餐角标只取描述里的促销首句，不把整句描述塞进角标
+    if (lead.length > 0 && lead.length <= 6) tag = lead
+    if (description) desc = description
+  } else {
+    if (description && description.length <= 12) tag = description
+    else if (description) desc = description
+    if (!tag && num(plan.purchaseLimit) === 1) tag = '仅可买一次'
+  }
 
   return {
     id:
@@ -135,9 +143,11 @@ export const toPlanCards = (plans: MembershipPlan[]): MembershipPlanCard[] => {
 /** 适用身份匹配当前用户；接口未标记身份的套餐两边都展示。筛空时退回全部，避免页面空白。 */
 export const plansForIdentity = (
   plans: MembershipPlanCard[],
-  identity?: number | null,
+  identity?: number | string | null,
 ) => {
-  if (identity == null || Number.isNaN(Number(identity))) return plans
+  if (identity == null || identity === '' || Number.isNaN(Number(identity))) {
+    return plans
+  }
   const id = Number(identity)
   const matched = plans.filter(
     (plan) => plan.applicableIdentity == null || plan.applicableIdentity === id,
@@ -148,14 +158,39 @@ export const plansForIdentity = (
 export const plansByLevel = (plans: MembershipPlanCard[], level: number) =>
   plans.filter((plan) => plan.level === level)
 
-/** 个人板只有 VIP / SVIP。level 0 没有独立页签，跟在 VIP 后面展示。 */
+const ORG_CODE = /^ent_/i
+const ORG_MARK = /企业/
+
+/**
+ * 企业套餐与个人套餐同等级售卖（企业 VIP 在 level 1、企业 SVIP 在 level 2），
+ * applicableIdentity 两边都可能是同一个值，只能按 ent_ 编码前缀识别，
+ * 名称或描述里的「企业」字样兜底。
+ */
+export const isOrgPlan = (plan: MembershipPlanCard) =>
+  ORG_CODE.test(plan.id) ||
+  ORG_MARK.test(`${plan.name} ${plan.tag ?? ''} ${plan.desc ?? ''}`)
+
+export const orgPlans = (plans: MembershipPlanCard[]) => plans.filter(isOrgPlan)
+
+export const personalPlans = (plans: MembershipPlanCard[]) =>
+  plans.filter((plan) => !isOrgPlan(plan))
+
+/** 企业套餐子档：优先按会员等级分，等级缺失时回退名称 */
+export const orgPlanTier = (plan: MembershipPlanCard): 'vip' | 'svip' => {
+  if (plan.level === MembershipLevel.Vip) return 'vip'
+  if (plan.level === MembershipLevel.Svip) return 'svip'
+  return /svip/i.test(`${plan.id} ${plan.name}`) ? 'svip' : 'vip'
+}
+
+/** 个人板只有 VIP / SVIP。level 0 没有独立页签，跟在 VIP 后面展示；企业套餐只归企业页签。 */
 export const personalPlansForTab = (
   plans: MembershipPlanCard[],
   tab: 'vip' | 'svip',
 ) => {
-  if (tab === 'svip') return plansByLevel(plans, MembershipLevel.Svip)
+  const personal = personalPlans(plans)
+  if (tab === 'svip') return plansByLevel(personal, MembershipLevel.Svip)
   return [
-    ...plansByLevel(plans, MembershipLevel.Vip),
-    ...plansByLevel(plans, MembershipLevel.None),
+    ...plansByLevel(personal, MembershipLevel.Vip),
+    ...plansByLevel(personal, MembershipLevel.None),
   ]
 }

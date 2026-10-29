@@ -101,6 +101,13 @@ describe('PersonalCenter membership period', () => {
     expect(fetchMyMembership).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('个人会员：')
     expect(wrapper.text()).toContain('2026-10-22 至 2027-10-22')
+    expect(wrapper.get('.member-row .vip-btn').text()).toContain('续费')
+    expect(wrapper.get('.member-row').text()).not.toContain('开通会员')
+
+    const modal = wrapper.findComponent({ name: 'RenewMembershipModal' })
+    expect(modal.props('open')).toBe(false)
+    await wrapper.get('.member-row .vip-btn').trigger('click')
+    expect(modal.props('open')).toBe(true)
     wrapper.unmount()
   })
 
@@ -116,7 +123,8 @@ describe('PersonalCenter membership period', () => {
 
     const wrapper = await mountPage()
 
-    expect(wrapper.text()).toContain('开通会员')
+    expect(wrapper.get('.member-row .vip-btn').text()).toContain('开通会员')
+    expect(wrapper.get('.member-row').text()).not.toContain('续费')
     expect(wrapper.text()).not.toContain('至')
     wrapper.unmount()
   })

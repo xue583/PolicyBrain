@@ -24,232 +24,147 @@ import perkCustom from '@/assets/membership/enterprise/perk-custom.png'
 import MemberCompareTable from './components/MemberCompareTable.vue'
 import MemberCrownIcon from './components/MemberCrownIcon.vue'
 import MemberPayPanel from './components/MemberPayPanel.vue'
+import {
+  benefitsForEnterpriseTab,
+  type MembershipBenefitCard,
+} from './membershipBenefits'
+import {
+  MembershipLevel,
+  orgPlanTier,
+  orgPlans,
+  personalPlans,
+  plansByLevel,
+  type MembershipPlanCard,
+} from './membershipPlans'
 import { usePlanSelection } from './usePlanSelection'
 
 defineOptions({ name: 'EnterpriseMemberBoard' })
 
+const props = withDefaults(
+  defineProps<{
+    plans?: MembershipPlanCard[]
+    benefits?: MembershipBenefitCard[]
+    emptyText?: string
+    benefitEmptyText?: string
+  }>(),
+  {
+    plans: () => [],
+    benefits: () => [],
+    emptyText: '暂无在售套餐',
+    benefitEmptyText: '暂无会员权益',
+  },
+)
+
 type BoardTab = 'vip' | 'svip' | 'org'
 type OrgSub = 'vip' | 'svip'
-type PlanTier = 'vip' | 'svip' | `org-${OrgSub}`
-
-type Plan = {
-  id: string
-  name: string
-  price: number
-  original?: number
-  unit?: string
-  daily: string
-  tag?: string
-  featured?: boolean
-  years: number
-  saved?: string
-}
 
 const tab = ref<BoardTab>('vip')
 const orgSub = ref<OrgSub>('svip')
-const selectedPlan = ref('three')
+const selectedPlan = ref('')
 const seats = ref(5)
 
-const vipPlans: Plan[] = [
-  {
-    id: 'three',
-    name: '三年会员',
-    price: 698,
-    original: 2124,
-    daily: '0.64',
-    tag: '买二送一',
-    featured: true,
-    years: 3,
-  },
-  {
-    id: 'year',
-    name: '一年会员',
-    price: 368,
-    original: 708,
-    daily: '1.01',
-    tag: '超值特惠',
-    years: 1,
-  },
-  {
-    id: 'half',
-    name: '半年会员',
-    price: 188,
-    original: 354,
-    daily: '1.03',
-    tag: '买二送一',
-    years: 0.5,
-  },
-  {
-    id: 'quarter',
-    name: '季度会员',
-    price: 128,
-    original: 177,
-    daily: '1.43',
-    tag: '买二送一',
-    years: 0.25,
-  },
-  {
-    id: 'month',
-    name: '月度',
-    price: 49,
-    daily: '1.63',
-    tag: '买二送一',
-    years: 1 / 12,
-  },
-]
+const tierIcons = {
+  vip: [
+    benefitSearch,
+    benefitDeclare,
+    benefitBatch,
+    benefitMatch,
+    benefitNurture,
+    benefitRecommend,
+  ],
+  svip: [
+    svipBenefitSearch,
+    svipBenefitDeclare,
+    svipBenefitBatch,
+    svipBenefitMatch,
+    svipBenefitNurture,
+    svipBenefitRecommend,
+  ],
+  org: [perkDiscount, perkConvenient, perkFlexible, perkCustom],
+}
 
-const svipPlans: Plan[] = [
-  {
-    id: 'three',
-    name: '三年SVIP',
-    price: 3698,
-    original: 5547,
-    daily: '0.64',
-    tag: '买2年送1年',
-    featured: true,
-    years: 3,
-  },
-  {
-    id: 'two',
-    name: '2年SVIP',
-    price: 2698,
-    original: 3796,
-    daily: '1.01',
-    years: 2,
-  },
-  {
-    id: 'year',
-    name: '1年SVIP',
-    price: 1898,
-    daily: '1.03',
-    years: 1,
-  },
-]
+const benefitIcon = (name: string, index: number) => {
+  const pool = tierIcons[tab.value]
+  if (/申报/.test(name)) {
+    return tab.value === 'svip' ? svipBenefitDeclare : benefitDeclare
+  }
+  if (/批量/.test(name)) {
+    return tab.value === 'svip' ? svipBenefitBatch : benefitBatch
+  }
+  if (/匹配/.test(name)) {
+    return tab.value === 'svip' ? svipBenefitMatch : benefitMatch
+  }
+  if (/培育/.test(name)) {
+    return tab.value === 'svip' ? svipBenefitNurture : benefitNurture
+  }
+  if (/推荐/.test(name)) {
+    return tab.value === 'svip' ? svipBenefitRecommend : benefitRecommend
+  }
+  if (/搜索|查询/.test(name)) {
+    return tab.value === 'svip' ? svipBenefitSearch : benefitSearch
+  }
+  if (/优惠/.test(name)) return perkDiscount
+  if (/便捷|发票/.test(name)) return perkConvenient
+  if (/灵活|成员/.test(name)) return perkFlexible
+  if (/定制/.test(name)) return perkCustom
+  return pool[index % pool.length] ?? benefitSearch
+}
 
-const orgVipPlans: Plan[] = [
-  {
-    id: 'three',
-    name: '三年套餐',
-    price: 1680,
-    unit: '/人',
-    daily: '1.53',
-    tag: '买二送一',
-    featured: true,
-    years: 3,
-    saved: '420',
-  },
-  {
-    id: 'two',
-    name: '两年会员',
-    price: 1088,
-    unit: '/人',
-    daily: '1.49',
-    years: 2,
-    saved: '308',
-  },
-  {
-    id: 'year',
-    name: '一年会员',
-    price: 688,
-    unit: '/人',
-    daily: '1.88',
-    years: 1,
-    saved: '110',
-  },
-]
+const personalLevelPlans = computed(() => personalPlans(props.plans))
 
-const orgSvipPlans: Plan[] = [
-  {
-    id: 'three',
-    name: '三年套餐',
-    price: 2880,
-    unit: '/人',
-    daily: '2.64',
-    tag: '买二送一',
-    featured: true,
-    years: 3,
-    saved: '720',
-  },
-  {
-    id: 'two',
-    name: '两年会员',
-    price: 1868,
-    unit: '/人',
-    daily: '3.04',
-    years: 2,
-    saved: '720',
-  },
-  {
-    id: 'year',
-    name: '一年会员',
-    price: 1088,
-    unit: '/人',
-    daily: '4.32',
-    years: 1,
-    saved: '220',
-  },
-]
-
-const vipBenefits = [
-  { icon: benefitSearch, label: '高级搜索' },
-  { icon: benefitDeclare, label: '智能申报' },
-  { icon: benefitBatch, label: '批量查询' },
-  { icon: benefitMatch, label: '匹配政策' },
-  { icon: benefitNurture, label: '培育企业' },
-  { icon: benefitRecommend, label: '个性化政策推荐' },
-]
-
-const svipBenefits = [
-  { icon: svipBenefitSearch, label: '高级搜索' },
-  { icon: svipBenefitDeclare, label: '智能申报' },
-  { icon: svipBenefitBatch, label: '批量查询' },
-  { icon: svipBenefitMatch, label: '匹配政策' },
-  { icon: svipBenefitNurture, label: '培育企业' },
-  { icon: svipBenefitRecommend, label: '个性化政策推荐' },
-]
-
-const benefitBullets = [
-  '您将拥有一套企业的资质、知产、研发、政策、人员、资产等数据的标准化管理系统，公开数据数据自动更新，资质证书AI识别一键对应上传',
-  '基于您企业的真实数据提供更精准的政策匹配方案，并通过AI为您辅助生成各类重点政策的材料，从此看懂政策申报不再多花冤枉钱；',
-  '基于您企业所从事的产品或服务为您提供最新的全国相关科技成果信息，我们联合全国高校和科研院所推动最新技术在您这里落地转化；',
-  '基于您企业所从事的产品或服务以及对应产业链位置，为您推荐本地及全国的同行及上下游企业，为您稳定供应链、拓展业务提供帮助；',
-]
-
+/** 企业套餐页签的商务权益，接口不提供，按设计稿写死 */
 const orgPerks = [
-  {
-    icon: perkDiscount,
-    title: '更优惠',
-    desc: '批量购买优惠，最高可享8折',
-  },
+  { icon: perkDiscount, title: '更优惠', desc: '批量购买优惠，最高可享8折' },
   {
     icon: perkConvenient,
     title: '更便捷',
-    desc: '采购流程便捷，发票合同统一申请看步骤',
+    desc: '采购流程便捷，发票合同统一申请查看步骤',
   },
   {
     icon: perkFlexible,
     title: '更灵活',
     desc: '灵活管理成员，解决人员流动问题',
   },
-  {
-    icon: perkCustom,
-    title: '可定制',
-    desc: '如有定制需求，点击联系客服',
-  },
+  { icon: perkCustom, title: '可定制', desc: '如有定制需求，点击联系客服' },
 ]
 
-const planGroups: Record<PlanTier, Plan[]> = {
-  vip: vipPlans,
-  svip: svipPlans,
-  'org-vip': orgVipPlans,
-  'org-svip': orgSvipPlans,
-}
+const orgGroups = computed(() => {
+  const all = orgPlans(props.plans)
+  return {
+    all,
+    vip: all.filter((plan) => orgPlanTier(plan) === 'vip'),
+    svip: all.filter((plan) => orgPlanTier(plan) === 'svip'),
+  }
+})
 
-const currentTier = computed<PlanTier>(() =>
-  tab.value === 'org' ? `org-${orgSub.value}` : tab.value,
+/** 企业 VIP / SVIP 两档都有货时才显示子切换，否则企业页签平铺全部套餐 */
+const orgSplittable = computed(
+  () => orgGroups.value.vip.length > 0 && orgGroups.value.svip.length > 0,
 )
 
-const currentPlans = computed(() => planGroups[currentTier.value])
+const currentOrgPlans = computed(() => {
+  if (!orgSplittable.value) return orgGroups.value.all
+  return orgSub.value === 'svip' ? orgGroups.value.svip : orgGroups.value.vip
+})
+
+/** 企业套餐页签没有接口权益，权益区展示写死的商务权益 */
+const currentBenefits = computed(() =>
+  tab.value === 'org'
+    ? []
+    : benefitsForEnterpriseTab(props.benefits, tab.value),
+)
+
+const benefitNotes = computed(() =>
+  currentBenefits.value.filter((item) => item.description),
+)
+
+const currentPlans = computed(() => {
+  if (tab.value === 'svip') {
+    return plansByLevel(personalLevelPlans.value, MembershipLevel.Svip)
+  }
+  if (tab.value === 'org') return currentOrgPlans.value
+  return plansByLevel(personalLevelPlans.value, MembershipLevel.Vip)
+})
 
 const { currentPlan, selectPlan } = usePlanSelection(currentPlans, selectedPlan)
 
@@ -259,31 +174,33 @@ const payTone = computed<'gold' | 'blue' | 'red'>(() => {
   return 'gold'
 })
 
-const payableTotal = computed(() => currentPlan.value.price * seats.value)
+const payableTotal = computed(
+  () => (currentPlan.value?.price ?? 0) * seats.value,
+)
 
 const packLabel = computed(() => {
-  const years = currentPlan.value.years
-  const yearText = years >= 1 ? `${years}年` : currentPlan.value.name
+  if (!currentPlan.value) return ''
+  if (!orgSplittable.value) return currentPlan.value.name
   const kind = orgSub.value === 'svip' ? 'SVIP企业套餐' : 'VIP企业套餐'
-  return `${kind}${yearText}`
+  return `${kind}${currentPlan.value.periodLabel}`
 })
 
-const expiryText = computed(() =>
-  dayjs()
-    .add(Math.round(currentPlan.value.years * 12), 'month')
-    .format('YYYY-MM-DD'),
-)
+const expiryText = computed(() => {
+  const days = currentPlan.value?.durationDays ?? 0
+  if (!days) return ''
+  return dayjs().add(days, 'day').format('YYYY-MM-DD')
+})
 
 const selectTab = (next: BoardTab) => {
   if (tab.value === next) return
   tab.value = next
-  selectedPlan.value = 'three'
+  selectedPlan.value = ''
   if (next === 'org') orgSub.value = 'svip'
 }
 
 const selectOrgSub = (next: OrgSub) => {
   orgSub.value = next
-  selectedPlan.value = 'three'
+  selectedPlan.value = ''
 }
 
 const changeSeats = (delta: number) => {
@@ -335,9 +252,9 @@ const changeSeats = (delta: number) => {
         </button>
       </div>
 
-      <div class="board-body">
+      <div class="board-body" :class="{ 'is-single': !currentPlan }">
         <div class="board-main">
-          <div v-if="tab === 'org'" class="org-switch">
+          <div v-if="tab === 'org' && orgSplittable" class="org-switch">
             <button
               type="button"
               :class="{ active: orgSub === 'vip' }"
@@ -356,15 +273,16 @@ const changeSeats = (delta: number) => {
             </button>
           </div>
 
-          <div class="plan-row" :class="`is-${tab}`">
+          <p v-if="!currentPlans.length" class="scene-note">{{ emptyText }}</p>
+          <div v-else class="plan-row" :class="`is-${tab}`">
             <button
               v-for="plan in currentPlans"
               :key="plan.id"
               type="button"
               class="plan-card"
-              :class="{ selected: selectedPlan === plan.id }"
+              :class="{ selected: currentPlan?.id === plan.id }"
               :style="
-                selectedPlan === plan.id && tab !== 'org'
+                currentPlan?.id === plan.id && tab !== 'org'
                   ? {
                       backgroundImage: `url(${
                         tab === 'svip' ? svipPlanHighlight : planHighlight
@@ -372,25 +290,32 @@ const changeSeats = (delta: number) => {
                     }
                   : undefined
               "
-              :aria-pressed="selectedPlan === plan.id"
+              :aria-pressed="currentPlan?.id === plan.id"
               @click="selectPlan(plan.id)"
             >
               <span v-if="plan.tag" class="plan-tag">{{ plan.tag }}</span>
               <span class="plan-name">{{ plan.name }}</span>
               <span class="plan-price">
                 <em>¥</em>{{ plan.price
-                }}<small v-if="plan.unit">{{ plan.unit }}</small>
-                <del v-if="plan.original">¥{{ plan.original }}</del>
+                }}<small v-if="tab === 'org'">/人</small>
+                <del v-if="plan.original && tab !== 'org'"
+                  >¥{{ plan.original }}</del
+                >
               </span>
-              <span class="plan-daily">每天仅需{{ plan.daily }}元</span>
-              <span v-if="plan.saved" class="plan-saved"
+              <span v-if="plan.daily" class="plan-daily"
+                >每天仅需{{ plan.daily }}元</span
+              >
+              <span v-if="plan.saved && tab === 'org'" class="plan-saved"
                 >已减{{ plan.saved }}/人</span
               >
             </button>
           </div>
 
-          <div v-if="tab === 'org'" class="seat-row">
-            <p>开通新套餐:{{ packLabel }}（{{ expiryText }}到期）</p>
+          <div v-if="tab === 'org' && currentPlan" class="seat-row">
+            <p>
+              开通新套餐:{{ packLabel
+              }}<template v-if="expiryText">（{{ expiryText }}到期）</template>
+            </p>
             <div class="seat-control">
               人数：
               <button type="button" @click="changeSeats(-1)">−</button>
@@ -401,27 +326,31 @@ const changeSeats = (delta: number) => {
               实付金额：{{ currentPlan.price }}*{{ seats }}=¥{{ payableTotal }}
             </p>
           </div>
-          <p v-else class="scene-note">适用场景：个人日常使用，尊享50+项权益</p>
+          <p v-else-if="tab !== 'org'" class="scene-note">
+            适用场景：个人日常使用，尊享50+项权益
+          </p>
 
           <section v-if="tab !== 'org'" class="benefits">
             <h2 v-if="tab === 'vip'">尊享50+项权益</h2>
             <h2 v-else>
               SVIP权益,包含VIP50项权益+<em>「17项」</em> SVIP专属特权
             </h2>
-            <ul class="benefit-list">
-              <li
-                v-for="item in tab === 'vip' ? vipBenefits : svipBenefits"
-                :key="item.label"
-              >
-                <img :src="item.icon" :alt="item.label" />
-                <span>{{ item.label }}</span>
-              </li>
-            </ul>
-            <ul class="bullet-list">
-              <li v-for="(text, index) in benefitBullets" :key="index">
-                {{ text }}
-              </li>
-            </ul>
+            <p v-if="!currentBenefits.length" class="scene-note">
+              {{ benefitEmptyText }}
+            </p>
+            <template v-else>
+              <ul class="benefit-list">
+                <li v-for="(item, index) in currentBenefits" :key="item.id">
+                  <img :src="benefitIcon(item.name, index)" :alt="item.name" />
+                  <span>{{ item.name }}</span>
+                </li>
+              </ul>
+              <ul v-if="benefitNotes.length" class="bullet-list">
+                <li v-for="item in benefitNotes" :key="item.id">
+                  {{ item.name }}：{{ item.description }}
+                </li>
+              </ul>
+            </template>
           </section>
 
           <section v-else class="org-perks">
@@ -444,8 +373,10 @@ const changeSeats = (delta: number) => {
         </div>
 
         <MemberPayPanel
+          v-if="currentPlan"
           variant="enterprise"
           :price="currentPlan.price"
+          :plan-code="currentPlan.id"
           :qr-frame="qrFrame"
           :tone="payTone"
         />
@@ -575,6 +506,10 @@ const changeSeats = (delta: number) => {
 .board-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
+
+  &.is-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .board-main {
@@ -735,18 +670,69 @@ const changeSeats = (delta: number) => {
 
 .board.is-org {
   .plan-card {
-    border-color: #dce7f7;
+    // 角标要探出卡片上边框，底部色带自行收圆角
+    overflow: visible;
+    border-color: #f0f0f2;
+    background: #fff;
+
+    .plan-name {
+      margin-bottom: 26px;
+      color: #73534d;
+    }
+
+    .plan-price {
+      color: #333;
+
+      small {
+        color: #b5b5b5;
+      }
+    }
+
+    .plan-daily {
+      color: #c9c9cc;
+    }
+  }
+
+  .plan-tag {
+    top: -10px;
+    left: 0;
+    padding: 2px 10px;
+    border-radius: 4px;
+    line-height: 1.5;
   }
 
   .plan-card.selected {
-    background: #fff;
-    border-color: #3d7cff;
+    border-color: #c2dcfc;
+    background: #fafcff;
 
-    .plan-name,
-    .plan-price,
-    .plan-daily {
-      color: #e24b3a;
+    .plan-name {
+      color: #2f6bcd;
     }
+
+    .plan-price {
+      color: #ff3b4d;
+    }
+
+    .plan-daily {
+      color: #c8cacc;
+    }
+  }
+
+  // 底部「已减」色带：未选中灰底，选中蓝底
+  .plan-saved {
+    width: calc(100% + 20px);
+    margin: auto -10px -18px;
+    padding: 8px 10px 10px;
+    border-radius: 0 0 7px 7px;
+    background: #f5f6fa;
+    color: #9b9b9e;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .plan-card.selected .plan-saved {
+    background: #ddecff;
+    color: #326dcf;
   }
 }
 

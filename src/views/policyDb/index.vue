@@ -586,6 +586,7 @@ const columns = [
   color: #262626;
   font-weight: 500;
   line-height: 22px;
+  font-size: 16px;
 
   &:hover {
     color: var(--pb-primary);

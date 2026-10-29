@@ -6,6 +6,7 @@ export type {
   EnterpriseIndustryChain,
   EnterpriseItem,
   EnterprisePatent,
+  EnterprisePortrait,
   EnterprisePolicyRecord,
   EnterpriseProduct,
   EnterpriseQualPersonnel,

@@ -45,7 +45,7 @@ const invoiceRecords = ref<InvoiceRecord[]>([
     amount: '0.01',
     appliedAt: '2024-05-04',
     status: 'issued',
-    phone: '18236992863',
+    phone: '15390929874',
     address: '地址文案地址',
   },
   {
@@ -55,7 +55,7 @@ const invoiceRecords = ref<InvoiceRecord[]>([
     amount: '0.01',
     appliedAt: '2024-05-04',
     status: 'issued',
-    phone: '18236992863',
+    phone: '15390929874',
     address: '地址文案地址',
   },
   {
@@ -65,7 +65,7 @@ const invoiceRecords = ref<InvoiceRecord[]>([
     amount: '0.01',
     appliedAt: '2024-05-04',
     status: 'applying',
-    phone: '18236992863',
+    phone: '15390929874',
     address: '地址文案地址',
   },
 ])

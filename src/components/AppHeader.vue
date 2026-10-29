@@ -589,7 +589,7 @@ onUnmounted(() => {
   border-bottom: none;
   line-height: 62px;
   background: transparent;
-  font-size: 15px;
+  font-size: 16px;
 
   :deep(.ant-menu-item) {
     padding-inline: 10px;

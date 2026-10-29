@@ -47,6 +47,7 @@ export const fetchEnterprisePage = async (query: EnterpriseQuery) => {
   return { ...page, items: page.items.map(mapEnterpriseCard) }
 }
 
+/** GET /enterprises/{id} 企业详情画像。隐藏或不存在时 404。 */
 export const fetchEnterpriseRaw = (id: number) => {
   return request({
     url: `/enterprises/${id}`,

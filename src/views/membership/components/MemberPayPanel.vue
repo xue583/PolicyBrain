@@ -1,12 +1,29 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { message } from 'ant-design-vue'
+import {
+  createMembershipOrder,
+  createMembershipPayment,
+  fetchMembershipOrder,
+  type MembershipPayChannel,
+} from '@/api/membership'
 import iconCheck from '@/assets/membership/icon-check.png'
+import { useAuthStore } from '@/stores/auth'
+import { triggerNeedLogin } from '@/utils/auth'
+import {
+  isIntentExpired,
+  isMembershipActivated,
+  readMembershipPaymentOutcome,
+  submitAlipayCheckout,
+} from '../membershipPayment'
 
 defineOptions({ name: 'MemberPayPanel' })
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     price: number
+    /** 在售档位编码，创建支付意向时提交 */
+    planCode: string
     qrFrame: string
     /** 个人版 / 企业版（二维码区域更高、提示字号更小） */
     variant?: 'personal' | 'enterprise'
@@ -17,15 +34,49 @@ withDefaults(
 )
 
 type PayChannel = 'alipay' | 'wechatpay'
+type PayPhase =
+  'idle' | 'submitting' | 'waiting' | 'success' | 'closed' | 'expired'
 
+const POLL_INTERVAL_MS = 2000
+
+const auth = useAuthStore()
 const channel = ref<PayChannel>('alipay')
+const phase = ref<PayPhase>('idle')
 
 const payMethods: Array<{ id: PayChannel; label: string; icon: string }> = [
   { id: 'alipay', label: '支付宝支付', icon: 'icon-zhifubao' },
   { id: 'wechatpay', label: '微信支付', icon: 'icon-weixin' },
 ]
 
-/** 伪二维码格子（视觉占位，非真实码；随支付方式换一套图案） */
+let pollGeneration = 0
+let pollTimer = 0
+let checkoutWindow: Window | null = null
+
+const isFree = computed(() => props.price <= 0)
+
+const actionLabel = computed(() => {
+  if (phase.value === 'submitting') return '正在跳转'
+  if (phase.value === 'success') return '支付成功'
+  if (
+    phase.value === 'waiting' ||
+    phase.value === 'closed' ||
+    phase.value === 'expired'
+  ) {
+    return '重新支付'
+  }
+  return isFree.value ? '立即开通' : '去支付'
+})
+
+const actionHint = computed(() => {
+  if (phase.value === 'submitting') return '正在创建订单'
+  if (phase.value === 'waiting') return '请在支付宝完成支付'
+  if (phase.value === 'success') return '会员即将生效'
+  if (phase.value === 'closed') return '订单已关闭，请重新支付'
+  if (phase.value === 'expired') return '支付已超时，请重新下单'
+  return isFree.value ? '当前套餐免费开通' : '跳转支付宝收银台'
+})
+
+/** 伪二维码格子（微信支付视觉占位，非真实码） */
 function buildQrCells(seed: number) {
   const size = 29
   const cells: Array<[number, number]> = []
@@ -60,11 +111,151 @@ function buildQrCells(seed: number) {
   return cells
 }
 
-const qrCells = computed(() => buildQrCells(channel.value === 'alipay' ? 2 : 5))
+const qrCells = computed(() => buildQrCells(5))
+
+const stopPolling = () => {
+  pollGeneration += 1
+  window.clearTimeout(pollTimer)
+  pollTimer = 0
+}
+
+const closeCheckoutWindow = () => {
+  if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close()
+  checkoutWindow = null
+}
+
+const resetCheckout = () => {
+  const closeWindow = phase.value === 'submitting'
+  stopPolling()
+  if (closeWindow) closeCheckoutWindow()
+  else checkoutWindow = null
+  phase.value = 'idle'
+}
 
 function selectChannel(next: PayChannel) {
   channel.value = next
 }
+
+const applyOutcome = (
+  outcome: ReturnType<typeof readMembershipPaymentOutcome>,
+) => {
+  if (outcome === 'pending') return false
+  phase.value = outcome === 'paid' ? 'success' : outcome
+  if (outcome === 'paid') message.success('支付成功')
+  return true
+}
+
+const pollOrder = async (
+  orderNo: string,
+  expiresAt: string | null | undefined,
+  generation: number,
+) => {
+  if (generation !== pollGeneration) return
+  if (isIntentExpired(expiresAt)) {
+    phase.value = 'expired'
+    return
+  }
+  try {
+    const status = await fetchMembershipOrder(orderNo)
+    if (generation !== pollGeneration) return
+    if (applyOutcome(readMembershipPaymentOutcome(status))) return
+  } catch {
+    if (generation !== pollGeneration) return
+  }
+  pollTimer = window.setTimeout(() => {
+    void pollOrder(orderNo, expiresAt, generation)
+  }, POLL_INTERVAL_MS)
+}
+
+const openAlipayPlaceholder = (popup: Window) => {
+  popup.document.open()
+  popup.document.write(
+    '<!DOCTYPE html><title>支付宝支付</title><p style="font:14px/1.6 sans-serif;padding:24px;color:#1d2b3a">正在跳转支付宝，请稍候…</p>',
+  )
+  popup.document.close()
+}
+
+const goAlipay = async () => {
+  if (phase.value === 'submitting' || phase.value === 'success') return
+  if (!auth.isLoggedIn) {
+    triggerNeedLogin()
+    message.warning('请先登录后再支付')
+    return
+  }
+  const planCode = props.planCode.trim()
+  if (!planCode) {
+    message.warning('请选择套餐')
+    return
+  }
+
+  stopPolling()
+  const generation = pollGeneration
+  phase.value = 'submitting'
+
+  const payChannel: MembershipPayChannel = isFree.value ? 'free' : 'alipay'
+  if (payChannel === 'alipay') {
+    checkoutWindow = window.open('', '_blank')
+    if (!checkoutWindow) {
+      phase.value = 'idle'
+      message.warning('浏览器拦截了支付窗口，请允许弹窗后重试')
+      return
+    }
+    openAlipayPlaceholder(checkoutWindow)
+  }
+
+  try {
+    const intent = await createMembershipOrder(planCode)
+    if (generation !== pollGeneration) return
+    const orderNo = intent.orderNo?.trim()
+    if (!orderNo) {
+      closeCheckoutWindow()
+      phase.value = 'idle'
+      message.error('未获取到订单号')
+      return
+    }
+
+    const ticket = await createMembershipPayment(orderNo, payChannel)
+    if (generation !== pollGeneration) return
+
+    if (payChannel === 'free' || isMembershipActivated(ticket.membership)) {
+      closeCheckoutWindow()
+      phase.value = 'success'
+      message.success(payChannel === 'free' ? '开通成功' : '支付成功')
+      return
+    }
+
+    const html = ticket.redirectHtml?.trim() ?? ''
+    if (!html || !submitAlipayCheckout(checkoutWindow, html)) {
+      closeCheckoutWindow()
+      phase.value = 'idle'
+      message.warning(
+        html
+          ? '浏览器拦截了支付窗口，请允许弹窗后重试'
+          : '未获取到支付宝支付页面',
+      )
+      return
+    }
+
+    phase.value = 'waiting'
+    void pollOrder(orderNo, intent.expiresAt, generation)
+  } catch {
+    if (generation !== pollGeneration) return
+    closeCheckoutWindow()
+    phase.value = 'idle'
+  }
+}
+
+watch(
+  () => props.planCode,
+  () => {
+    resetCheckout()
+  },
+)
+
+onUnmounted(() => {
+  stopPolling()
+  checkoutWindow = null
+})
 </script>
 
 <template>
@@ -86,7 +277,19 @@ function selectChannel(next: PayChannel) {
       </button>
     </div>
     <div class="qr-box" :style="{ backgroundImage: `url(${qrFrame})` }">
-      <svg class="qr-code" viewBox="0 0 29 29" aria-hidden="true">
+      <div v-if="channel === 'alipay'" class="pay-action">
+        <button
+          type="button"
+          class="pay-go"
+          :class="{ 'is-success': phase === 'success' }"
+          :disabled="phase === 'submitting' || phase === 'success'"
+          @click="goAlipay"
+        >
+          {{ actionLabel }}
+        </button>
+        <p class="pay-action-hint" aria-live="polite">{{ actionHint }}</p>
+      </div>
+      <svg v-else class="qr-code" viewBox="0 0 29 29" aria-hidden="true">
         <rect width="29" height="29" fill="#fff" />
         <g fill="#1a1a1a">
           <rect
@@ -220,6 +423,48 @@ function selectChannel(next: PayChannel) {
 .is-enterprise .qr-box {
   height: 200px;
   padding: 28px 18px 22px;
+}
+
+.pay-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.pay-go {
+  min-width: 96px;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: #1677ff;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 36px;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+
+  &.is-success {
+    background: #07a83a;
+  }
+}
+
+.pay-action-hint {
+  margin: 0;
+  max-width: 112px;
+  color: #8a7a66;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .qr-code {

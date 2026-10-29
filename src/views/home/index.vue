@@ -553,6 +553,9 @@ const openBeian = () => {
               <h4>关于公司</h4>
               <div class="info-links">
                 <router-link to="/about">关于我们</router-link>
+                <router-link to="/about/member">会员协议</router-link>
+                <router-link to="/about/agreement">用户协议</router-link>
+                <router-link to="/about/privacy">隐私政策</router-link>
               </div>
             </div>
 
@@ -877,14 +880,14 @@ const openBeian = () => {
   h3 {
     margin-bottom: 10px;
     font-family: var(--pb-font-display);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
     color: #393939;
     line-height: 1.3;
   }
 
   p {
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.7;
     color: #393939;
     white-space: pre-line;
@@ -1066,7 +1069,7 @@ const openBeian = () => {
 .news-title {
   margin: 0;
   min-width: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1f1f1f;
   line-height: 1.5;
@@ -1222,7 +1225,7 @@ const openBeian = () => {
 
 .industry-desc {
   margin: 0 0 14px;
-  font-size: 20px;
+  font-size: 18px;
   color: #0c164a;
   font-family: AlibabaPuHuiTi_2_65_Medium;
   font-weight: 500;

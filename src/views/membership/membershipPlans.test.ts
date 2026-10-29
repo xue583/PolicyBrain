@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { MembershipLevel } from '@/api/membership'
 import {
   asMembershipPlans,
+  isOrgPlan,
+  orgPlanTier,
+  orgPlans,
+  personalPlans,
   personalPlansForTab,
   plansByLevel,
   plansForIdentity,
@@ -52,13 +56,23 @@ describe('membership plan mapping', () => {
     })
   })
 
-  it('uses currentPrice and shows the strike price when it is higher', () => {
+  it('prices from the standard price field and converts fen into yuan', () => {
     const [card] = toPlanCards([plan()])
-    expect(card?.price).toBe(368)
-    expect(card?.original).toBe(708)
-    expect(card?.saved).toBe('340')
-    expect(card?.tag).toBe('超值特惠')
-    expect(card?.daily).toBe('1.01')
+    expect(card?.price).toBe(708)
+    expect(card?.original).toBeUndefined()
+    expect(card?.saved).toBeUndefined()
+    expect(card?.daily).toBe('1.94')
+
+    const [struck] = toPlanCards([plan({ originalPrice: 99900 })])
+    expect(struck?.price).toBe(708)
+    expect(struck?.original).toBe(999)
+    expect(struck?.saved).toBe('291')
+
+    // 接口没返回 price 时才回退 currentPrice
+    const [fallback] = toPlanCards([
+      plan({ price: undefined, currentPrice: 36800 }),
+    ])
+    expect(fallback?.price).toBe(368)
   })
 
   it('sorts by sort, dedupes code, and features the first plan of each level', () => {
@@ -138,5 +152,88 @@ describe('membership plan mapping', () => {
     expect(
       plansByLevel(cards, MembershipLevel.None).map((item) => item.id),
     ).toEqual(['free'])
+  })
+
+  it('splits enterprise plans out of the personal VIP / SVIP tabs', () => {
+    const cards = toPlanCards([
+      plan({ code: 'vip_yearly', name: 'VIP 一年会员' }),
+      plan({
+        code: 'ent_vip_triennial',
+        name: 'VIP 企业三年套餐',
+        durationDays: 1095,
+      }),
+      plan({
+        code: 'svip_annual',
+        name: 'SVIP 一年会员',
+        level: MembershipLevel.Svip,
+      }),
+      plan({
+        code: 'ent_svip_annual',
+        name: 'SVIP 企业一年套餐',
+        level: MembershipLevel.Svip,
+      }),
+    ])
+
+    expect(isOrgPlan(cards[1])).toBe(true)
+    expect(isOrgPlan(cards[3])).toBe(true)
+    expect(orgPlans(cards).map((item) => item.id)).toEqual([
+      'ent_vip_triennial',
+      'ent_svip_annual',
+    ])
+    expect(personalPlans(cards).map((item) => item.id)).toEqual([
+      'vip_yearly',
+      'svip_annual',
+    ])
+    expect(personalPlansForTab(cards, 'vip').map((item) => item.id)).toEqual([
+      'vip_yearly',
+    ])
+    expect(personalPlansForTab(cards, 'svip').map((item) => item.id)).toEqual([
+      'svip_annual',
+    ])
+  })
+
+  it('recognises enterprise plans by description when the name is bare', () => {
+    const cards = toPlanCards([
+      plan({
+        code: 'vip_yearly',
+        name: '一年会员',
+        description: '超值特惠。个人会员，每天约 1.01 元。',
+      }),
+      plan({
+        code: 'ent_vip_yearly',
+        name: '一年套餐',
+        description: '企业套餐，按人计价。已减 110 元/人。',
+      }),
+    ])
+
+    expect(cards.map(isOrgPlan)).toEqual([false, true])
+    expect(personalPlansForTab(cards, 'vip').map((item) => item.id)).toEqual([
+      'vip_yearly',
+    ])
+    expect(orgPlans(cards).map((item) => item.id)).toEqual(['ent_vip_yearly'])
+  })
+
+  it('files enterprise plans into the VIP / SVIP sub switch by level', () => {
+    const cards = toPlanCards([
+      plan({ code: 'ent_vip_yearly', name: 'VIP 企业一年套餐' }),
+      plan({
+        code: 'ent_svip_yearly',
+        name: 'SVIP 企业一年套餐',
+        level: MembershipLevel.Svip,
+      }),
+      plan({ code: 'ent_free', name: '企业体验', level: MembershipLevel.None }),
+      plan({
+        code: 'ent_mystery',
+        name: '企业未标等级套餐',
+        level: MembershipLevel.None,
+      }),
+    ])
+
+    expect(cards.map((item) => orgPlanTier(item))).toEqual([
+      'vip',
+      'svip',
+      'vip',
+      'vip',
+    ])
   })
 })

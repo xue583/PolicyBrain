@@ -407,7 +407,7 @@ const openDetail = (item: PolicyItem) => {
 
 .item-title {
   flex: 1;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #1f1f1f;
   line-height: 1.4;

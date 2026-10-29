@@ -12,6 +12,7 @@ import EnterpriseProfileCard from './EnterpriseProfileCard.vue'
 import PolicyRecordsPanel from './PolicyRecordsPanel.vue'
 import IntellectualPropertyPanel from './IntellectualPropertyPanel.vue'
 import BusinessInfoPanel from './BusinessInfoPanel.vue'
+import EnterprisePortraitPanel from './EnterprisePortraitPanel.vue'
 import { useFollowable } from '@/composables/useFollowable'
 import { useAuthStore } from '@/stores/auth'
 import { triggerNeedLogin } from '@/utils/auth'
@@ -158,6 +159,13 @@ const onPolicyMatch = () => {
               :credibility="enterprise.productCredibility"
             />
           </a-tab-pane>
+
+          <a-tab-pane key="portrait" tab="企业画像">
+            <EnterprisePortraitPanel
+              :key="enterprise.id"
+              :portrait="enterprise.portrait"
+            />
+          </a-tab-pane>
         </DetailTabs>
       </DetailCard>
     </template>
@@ -179,6 +187,20 @@ const onPolicyMatch = () => {
 }
 
 @include below-lg {
+  .detail-tabs :deep(.ant-tabs-nav-wrap) {
+    overflow-x: auto !important;
+  }
+
+  .detail-tabs :deep(.ant-tabs-nav-list) {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .detail-tabs :deep(.ant-tabs-tab) {
+    flex: 0 0 auto;
+    padding: 14px 16px;
+  }
+
   .detail-tabs :deep(.ant-tabs-content-holder) {
     padding: 16px 16px 20px;
   }
