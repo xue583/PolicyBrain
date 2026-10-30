@@ -68,14 +68,14 @@ export const mapIssuingAuthorityOptions = (
     .filter((item): item is IssuingAuthorityOption => Boolean(item))
 }
 
-/** 发布单位下拉。匿名接口，keyword / level / 省市区均可空。 */
+/** 发布单位下拉。匿名接口，Body：keyword / level / 省市区均可空。 */
 export const fetchIssuingAuthorityOptions = async (
   query: IssuingAuthorityQuery,
 ) => {
   const data = await request({
     url: '/issuingAuthority/nameOptions',
-    method: 'get',
-    params: compactParams({
+    method: 'put',
+    data: compactParams({
       keyword: query.keyword?.trim(),
       level: query.level,
       provinceId: query.provinceId,

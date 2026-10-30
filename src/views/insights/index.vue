@@ -40,6 +40,8 @@ import PolicyFeed from './components/PolicyFeed.vue'
 
 defineOptions({ name: 'DataInsights' })
 
+const cockpitLead = '用数据透视政策，让企业更好发展'
+
 const now = ref(dayjs())
 const trendRange = ref<TrendRange>('30d')
 const fundRange = ref<TrendRange>('12m')
