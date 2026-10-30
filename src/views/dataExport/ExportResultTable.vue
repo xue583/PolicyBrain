@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import { DownloadOutlined } from '@ant-design/icons-vue'
 import type { TableColumnType } from 'ant-design-vue'
-import type { ExportEnterprise } from '@/mock/dataExport'
+import type { ExportEnterpriseRow } from '@/api/enterpriseExport'
 
 defineOptions({ name: 'ExportResultTable' })
 
-defineProps<{
-  columns: TableColumnType<ExportEnterprise>[]
-  list: ExportEnterprise[]
-  total: number
-  currentPage: number
-  pageSize: number
-  countText?: string
-}>()
+withDefaults(
+  defineProps<{
+    columns: TableColumnType<ExportEnterpriseRow>[]
+    list: ExportEnterpriseRow[]
+    total: number
+    currentPage: number
+    pageSize: number
+    countText?: string
+    exporting?: boolean
+  }>(),
+  { countText: '', exporting: false },
+)
 
 const emit = defineEmits<{
   'update:currentPage': [value: number]
@@ -25,7 +29,13 @@ const emit = defineEmits<{
     <slot name="count">
       <span class="result-count">{{ countText }}</span>
     </slot>
-    <a-button type="primary" ghost class="export-btn" @click="emit('export')">
+    <a-button
+      type="primary"
+      ghost
+      class="export-btn"
+      :loading="exporting"
+      @click="emit('export')"
+    >
       <DownloadOutlined />
       导出Excel
     </a-button>
@@ -36,7 +46,7 @@ const emit = defineEmits<{
     :columns="columns"
     :data-source="list"
     :pagination="false"
-    :row-key="(row: ExportEnterprise) => row.id"
+    :row-key="(row: ExportEnterpriseRow) => row.id"
     size="middle"
   >
     <template #bodyCell="{ column, record, index }">

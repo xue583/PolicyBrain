@@ -137,7 +137,7 @@ const toggleGroup = (key: FilterKey | 'province') => {
         <a-input
           v-model:value="filters.keyword"
           allow-clear
-          placeholder="请输入政策名称关键词搜索"
+          placeholder="请输入企业名称关键词"
         />
 
         <div class="filter-group">

@@ -101,6 +101,7 @@ describe('shouldSkipApiPrefix', () => {
     expect(shouldSkipApiPrefix('/search/news')).toBe(true)
     expect(shouldSkipApiPrefix('/home/hot-keywords')).toBe(true)
     expect(shouldSkipApiPrefix('/issuingAuthority/nameOptions')).toBe(true)
+    expect(shouldSkipApiPrefix('/export/enterprises/search')).toBe(true)
     expect(shouldSkipApiPrefix('/users/me')).toBe(false)
     expect(shouldSkipApiPrefix('/authenticate')).toBe(false)
     expect(shouldSkipApiPrefix('/newsletter')).toBe(false)

@@ -538,7 +538,7 @@ const columns = [
 
 .policy-table {
   --db-table-font-size: 14px;
-  --db-table-cell-padding: 11px 20px;
+  --db-table-cell-padding: 20px;
 
   :deep(.db-table) {
     border-color: #e6edf5;
@@ -578,7 +578,7 @@ const columns = [
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 

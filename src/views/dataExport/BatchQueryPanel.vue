@@ -12,21 +12,20 @@ defineOptions({ name: 'ExportBatchQueryPanel' })
 
 const emit = defineEmits<{
   downloadTemplate: []
-  uploaded: [fileName: string]
+  uploaded: [file: File]
 }>()
 
 const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
   if (!['xls', 'xlsx', 'csv'].includes(ext)) {
-    message.error('仅支持 Excel 格式（.xls / .xlsx）')
+    message.error('仅支持 Excel 或 CSV（.xls / .xlsx / .csv）')
     return false
   }
   if (file.size > 5 * 1024 * 1024) {
     message.error('文件大小不能超过 5MB')
     return false
   }
-  emit('uploaded', file.name)
-  message.success('名单已上传，已匹配查询结果')
+  emit('uploaded', file)
   return false
 }
 </script>
@@ -79,7 +78,8 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
       <p class="upload-title">将文件拖拽到此处或 <em>点击上传</em></p>
       <p class="upload-sub">下载Excel示例文件并填充企业名录信息</p>
       <p class="upload-hint">
-        文件大小不超过5M · 仅支持Excel格式(.xls/.xlsx) · 单次查询限500家企业
+        文件大小不超过5M · 支持 Excel、CSV（.xls / .xlsx / .csv） ·
+        单次查询限500家企业
       </p>
     </a-upload-dragger>
 

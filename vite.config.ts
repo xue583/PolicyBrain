@@ -82,6 +82,7 @@ export default defineConfig(({ mode }) => {
             '/kb',
             '/home',
             '/issuingAuthority',
+            '/export',
           ].map((prefix) => [
             prefix,
             {

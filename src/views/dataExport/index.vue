@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RightOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import type { TableColumnType } from 'ant-design-vue'
-import {
-  electronicsIndustry,
-  exportEnterpriseTotal,
-  mockExportEnterprises,
-  type ExportEnterprise,
-} from '../../mock/dataExport'
 import ExportEmptyState from './ExportEmptyState.vue'
 import ExportResultTable from './ExportResultTable.vue'
 import ExportFilterSider, {
@@ -17,9 +11,24 @@ import ExportFilterSider, {
   type FilterTab,
 } from './ExportFilterSider.vue'
 import BatchQueryPanel from './BatchQueryPanel.vue'
-import { useFilteredList } from '@/composables/useFilteredList'
 import { downloadCsv } from '@/utils/downloadCsv'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
+import { loadRegionOptions, type CityOption } from '@/api/meta'
+import {
+  buildExportJobRequest,
+  createEnterpriseExportJob,
+  exportEnterpriseBatch,
+  fetchEnterpriseBatchPage,
+  fetchEnterpriseExportJob,
+  searchEnterprisesByPolicy,
+  searchExportEnterprises,
+  submitEnterpriseBatchQuery,
+  toAdvancedQuery,
+  toPolicyQuery,
+  type ExportEnterpriseRow,
+  type ExportFilterInput,
+} from '@/api/enterpriseExport'
+import { toErrorMessage } from '@/utils/apiError'
 import searchIcon from '../../assets/export/search.png'
 import search2Icon from '../../assets/export/search2.png'
 
@@ -27,18 +36,20 @@ defineOptions({ name: 'DataExport' })
 
 type QueryMode = 'advanced' | 'batch'
 
+const pageSize = 10
 const mode = ref<QueryMode>('advanced')
 const filterTab = ref<FilterTab>('basic')
 const searchedTab = ref<FilterTab>('basic')
-const hasSearched = ref(true)
+const hasSearched = ref(false)
 const uploadedName = ref('')
+const regions = ref<CityOption[]>([])
 
 const filters = ref<ExportFilters>({
   keyword: '',
   policies: [],
-  year: 2026,
+  year: null,
   province: '河南省',
-  industry: electronicsIndustry,
+  industry: '',
   ip: '',
   capital: '',
   age: '',
@@ -54,42 +65,23 @@ const openGroups = ref<Record<FilterKey | 'province', boolean>>({
   economy: false,
 })
 
-const filteredList = computed(() => {
-  const current = filters.value
-  return mockExportEnterprises.filter((item) => {
-    const kw = current.keyword.trim()
-    if (kw && !item.name.includes(kw) && !item.address.includes(kw))
-      return false
+const appliedFilters = ref<ExportFilters | null>(null)
+const advancedRows = ref<ExportEnterpriseRow[]>([])
+const advancedTotal = ref(0)
+const advancedPage = ref(1)
+const advancedLoading = ref(false)
+const advancedError = ref('')
+const batchRows = ref<ExportEnterpriseRow[]>([])
+const batchTotal = ref(0)
+const batchPage = ref(1)
+const batchToken = ref('')
+const batchLoading = ref(false)
+const exporting = ref(false)
+const pendingJobId = ref('')
+let advancedSeq = 0
+let batchSeq = 0
 
-    if (searchedTab.value === 'policy') {
-      if (current.year && item.year !== current.year) return false
-      if (
-        current.policies.length &&
-        !current.policies.some((p) => item.policies.includes(p))
-      ) {
-        return false
-      }
-      return true
-    }
-
-    if (current.province && item.province !== current.province) return false
-    if (current.industry && item.industry !== current.industry) return false
-    if (current.ip && !item.ipTypes.includes(current.ip)) return false
-    if (current.capital && item.capitalRange !== current.capital) return false
-    if (current.age && item.ageRange !== current.age) return false
-    if (current.economy && item.economyType !== current.economy) return false
-    return true
-  })
-})
-
-const displayList = computed(() =>
-  hasSearched.value ? filteredList.value : [],
-)
-
-const { currentPage, pageSize, pagedList, total, resetPage } =
-  useFilteredList(displayList)
-
-const columns: TableColumnType<ExportEnterprise>[] = [
+const columns: TableColumnType<ExportEnterpriseRow>[] = [
   {
     title: '序号',
     key: 'index',
@@ -117,10 +109,30 @@ const collapseGroups = () => {
   openGroups.value.economy = false
 }
 
+const snapshotFilters = (value: ExportFilters): ExportFilters => ({
+  ...value,
+  policies: [...value.policies],
+})
+
+const provinceIdOf = (name: string) =>
+  regions.value.find((item) => item.label === name)?.id
+
+const toFilterInput = (value: ExportFilters): ExportFilterInput => ({
+  keyword: value.keyword,
+  policies: value.policies,
+  year: value.year,
+  provinceId: provinceIdOf(value.province),
+  industry: value.industry,
+  ip: value.ip,
+  capital: value.capital,
+  age: value.age,
+  economy: value.economy,
+})
+
 const resetFilters = () => {
   filters.value.keyword = ''
   filters.value.policies = []
-  filters.value.year = 2026
+  filters.value.year = null
   filters.value.province = '河南省'
   filters.value.industry = ''
   filters.value.ip = ''
@@ -129,7 +141,12 @@ const resetFilters = () => {
   filters.value.economy = ''
   hasSearched.value = false
   searchedTab.value = filterTab.value
-  resetPage()
+  appliedFilters.value = null
+  pendingJobId.value = ''
+  advancedRows.value = []
+  advancedTotal.value = 0
+  advancedPage.value = 1
+  advancedError.value = ''
   openGroups.value.province = filterTab.value === 'basic'
   openGroups.value.industry = false
   openGroups.value.ip = false
@@ -138,11 +155,64 @@ const resetFilters = () => {
   openGroups.value.economy = false
 }
 
+const loadAdvanced = async () => {
+  const applied = appliedFilters.value
+  if (!hasSearched.value || !applied) return
+  const id = ++advancedSeq
+  advancedLoading.value = true
+  advancedError.value = ''
+  const input = toFilterInput(applied)
+  const policyQuery =
+    searchedTab.value === 'policy' ? toPolicyQuery(input) : null
+  if (searchedTab.value === 'policy' && !policyQuery) {
+    advancedRows.value = []
+    advancedTotal.value = 0
+    advancedLoading.value = false
+    return
+  }
+  try {
+    const page = policyQuery
+      ? await searchEnterprisesByPolicy(policyQuery, {
+          pageIndex: advancedPage.value,
+          pageSize,
+        })
+      : await searchExportEnterprises(toAdvancedQuery(input), {
+          pageIndex: advancedPage.value,
+          pageSize,
+        })
+    if (id !== advancedSeq) return
+    advancedRows.value = page.items
+    advancedTotal.value = page.totalElements
+  } catch (err) {
+    if (id !== advancedSeq) return
+    advancedRows.value = []
+    advancedTotal.value = 0
+    advancedError.value = toErrorMessage(err)
+  } finally {
+    if (id === advancedSeq) advancedLoading.value = false
+  }
+}
+
 const viewResults = () => {
+  if (
+    filterTab.value === 'policy' &&
+    !toPolicyQuery(toFilterInput(filters.value))
+  ) {
+    message.warning('请输入政策名称或选择热门政策')
+    return
+  }
+  appliedFilters.value = snapshotFilters(filters.value)
   hasSearched.value = true
   searchedTab.value = filterTab.value
-  resetPage()
+  advancedPage.value = 1
+  pendingJobId.value = ''
   collapseGroups()
+  void loadAdvanced()
+}
+
+const onAdvancedPage = (page: number) => {
+  advancedPage.value = page
+  void loadAdvanced()
 }
 
 const downloadTemplate = () => {
@@ -150,30 +220,152 @@ const downloadTemplate = () => {
   message.success('模板已下载')
 }
 
-const exportExcel = () => {
-  if (!displayList.value.length) {
+const sleep = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+
+const pollExportJob = async (jobId: string) => {
+  for (let attempt = 0; attempt < 90; attempt += 1) {
+    const job = await fetchEnterpriseExportJob(jobId)
+    if (job.status === 2) {
+      pendingJobId.value = ''
+      if (!job.downloadUrl) throw new Error('导出完成，但未返回下载链接')
+      return job.downloadUrl
+    }
+    if (job.status === 3) {
+      pendingJobId.value = ''
+      throw new Error(job.message || job.statusText || '导出失败')
+    }
+    if (attempt < 89) await sleep(2000)
+  }
+  throw new Error('导出仍在处理，请稍后再次点击导出')
+}
+
+const exportQueryFile = async () => {
+  const applied = appliedFilters.value
+  if (!applied) throw new Error('请先查询后再导出')
+  const body = buildExportJobRequest(searchedTab.value, toFilterInput(applied))
+  if (!body) throw new Error('请先查询后再导出')
+  let jobId = pendingJobId.value
+  if (!jobId) {
+    const created = await createEnterpriseExportJob(body)
+    if (!created.jobId) throw new Error('未返回导出任务号')
+    jobId = created.jobId
+    pendingJobId.value = jobId
+  }
+  return pollExportJob(jobId)
+}
+
+const exportExcel = async () => {
+  if (exporting.value) return
+  if (mode.value === 'batch' && !batchToken.value) {
+    message.warning('请先上传企业名单')
+    return
+  }
+  if (mode.value === 'advanced' && !advancedTotal.value) {
     message.warning('暂无可导出的数据')
     return
   }
-  const rows = [
-    ['序号', '企业名称', '注册地址', '所属行业', '已获政策数量'],
-    ...displayList.value.map((item, index) => [
-      String(index + 1),
-      item.name,
-      item.address,
-      item.industry,
-      String(item.policyCount),
-    ]),
-  ]
-  downloadCsv('企业数据导出.csv', rows)
-  message.success('已导出 Excel 文件')
+  const popup = window.open('', '_blank')
+  exporting.value = true
+  const hide = message.loading('正在生成导出文件，数据较多时请稍候…', 0)
+  try {
+    const url =
+      mode.value === 'batch'
+        ? await exportEnterpriseBatch(batchToken.value)
+        : await exportQueryFile()
+    if (!url) throw new Error('未返回下载链接')
+    if (popup && !popup.closed) {
+      popup.opener = null
+      popup.location.href = url
+    } else {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noopener'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    }
+    message.success('导出文件已生成，下载链接约 30 分钟内有效')
+  } catch (err) {
+    popup?.close()
+    message.error(toErrorMessage(err, '导出失败'))
+  } finally {
+    hide()
+    exporting.value = false
+  }
 }
 
-const onBatchUploaded = (name: string) => {
-  uploadedName.value = name
-  hasSearched.value = true
-  resetPage()
+const applyBatchPage = (
+  page: Awaited<ReturnType<typeof submitEnterpriseBatchQuery>>,
+  fileName?: string,
+) => {
+  batchToken.value = page.token || batchToken.value
+  batchRows.value = page.items
+  batchTotal.value = page.totalElements
+  batchPage.value = page.pageIndex || 1
+  if (fileName) uploadedName.value = fileName
+  if (!page.unmatchedNames.length) return
+  const preview = page.unmatchedNames.slice(0, 3).join('、')
+  const suffix =
+    page.unmatchedNames.length > 3 ? `等 ${page.unmatchedNames.length} 家` : ''
+  message.warning(`未匹配企业：${preview}${suffix}`)
 }
+
+const onBatchUploaded = async (file: File) => {
+  const id = ++batchSeq
+  batchLoading.value = true
+  try {
+    const page = await submitEnterpriseBatchQuery(file, {
+      pageIndex: 1,
+      pageSize,
+    })
+    if (id !== batchSeq) return
+    applyBatchPage(page, file.name)
+    if (page.totalElements) message.success('名单已上传，已匹配查询结果')
+  } catch (err) {
+    if (id !== batchSeq) return
+    message.error(toErrorMessage(err, '批量查询失败'))
+  } finally {
+    if (id === batchSeq) batchLoading.value = false
+  }
+}
+
+const onBatchPage = async (pageIndex: number) => {
+  if (!batchToken.value) return
+  const id = ++batchSeq
+  batchPage.value = pageIndex
+  batchLoading.value = true
+  try {
+    const page = await fetchEnterpriseBatchPage(batchToken.value, {
+      pageIndex,
+      pageSize,
+    })
+    if (id !== batchSeq) return
+    applyBatchPage(page)
+  } catch (err) {
+    if (id !== batchSeq) return
+    message.error(toErrorMessage(err, '翻页失败'))
+  } finally {
+    if (id === batchSeq) batchLoading.value = false
+  }
+}
+
+onMounted(() => {
+  void (async () => {
+    try {
+      regions.value = await loadRegionOptions()
+    } catch {
+      regions.value = []
+    }
+    appliedFilters.value = snapshotFilters(filters.value)
+    hasSearched.value = true
+    searchedTab.value = 'basic'
+    await loadAdvanced()
+  })()
+})
 </script>
 
 <template>
@@ -230,39 +422,54 @@ const onBatchUploaded = (name: string) => {
 
         <a-card class="result-card" :bordered="false">
           <section class="result-pane">
-            <ExportEmptyState
-              v-if="!hasSearched"
-              title="无查询结果"
-              description="请选择筛选条件后点击“查看结果”"
-              note="筛选符合条件的郑州企业，支持一键导出Excel"
-            />
+            <a-spin :spinning="advancedLoading">
+              <a-alert
+                v-if="advancedError"
+                type="error"
+                show-icon
+                :message="advancedError"
+                style="margin-bottom: 16px"
+              >
+                <template #action>
+                  <a-button size="small" @click="loadAdvanced">重试</a-button>
+                </template>
+              </a-alert>
 
-            <ExportEmptyState
-              v-else-if="!total"
-              title="无查询结果"
-              description="未找到符合条件的企业，请调整筛选后再试"
-            />
+              <ExportEmptyState
+                v-else-if="!hasSearched && !advancedLoading"
+                title="无查询结果"
+                description="请选择筛选条件后点击“查看结果”"
+                note="筛选符合条件的企业，支持一键导出Excel"
+              />
 
-            <ExportResultTable
-              v-else
-              :columns="columns"
-              :list="pagedList"
-              :total="total"
-              :current-page="currentPage"
-              :page-size="pageSize"
-              count-text=""
-              @update:current-page="currentPage = $event"
-              @export="exportExcel"
-            >
-              <template #count>
-                <ResultCountBar
-                  class="export-count"
-                  prefix="共收录"
-                  :total="exportEnterpriseTotal.toLocaleString('zh-CN')"
-                  unit="家企业"
-                />
-              </template>
-            </ExportResultTable>
+              <ExportEmptyState
+                v-else-if="hasSearched && !advancedLoading && !advancedTotal"
+                title="无查询结果"
+                description="未找到符合条件的企业，请调整筛选后再试"
+              />
+
+              <ExportResultTable
+                v-else-if="advancedTotal"
+                :columns="columns"
+                :list="advancedRows"
+                :total="advancedTotal"
+                :current-page="advancedPage"
+                :page-size="pageSize"
+                :exporting="exporting"
+                count-text=""
+                @update:current-page="onAdvancedPage"
+                @export="exportExcel"
+              >
+                <template #count>
+                  <ResultCountBar
+                    class="export-count"
+                    prefix="共收录"
+                    :total="advancedTotal.toLocaleString('zh-CN')"
+                    unit="家企业"
+                  />
+                </template>
+              </ExportResultTable>
+            </a-spin>
           </section>
         </a-card>
       </div>
@@ -272,28 +479,36 @@ const onBatchUploaded = (name: string) => {
         @download-template="downloadTemplate"
         @uploaded="onBatchUploaded"
       >
-        <ExportResultTable
-          v-if="uploadedName"
-          :columns="columns"
-          :list="pagedList"
-          :total="total"
-          :current-page="currentPage"
-          :page-size="pageSize"
-          count-text=""
-          @update:current-page="currentPage = $event"
-          @export="exportExcel"
-        >
-          <template #count>
-            <ResultCountBar
-              class="export-count"
-              prefix="已匹配"
-              :total="total"
-              unit="家企业"
-            >
-              <span class="file-name">（{{ uploadedName }}）</span>
-            </ResultCountBar>
-          </template>
-        </ExportResultTable>
+        <a-spin :spinning="batchLoading">
+          <ExportEmptyState
+            v-if="uploadedName && !batchLoading && !batchTotal"
+            title="无查询结果"
+            description="上传名单中没有匹配到企业，请检查名称后重试"
+          />
+          <ExportResultTable
+            v-else-if="uploadedName && batchTotal"
+            :columns="columns"
+            :list="batchRows"
+            :total="batchTotal"
+            :current-page="batchPage"
+            :page-size="pageSize"
+            :exporting="exporting"
+            count-text=""
+            @update:current-page="onBatchPage"
+            @export="exportExcel"
+          >
+            <template #count>
+              <ResultCountBar
+                class="export-count"
+                prefix="已匹配"
+                :total="batchTotal"
+                unit="家企业"
+              >
+                <span class="file-name">（{{ uploadedName }}）</span>
+              </ResultCountBar>
+            </template>
+          </ExportResultTable>
+        </a-spin>
       </BatchQueryPanel>
     </div>
   </PageState>
