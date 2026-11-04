@@ -78,7 +78,8 @@ const mountPage = async (stubs?: Record<string, unknown>) => {
   await router.isReady()
 
   const wrapper = mount(PersonalCenter, {
-    global: { plugins: [pinia, router], stubs },
+    // vitest stubs 形状多样，放宽给 mount 的 Stubs 类型
+    global: { plugins: [pinia, router], stubs: stubs as never },
   })
   await flushPromises()
   return wrapper

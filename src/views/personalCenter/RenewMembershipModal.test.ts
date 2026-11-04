@@ -90,7 +90,9 @@ const membership = {
   remainingDays: 365,
 }
 
-const mountModal = (identity = PolicyUserType.EnterpriseSpecialist) => {
+const mountModal = (
+  identity: PolicyUserType = PolicyUserType.EnterpriseSpecialist,
+) => {
   localStorage.setItem('pb_access_token', 'access')
   const pinia = createPinia()
   setActivePinia(pinia)
