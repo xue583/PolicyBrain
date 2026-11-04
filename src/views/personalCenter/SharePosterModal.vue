@@ -79,6 +79,7 @@ const loadInviteLink = async () => {
     const url = data?.inviteUrl?.trim() || ''
     inviteUrl.value = url
     if (!url) linkError.value = '暂未获取到邀请链接'
+    else if (!safeInviteHref(url)) linkError.value = '邀请链接无效'
   } catch (err) {
     if (requestId !== linkRequestId) return
     const raw = err instanceof ApiError ? err.message : ''
@@ -422,29 +423,41 @@ const savePoster = async () => {
                 </template>
               </p>
               <div class="share-poster-link">
-                <a
-                  v-if="safeInviteUrl"
-                  class="share-poster-cta"
-                  :href="safeInviteUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {{ CTA_LABEL }}
-                  <svg
-                    viewBox="0 0 16 16"
-                    width="16"
-                    height="16"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
+                <template v-if="safeInviteUrl">
+                  <a
+                    class="share-poster-cta"
+                    :href="safeInviteUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    <path d="M4 8h8" />
-                    <path d="M8.5 4.5 12 8l-3.5 3.5" />
-                  </svg>
-                </a>
+                    {{ CTA_LABEL }}
+                    <svg
+                      viewBox="0 0 16 16"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 8h8" />
+                      <path d="M8.5 4.5 12 8l-3.5 3.5" />
+                    </svg>
+                  </a>
+                  <a
+                    class="share-poster-url"
+                    :href="safeInviteUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {{ safeInviteUrl }}
+                  </a>
+                </template>
+                <p v-else-if="linkError" class="share-poster-link-error">
+                  {{ linkError }}
+                </p>
               </div>
             </div>
           </div>
@@ -645,6 +658,32 @@ const savePoster = async () => {
     outline: 2px solid #fff;
     outline-offset: 2px;
   }
+}
+
+.share-poster-url {
+  color: #1677ff;
+  font-size: 3cqw;
+  line-height: 1.45;
+  text-align: center;
+  text-decoration: none;
+  word-break: break-all;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #1677ff;
+    outline-offset: 2px;
+  }
+}
+
+.share-poster-link-error {
+  margin: 0;
+  color: #cf1322;
+  font-size: 3.2cqw;
+  line-height: 1.45;
+  text-align: center;
 }
 
 .share-poster-lead,
