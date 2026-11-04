@@ -1,55 +1,71 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  FileTextOutlined,
-  TeamOutlined,
-  DesktopOutlined,
+  AppstoreOutlined,
   ContainerOutlined,
+  FileTextOutlined,
   FolderOpenFilled,
+  FundOutlined,
+  TeamOutlined,
 } from '@ant-design/icons-vue'
 import advertisementImg from '@/assets/api/advertisement.png'
 import openImg from '@/assets/api/open.png'
 import notOpenImg from '@/assets/api/notOpen.png'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
-import { apiMainCategory } from '@/views/api/catalog'
+import { apiCategories, totalApiCount, type ApiItem } from '@/views/api/catalog'
 
 defineOptions({ name: 'ComingSoon' })
 
+const categoryIcons: Record<string, Component> = {
+  项目库: FileTextOutlined,
+  政策数据库: ContainerOutlined,
+  企业库数据: TeamOutlined,
+  政策匹配: FundOutlined,
+  业务线索: AppstoreOutlined,
+}
+
 const router = useRouter()
-const selectedKeys = ref<string[]>(['政策接口'])
+const selectedKeys = ref<string[]>([apiCategories[0]?.name ?? ''])
 const keyword = useRouteKeyword()
 
+const menuItems = computed(() =>
+  apiCategories.map((category) => ({
+    key: category.name,
+    label: category.name,
+    count: category.count,
+    icon: categoryIcons[category.name] ?? FileTextOutlined,
+  })),
+)
+
+const matchItem = (item: ApiItem, kw: string) =>
+  item.name.includes(kw) ||
+  item.code.includes(kw) ||
+  item.description.includes(kw)
+
 const visibleCategory = computed(() => {
+  const current =
+    apiCategories.find((category) => category.name === selectedKeys.value[0]) ??
+    apiCategories[0]
+  if (!current) return { name: '', count: 0, items: [] as ApiItem[] }
   const kw = keyword.value.trim()
-  if (!kw) return apiMainCategory
-  const groups = apiMainCategory.groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter(
-        (item) => item.name.includes(kw) || item.code.includes(kw),
-      ),
-    }))
-    .filter((group) => group.items.length > 0)
-  return {
-    ...apiMainCategory,
-    count: groups.reduce((sum, group) => sum + group.items.length, 0),
-    groups,
-  }
+  if (!kw) return current
+  const items = current.items.filter((item) => matchItem(item, kw))
+  return { ...current, count: items.length, items }
 })
 
-const menuItems = [
-  { key: '政策接口', label: '政策接口', count: 9, icon: ContainerOutlined },
-  { key: '企业接口', label: '企业接口', count: 12, icon: TeamOutlined },
-  { key: '功能接口', label: '功能接口', count: 5, icon: DesktopOutlined },
-  {
-    key: '投资项目接口',
-    label: '投资项目接口',
-    count: 5,
-    icon: FileTextOutlined,
-  },
-]
-const totalApiCount = 45
+watch(keyword, (value) => {
+  const kw = value.trim()
+  if (!kw) return
+  const current = apiCategories.find(
+    (category) => category.name === selectedKeys.value[0],
+  )
+  if (current?.items.some((item) => matchItem(item, kw))) return
+  const hit = apiCategories.find((category) =>
+    category.items.some((item) => matchItem(item, kw)),
+  )
+  if (hit) selectedKeys.value = [hit.name]
+})
 
 const openDetail = (id: number) => {
   void router.push({ name: 'api-detail', params: { id: String(id) } })
@@ -92,42 +108,33 @@ const openDetail = (id: number) => {
           {{ visibleCategory.name }}（{{ visibleCategory.count }}个）
         </h2>
 
-        <p v-if="!visibleCategory.groups.length" class="empty-tip">
+        <p v-if="!visibleCategory.items.length" class="empty-tip">
           未找到相关接口
         </p>
 
         <div
-          v-for="group in visibleCategory.groups"
-          :key="group.name"
-          class="api-group"
+          v-for="item in visibleCategory.items"
+          :key="item.id"
+          class="api-card"
+          @click="openDetail(item.id)"
         >
-          <h3 class="group-title">
-            {{ group.name }}
-            <span class="group-count">{{ group.items.length }}</span>
-          </h3>
-
-          <div
-            v-for="item in group.items"
-            :key="item.id"
-            class="api-card"
-            @click="openDetail(item.id)"
-          >
-            <img
-              :src="item.isOpen ? openImg : notOpenImg"
-              :alt="item.isOpen ? '开放' : '未开放'"
-              class="status-badge"
-            />
-            <div class="card-title-row">
-              <div class="card-icon">
-                <FolderOpenFilled />
-              </div>
-              <h4 class="card-title">{{ item.name }}</h4>
+          <img
+            :src="item.isOpen ? openImg : notOpenImg"
+            :alt="item.isOpen ? '开放' : '未开放'"
+            class="status-badge"
+          />
+          <div class="card-title-row">
+            <div class="card-icon">
+              <FolderOpenFilled />
             </div>
-            <p class="card-desc">{{ item.description }}</p>
-            <div class="card-meta-container">
-              <div class="card-meta">接口编号：{{ item.code }}</div>
-              <div class="card-meta">返回结果：{{ item.returnData }}</div>
-            </div>
+            <h4 class="card-title">{{ item.name }}</h4>
+          </div>
+          <p v-if="item.description" class="card-desc">
+            {{ item.description }}
+          </p>
+          <div class="card-meta-container">
+            <div class="card-meta">接口编号：{{ item.code || '—' }}</div>
+            <div class="card-meta">返回结果：{{ item.returnData }}</div>
           </div>
         </div>
       </div>
@@ -254,29 +261,6 @@ const openDetail = (id: number) => {
   font-weight: 600;
   color: var(--pb-title);
   line-height: 1.4;
-}
-
-.api-group {
-  margin-bottom: 32px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.group-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--pb-title);
-  margin: 0 0 16px;
-  padding-left: 12px;
-  border-left: 3px solid var(--pb-primary);
-
-  .group-count {
-    color: var(--pb-muted);
-    font-weight: 400;
-    margin-left: 4px;
-  }
 }
 
 .api-card {

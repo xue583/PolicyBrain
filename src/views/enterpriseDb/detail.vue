@@ -13,7 +13,7 @@ import PolicyRecordsPanel from './PolicyRecordsPanel.vue'
 import IntellectualPropertyPanel from './IntellectualPropertyPanel.vue'
 import BusinessInfoPanel from './BusinessInfoPanel.vue'
 import EnterprisePortraitPanel from './EnterprisePortraitPanel.vue'
-import { useFollowable } from '@/composables/useFollowable'
+import { FOLLOW_ENTERPRISE, useFollowable } from '@/composables/useFollowable'
 import { useAuthStore } from '@/stores/auth'
 import { triggerNeedLogin } from '@/utils/auth'
 import DetailCard from '@/components/common/DetailCard.vue'
@@ -21,8 +21,6 @@ import DetailPageShell from '@/components/common/DetailPageShell.vue'
 import DetailTabs from '@/components/common/DetailTabs.vue'
 
 defineOptions({ name: 'EnterpriseDbDetail' })
-
-const FOLLOW_KEY = 'pb_followed_enterprise_db'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,7 +33,10 @@ const loading = ref(false)
 const error = ref('')
 
 const activeTab = ref('policies')
-const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, enterpriseId)
+const { followed, toggleFollow } = useFollowable(
+  FOLLOW_ENTERPRISE,
+  enterpriseId,
+)
 
 const load = async () => {
   const id = enterpriseId.value

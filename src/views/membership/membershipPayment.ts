@@ -1,3 +1,4 @@
+import QRCode from 'qrcode'
 import {
   MembershipOrderStatus,
   type AccountMembership,
@@ -65,17 +66,29 @@ export const isIntentExpired = (
   return Number.isFinite(deadline) && deadline <= now
 }
 
-/** 把支付宝收银台表单写进预先打开的窗口，避免异步请求之后被拦截弹窗。 */
-export const submitAlipayCheckout = (popup: Window | null, html: string) => {
-  if (!popup || popup.closed) return false
-  const body = html.trim()
-  if (!body) return false
-  if (/^https?:\/\//i.test(body)) {
-    popup.location.href = body
-    return true
-  }
-  popup.document.open()
-  popup.document.write(body)
-  popup.document.close()
-  return true
+const readyImageSrc = /^(data:image\/|https?:\/\/|blob:)/i
+
+/** 微信 Native 返回的是待编码内容；已经是图片地址时直接展示。 */
+export const resolvePaymentQrSrc = async (content?: string | null) => {
+  const value = content?.trim() ?? ''
+  if (!value) return ''
+  if (readyImageSrc.test(value)) return value
+  return QRCode.toDataURL(value, {
+    margin: 1,
+    width: 240,
+    errorCorrectionLevel: 'M',
+  })
+}
+
+export type AlipayCheckout =
+  { kind: 'html'; html: string } | { kind: 'url'; url: string }
+
+/** 支付宝收银台是自动提交表单或跳转地址，放进页面内弹窗展示。 */
+export const readAlipayCheckout = (
+  html?: string | null,
+): AlipayCheckout | null => {
+  const body = html?.trim() ?? ''
+  if (!body) return null
+  if (/^https?:\/\//i.test(body)) return { kind: 'url', url: body }
+  return { kind: 'html', html: body }
 }

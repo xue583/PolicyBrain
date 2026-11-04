@@ -865,49 +865,56 @@ const matchBadge = (
 /** 企→政匹配列表项。Swagger 的 200 未给出字段，按政策名片与匹配分数字段兼容读取。 */
 export const mapMatchPolicy = (raw: unknown): MatchPolicy => {
   const record = asRecord(raw)
-  const levelValue = pick(record, ['policyLevel'])
-  const amount = pick(record, [
+  const nested = asRecord(record.policy ?? record.policyCard ?? record.card)
+  const flat = { ...nested, ...record }
+  const levelValue = pick(flat, ['policyLevel'])
+  const amount = pick(flat, [
     'maxAmount',
     'amount',
     'subsidyAmount',
     'maxSubsidy',
   ])
   const amountNumber = Number(amount)
-  const note = pickString(record, [
+  const note = pickString(flat, [
     'incubatorNote',
     'reexamineDesc',
     'listMeaning',
     'matchNote',
   ])
+  const authority = asRecord(flat.issuingAuthority)
+  const scoreRaw = pick(flat, ['score', 'fraction', 'matchScore'])
+  const scoreNum = Number(scoreRaw)
+  const score =
+    scoreRaw === undefined || scoreRaw === null || scoreRaw === ''
+      ? null
+      : Number.isFinite(scoreNum)
+        ? scoreNum
+        : null
   return {
-    id: pickNumber(record, ['policyId', 'id']),
-    name: pickString(record, [
+    id: pickNumber(flat, ['policyId', 'id']),
+    name: pickString(flat, [
       'policyCardName',
       'name',
       'title',
       'depotName',
       'policyName',
     ]),
-    badge: matchBadge(record),
+    badge: matchBadge(flat),
     grade:
-      pickString(record, ['grade', 'depotLevel', 'listLevel']) ||
-      (typeof levelValue === 'number'
-        ? levelLabel(mapPolicyLevel(levelValue))
-        : ''),
-    score: pickNumber(record, ['score', 'fraction', 'matchScore']),
-    department: pickString(
-      record,
-      ['department', 'issuingAuthority', 'depotDepartment', 'authorityName'],
-      '-',
-    ),
+      pickString(flat, ['grade', 'depotLevel', 'listLevel']) ||
+      (levelValue !== undefined ? levelLabel(mapPolicyLevel(levelValue)) : ''),
+    score,
+    department:
+      pickString(authority, ['displayName', 'name']) ||
+      pickString(flat, ['department', 'depotDepartment', 'authorityName'], '-'),
     status: matchStatus(
-      pick(record, ['status', 'statusType', 'newsStatus', 'dynamicState']),
+      pick(flat, ['status', 'statusType', 'newsStatus', 'dynamicState']),
     ),
     maxAmount:
       amount === undefined || !Number.isFinite(amountNumber)
         ? undefined
         : amountNumber,
-    amountLines: matchAmountLines(record),
+    amountLines: matchAmountLines(flat),
     highlight: record.highlight === true || record.isHighlight === true,
     incubatorNote: note || undefined,
   }
@@ -982,7 +989,12 @@ export const mapMatchedEnterprise = (raw: unknown): MatchedEnterprise => {
       'legalRepresentative',
     ]),
     foundedDate: formatDate(
-      pick(flat, ['establishTime', 'foundedDate', 'establishDate']),
+      pick(flat, [
+        'establishTime',
+        'foundedDate',
+        'establishDate',
+        'establishYear',
+      ]),
     ),
     subsidyText: wanText(
       pick(flat, [

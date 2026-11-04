@@ -14,7 +14,7 @@ import {
 } from '@/api/policies'
 import type { PolicyDbApplyInfo, PolicyDbDetail } from '../../mock/policyDb'
 import { toErrorMessage } from '@/utils/apiError'
-import { useFollowable } from '@/composables/useFollowable'
+import { FOLLOW_POLICY, useFollowable } from '@/composables/useFollowable'
 import PageState from '@/components/PageState.vue'
 import DetailCard from '@/components/common/DetailCard.vue'
 import DetailPageShell from '@/components/common/DetailPageShell.vue'
@@ -25,8 +25,6 @@ import ApplyInfoPanel from './ApplyInfoPanel.vue'
 import UpdatesPanel from './UpdatesPanel.vue'
 
 defineOptions({ name: 'PolicyDbDetail' })
-
-const FOLLOW_KEY = 'pb_followed_policy_db'
 
 const route = useRoute()
 const regionStore = useRegionStore()
@@ -158,7 +156,7 @@ const isTabPending = (tab: PolicyTab) =>
 const tabErrorOf = (tab: PolicyTab) =>
   activeTab.value === tab ? tabError.value : ''
 
-const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, policyId)
+const { followed, toggleFollow } = useFollowable(FOLLOW_POLICY, policyId)
 
 watch(policyId, () => void load(), { immediate: true })
 
@@ -235,7 +233,7 @@ watch(activeTab, (tab) => {
                 <HeartFilled v-if="followed" />
                 <img v-else :src="followHeartIcon" alt="" class="follow-icon" />
               </template>
-              {{ followed ? '已关注' : '关注企业' }}
+              {{ followed ? '已关注' : '关注政策' }}
             </a-button>
             <p class="follow-tip">及时获取政策动态与截止提醒</p>
           </div>

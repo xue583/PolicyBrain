@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { PolicyUserType } from '@/api/auth'
 import { fetchMembershipBenefits, fetchMembershipPlans } from '@/api/membership'
@@ -26,8 +27,15 @@ import heroLibrary from '@/assets/membership/hero-library.png'
 
 defineOptions({ name: 'MembershipPage' })
 
+const route = useRoute()
 const auth = useAuthStore()
 const { user } = storeToRefs(auth)
+
+const boardTab = computed(() => {
+  const focus = route.query.focus
+  if (focus === 'vip' || focus === 'svip' || focus === 'org') return focus
+  return undefined
+})
 const isEnterpriseView = computed(
   () => Number(user.value?.identity) === PolicyUserType.EnterpriseService,
 )
@@ -154,6 +162,7 @@ const heroFeatures = [
         :benefits="allBenefits"
         :empty-text="planEmptyText"
         :benefit-empty-text="benefitEmptyText"
+        :initial-tab="boardTab"
       />
     </div>
   </div>

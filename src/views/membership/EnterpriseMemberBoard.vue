@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import dayjs from 'dayjs'
 import vipGem from '@/assets/membership/vip-gem.png'
 import qrFrame from '@/assets/membership/enterprise/qr-frame.png'
@@ -46,6 +46,8 @@ const props = withDefaults(
     benefits?: MembershipBenefitCard[]
     emptyText?: string
     benefitEmptyText?: string
+    /** 从个人中心「会员续费 / 追加开通」进入时直接落在企业套餐 */
+    initialTab?: 'vip' | 'svip' | 'org'
   }>(),
   {
     plans: () => [],
@@ -62,6 +64,17 @@ const tab = ref<BoardTab>('vip')
 const orgSub = ref<OrgSub>('svip')
 const selectedPlan = ref('')
 const seats = ref(5)
+
+watch(
+  () => props.initialTab,
+  (next) => {
+    if (next !== 'vip' && next !== 'svip' && next !== 'org') return
+    tab.value = next
+    selectedPlan.value = ''
+    if (next === 'org') orgSub.value = 'svip'
+  },
+  { immediate: true },
+)
 
 const tierIcons = {
   vip: [
@@ -375,8 +388,9 @@ const changeSeats = (delta: number) => {
         <MemberPayPanel
           v-if="currentPlan"
           variant="enterprise"
-          :price="currentPlan.price"
+          :price="tab === 'org' ? payableTotal : currentPlan.price"
           :plan-code="currentPlan.id"
+          :quantity="tab === 'org' ? seats : undefined"
           :qr-frame="qrFrame"
           :tone="payTone"
         />

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MembershipPage from './index.vue'
 
@@ -236,8 +237,12 @@ const mountPage = (identity?: number) => {
     auth.user = { identity }
   }
 
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', component: { template: '<div />' } }],
+  })
   return mount(MembershipPage, {
-    global: { plugins: [pinia] },
+    global: { plugins: [pinia, router] },
   })
 }
 

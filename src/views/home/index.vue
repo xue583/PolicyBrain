@@ -661,35 +661,35 @@ const openBeian = () => {
   width: 75%;
   max-width: calc(100% - 32px);
   margin: 0 auto;
-  padding: 100px 0 200px;
+  padding: 128px 0 248px;
   text-align: center;
 }
 
 .hero-title {
-  margin: 0 0 34px;
+  margin: 0 0 42px;
   font-family: var(--pb-font-display);
   line-height: 1.2;
 
   .line1 {
     display: block;
-    font-size: 32px;
+    font-size: 40px;
     font-weight: bold;
     color: var(--pb-title);
-    letter-spacing: 3px;
+    letter-spacing: 4px;
   }
 
   .line2 {
     display: block;
-    margin-top: 8px;
-    font-size: 40px;
+    margin-top: 12px;
+    font-size: 52px;
     font-weight: 700;
     color: var(--pb-primary);
-    letter-spacing: 2px;
+    letter-spacing: 3px;
   }
 }
 
 .search-block {
-  width: 680px;
+  width: 820px;
   max-width: 100%;
   margin: 0 auto;
   text-align: left;
@@ -698,8 +698,8 @@ const openBeian = () => {
 .search-tabs {
   display: flex;
   justify-content: center;
-  gap: 28px;
-  margin-bottom: 15px;
+  gap: 36px;
+  margin-bottom: 18px;
   padding-left: 4px;
 }
 
@@ -707,8 +707,8 @@ const openBeian = () => {
   position: relative;
   border: none;
   background: transparent;
-  padding: 0 0 8px;
-  font-size: 22px;
+  padding: 0 0 10px;
+  font-size: 24px;
   color: var(--pb-text);
   cursor: pointer;
   font-family: inherit;
@@ -734,9 +734,9 @@ const openBeian = () => {
 .search-bar {
   display: flex;
   align-items: stretch;
-  height: 48px;
+  height: 56px;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(22, 119, 255, 0.16);
   transition: box-shadow var(--pb-dur-fast) var(--pb-ease);
@@ -753,8 +753,8 @@ const openBeian = () => {
   min-width: 0;
   border: none;
   outline: none;
-  padding: 0 20px;
-  font-size: 16px;
+  padding: 0 24px;
+  font-size: 17px;
   color: var(--pb-text);
   background: transparent;
   font-family: inherit;
@@ -768,13 +768,13 @@ const openBeian = () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
-  min-width: 120px;
+  min-width: 140px;
   border: none;
   background: var(--pb-primary);
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
@@ -790,10 +790,10 @@ const openBeian = () => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  margin-top: 19px;
+  gap: 18px;
+  margin-top: 22px;
   padding-left: 4px;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.4;
 
   .hot-label {
@@ -820,27 +820,25 @@ const openBeian = () => {
   z-index: 1;
   width: 78.1%;
   max-width: calc(100% - 32px);
-  margin: -150px auto 0;
+  margin: -168px auto 0;
   padding-bottom: 56px;
 }
 
 .feature-row {
   display: grid;
-  min-height: 276px;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   background: #edf5fd;
   border-radius: var(--pb-radius-lg);
-  padding: 27px 23px 0;
+  padding: 20px 23px 16px;
 }
 
 .feature-card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
-  min-height: 96px;
-  padding: 20px 18px;
+  padding: 16px 18px 14px;
   border: none;
   font: inherit;
   text-align: left;

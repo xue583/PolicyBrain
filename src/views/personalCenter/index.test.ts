@@ -30,14 +30,23 @@ vi.mock('@/api/auth', async () => {
   }
 })
 
-vi.mock('@/api/membership', () => ({
-  fetchMyMembership: vi.fn(),
-}))
+vi.mock('@/api/membership', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/api/membership')>('@/api/membership')
+  return {
+    ...actual,
+    fetchMyMembership: vi.fn(),
+    fetchMembershipPlans: vi.fn(async () => []),
+    fetchMembershipBenefits: vi.fn(async () => []),
+    allocateMembershipSlot: vi.fn(),
+  }
+})
 
 const { fetchCurrentUser } = await import('@/api/auth')
-const { fetchMyMembership } = await import('@/api/membership')
+const { fetchMyMembership, allocateMembershipSlot } =
+  await import('@/api/membership')
 
-const mountPage = async () => {
+const mountPage = async (stubs?: Record<string, unknown>) => {
   localStorage.setItem('pb_access_token', 'access')
   const pinia = createPinia()
   setActivePinia(pinia)
@@ -69,7 +78,7 @@ const mountPage = async () => {
   await router.isReady()
 
   const wrapper = mount(PersonalCenter, {
-    global: { plugins: [pinia, router] },
+    global: { plugins: [pinia, router], stubs },
   })
   await flushPromises()
   return wrapper
@@ -100,6 +109,7 @@ describe('PersonalCenter membership period', () => {
 
     expect(fetchMyMembership).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('个人会员：')
+    expect(wrapper.text()).not.toContain('企业会员')
     expect(wrapper.text()).toContain('2026-10-22 至 2027-10-22')
     expect(wrapper.get('.member-row .vip-btn').text()).toContain('续费')
     expect(wrapper.get('.member-row').text()).not.toContain('开通会员')
@@ -108,6 +118,10 @@ describe('PersonalCenter membership period', () => {
     expect(modal.props('open')).toBe(false)
     await wrapper.get('.member-row .vip-btn').trigger('click')
     expect(modal.props('open')).toBe(true)
+    expect(modal.props('membership')).toMatchObject({ planCode: 'vip-year' })
+    modal.vm.$emit('paid')
+    await flushPromises()
+    expect(fetchMyMembership).toHaveBeenCalledTimes(2)
     wrapper.unmount()
   })
 
@@ -126,6 +140,68 @@ describe('PersonalCenter membership period', () => {
     expect(wrapper.get('.member-row .vip-btn').text()).toContain('开通会员')
     expect(wrapper.get('.member-row').text()).not.toContain('续费')
     expect(wrapper.text()).not.toContain('至')
+    wrapper.unmount()
+  })
+
+  it('loads enterprise seats and allocates an empty slot by phone', async () => {
+    vi.mocked(fetchMyMembership).mockResolvedValue({
+      level: 1,
+      planCode: 'ent_vip_year',
+      startedAt: '2026-11-11T09:41:00',
+      expiresAt: '2027-11-11T15:30:15',
+      remainingDays: 365,
+      lastOrderNo: 'ENT-1',
+      isBatchManager: true,
+      managedBatches: [
+        {
+          order: {
+            orderNo: 'ENT-1',
+            planCode: 'ent_vip_year',
+            expiresAt: '2027-11-11T09:41:00',
+            status: 2,
+            quantity: 2,
+          },
+          slots: [
+            {
+              id: 11,
+              holderPhone: '19545670526',
+              status: 2,
+              allocatedAt: '2026-08-16T09:41:00',
+            },
+            { id: 12, holderPhone: '', status: 1 },
+          ],
+          totalCount: 2,
+          allocatedCount: 1,
+          unallocatedCount: 1,
+        },
+      ],
+    })
+    vi.mocked(allocateMembershipSlot).mockResolvedValue({
+      id: 12,
+      holderPhone: '19067678686',
+      status: 2,
+    })
+
+    const wrapper = await mountPage({
+      AModal: {
+        props: ['open'],
+        template: '<div v-if="open"><slot /></div>',
+      },
+    })
+
+    expect(wrapper.text()).toContain('企业会员')
+    expect(wrapper.text()).toContain('到期时间：2027-11-11 15:30:15')
+    expect(wrapper.text()).toContain('主账号')
+    expect(wrapper.text()).not.toContain('个人会员')
+
+    await wrapper.get('.seat-bind').trigger('click')
+    const input = wrapper.get('input[placeholder="请输入手机号"]')
+    await input.setValue('19067678686')
+    await wrapper.get('.bind-submit').trigger('click')
+    await flushPromises()
+
+    expect(allocateMembershipSlot).toHaveBeenCalledWith('12', '19067678686')
+    expect(fetchMyMembership).toHaveBeenCalledTimes(2)
     wrapper.unmount()
   })
 

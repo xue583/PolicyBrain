@@ -1,65 +1,118 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { usePagination } from '@/composables/usePagination'
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import dayjs from 'dayjs'
+import { message } from 'ant-design-vue'
+import {
+  FOLLOW_ENTERPRISE,
+  FOLLOW_POLICY,
+  fetchAccountFollows,
+  unfollowTarget,
+  type AccountFollow,
+  type FollowTargetType,
+} from '@/api/account'
+import { forgetFollow } from '@/composables/useFollowable'
+import { useServerPage } from '@/composables/useServerPage'
+import { toErrorMessage } from '@/utils/apiError'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import PanelTabs from '@/components/common/PanelTabs.vue'
-import {
-  buildPolicyChanges,
-  companyNames,
-  type PolicyChange,
-} from '@/mock/personalCenter'
 import emptyImg from '@/assets/personalCenter/empty-message.png'
 
 defineOptions({ name: 'FollowPanel' })
 
-type FollowedCompany = {
-  id: number
-  name: string
-  address: string
-  industry: string
-  policyCount: number
+const POLICY_LEVEL: Record<number, string> = {
+  0: '国家级',
+  1: '省级',
+  2: '市级',
+  3: '区县级',
 }
 
-/** 视觉还原用 Mock 数据，接入后端后替换 */
-const companyAddresses = [
-  '河南省 郑州市 郑州航空港经济综合试验区',
-  '河南省 郑州市 郑州高新技术产业开发区',
-  '河南省 郑州市 中原区',
-]
-const policyCounts = [6, 7, 4, 8, 6, 7, 4, 8, 1, 1, 5, 3, 2, 9, 6]
-
-const companyRecords = ref<FollowedCompany[]>(
-  Array.from({ length: 15 }, (_, i) => ({
-    id: i + 1,
-    name: companyNames[i % companyNames.length]!,
-    address: companyAddresses[i % companyAddresses.length]!,
-    industry: '包装制造',
-    policyCount: policyCounts[i]!,
-  })),
-)
-
-const policyRecords = ref(buildPolicyChanges())
-
+const router = useRouter()
 const activeTab = ref<'company' | 'policy'>('company')
+const initialized = ref(false)
+const removingId = ref<number | null>(null)
 
-const activeRecords = computed(() =>
-  activeTab.value === 'company' ? companyRecords.value : policyRecords.value,
+const targetType = computed<FollowTargetType>(() =>
+  activeTab.value === 'company' ? FOLLOW_ENTERPRISE : FOLLOW_POLICY,
 )
 
-const { currentPage, pageSize, total, pagedList, resetPage } = usePagination<
-  FollowedCompany | PolicyChange
->(() => activeRecords.value)
+const { currentPage, pageSize, items, total, loading, error, reload } =
+  useServerPage(
+    (pageIndex, size) =>
+      fetchAccountFollows({
+        targetType: targetType.value,
+        pageIndex,
+        pageSize: size,
+      }),
+    () => activeTab.value,
+  )
 
-const switchTab = (tab: 'company' | 'policy') => {
-  activeTab.value = tab
-  resetPage()
+watch(loading, (value, prev) => {
+  if (prev && !value) initialized.value = true
+})
+
+const visibleItems = computed(() =>
+  items.value.filter(
+    (item) => !item.targetType || item.targetType === targetType.value,
+  ),
+)
+
+const showEmpty = computed(
+  () =>
+    initialized.value &&
+    !loading.value &&
+    !error.value &&
+    visibleItems.value.length === 0,
+)
+
+const formatTime = (value?: string | null) => {
+  if (!value) return '—'
+  const time = dayjs(value)
+  return time.isValid() ? time.format('YYYY-MM-DD HH:mm') : value
 }
 
-const removeCompany = (id: number) => {
-  companyRecords.value = companyRecords.value.filter((item) => item.id !== id)
-  if (pagedList.value.length === 0 && currentPage.value > 1)
-    currentPage.value -= 1
+const regionText = (item: AccountFollow) => {
+  const text = [item.provinceName, item.cityName].filter(Boolean).join(' ')
+  return text || '—'
+}
+
+const levelText = (level?: number | null) => {
+  if (level == null) return '—'
+  return POLICY_LEVEL[level] || '—'
+}
+
+const rowKey = (record: AccountFollow) =>
+  record.followId || record.targetId || record.name || 'follow'
+
+const openTarget = (item: AccountFollow) => {
+  if (!item.targetId) return
+  const name =
+    item.targetType === FOLLOW_POLICY
+      ? 'policy-db-detail'
+      : 'enterprise-db-detail'
+  void router.push({ name, params: { id: String(item.targetId) } })
+}
+
+const removeFollow = async (item: AccountFollow) => {
+  const id = Number(item.targetId)
+  const type = item.targetType || targetType.value
+  if (!id || removingId.value != null) return
+  removingId.value = id
+  try {
+    await unfollowTarget(type, id)
+    forgetFollow(type, id)
+    message.success('已取消关注')
+    if (visibleItems.value.length <= 1 && currentPage.value > 1) {
+      currentPage.value -= 1
+      return
+    }
+    await reload()
+  } catch (err) {
+    message.error(toErrorMessage(err, '取消关注失败'))
+  } finally {
+    removingId.value = null
+  }
 }
 </script>
 
@@ -72,59 +125,108 @@ const removeCompany = (id: number) => {
         { key: 'policy', label: '政策' },
       ]"
       :active-key="activeTab"
-      @update:active-key="switchTab"
+      @update:active-key="activeTab = $event"
     />
 
-    <a-table
-      class="follow-table"
-      :columns="
-        activeTab === 'company'
-          ? [
-              { title: '序号', dataIndex: 'id', width: 48 },
-              { title: '企业名称', dataIndex: 'name', ellipsis: true },
-              { title: '注册地址', dataIndex: 'address', ellipsis: true },
-              { title: '所属行业', dataIndex: 'industry', width: 90 },
-              { title: '获取政策数量', dataIndex: 'policyCount', width: 104 },
-              { title: '操作', dataIndex: 'action', width: 64 },
-            ]
-          : [
-              { title: '序号', dataIndex: 'id', width: 48 },
-              { title: '政策名称', dataIndex: 'policyName', ellipsis: true },
-              { title: '变动类型', dataIndex: 'changeType', width: 90 },
-              { title: '变动前', dataIndex: 'before', ellipsis: true },
-              { title: '变动后', dataIndex: 'after', ellipsis: true },
-              { title: '变动时间', dataIndex: 'changedAt', width: 150 },
-            ]
-      "
-      :data-source="pagedList"
-      :pagination="false"
+    <a-alert
+      v-if="error"
+      class="follow-error"
+      type="error"
+      show-icon
+      :message="error"
     >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'action'">
-          <a
-            class="remove-link"
-            @click.prevent="removeCompany((record as FollowedCompany).id)"
-            >删除</a
-          >
-        </template>
+      <template #action>
+        <a-button size="small" @click="reload">重试</a-button>
       </template>
-      <template #emptyText>
-        <EmptyState :image="emptyImg" />
-      </template>
-    </a-table>
+    </a-alert>
 
-    <PaginationBar
-      v-if="total > 0"
-      v-model:current="currentPage"
-      :total="total"
-      :page-size="pageSize"
-    />
+    <a-spin :spinning="loading">
+      <EmptyState v-if="showEmpty" :image="emptyImg" text="暂无关注内容" />
+
+      <template v-else>
+        <a-table
+          class="follow-table"
+          :columns="
+            activeTab === 'company'
+              ? [
+                  { title: '序号', dataIndex: 'index', width: 64 },
+                  { title: '企业名称', dataIndex: 'name', ellipsis: true },
+                  {
+                    title: '所在地区',
+                    dataIndex: 'provinceName',
+                    ellipsis: true,
+                  },
+                  { title: '法人', dataIndex: 'legalPerson', width: 100 },
+                  { title: '关注时间', dataIndex: 'followTime', width: 160 },
+                  { title: '操作', dataIndex: 'action', width: 88 },
+                ]
+              : [
+                  { title: '序号', dataIndex: 'index', width: 64 },
+                  { title: '政策名称', dataIndex: 'name', ellipsis: true },
+                  { title: '政策等级', dataIndex: 'policyLevel', width: 90 },
+                  {
+                    title: '发布单位',
+                    dataIndex: 'issuingAuthority',
+                    ellipsis: true,
+                  },
+                  { title: '关注时间', dataIndex: 'followTime', width: 160 },
+                  { title: '操作', dataIndex: 'action', width: 88 },
+                ]
+          "
+          :data-source="visibleItems"
+          :pagination="false"
+          :row-key="rowKey"
+        >
+          <template #bodyCell="{ column, record, index }">
+            <template v-if="column.dataIndex === 'index'">
+              {{ (currentPage - 1) * pageSize + index + 1 }}
+            </template>
+            <template v-else-if="column.dataIndex === 'name'">
+              <a class="name-link" @click.prevent="openTarget(record)">
+                {{ record.name || '—' }}
+              </a>
+            </template>
+            <template v-else-if="column.dataIndex === 'provinceName'">
+              {{ regionText(record) }}
+            </template>
+            <template v-else-if="column.dataIndex === 'legalPerson'">
+              {{ record.legalPerson || '—' }}
+            </template>
+            <template v-else-if="column.dataIndex === 'policyLevel'">
+              {{ levelText(record.policyLevel) }}
+            </template>
+            <template v-else-if="column.dataIndex === 'issuingAuthority'">
+              {{ record.issuingAuthority || '—' }}
+            </template>
+            <template v-else-if="column.dataIndex === 'followTime'">
+              {{ formatTime(record.followTime) }}
+            </template>
+            <template v-else-if="column.dataIndex === 'action'">
+              <a class="remove-link" @click.prevent="removeFollow(record)">
+                {{ removingId === record.targetId ? '取消中' : '取消关注' }}
+              </a>
+            </template>
+          </template>
+        </a-table>
+
+        <PaginationBar
+          v-if="!loading && total > 0 && visibleItems.length > 0"
+          v-model:current="currentPage"
+          :total="total"
+          :page-size="pageSize"
+        />
+      </template>
+    </a-spin>
   </div>
 </template>
 
 <style scoped lang="scss">
 .panel-tabs-mb {
   margin-bottom: 20px;
+}
+
+.follow-error {
+  margin-bottom: 16px;
 }
 
 .follow-table {
@@ -135,6 +237,7 @@ const removeCompany = (id: number) => {
   }
 }
 
+.name-link,
 .remove-link {
   color: var(--pb-primary);
   cursor: pointer;

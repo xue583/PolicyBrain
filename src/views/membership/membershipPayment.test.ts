@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { MembershipOrderStatus } from '@/api/membership'
 import {
   isIntentExpired,
   isMembershipActivated,
   readMembershipPaymentOutcome,
-  submitAlipayCheckout,
+  readAlipayCheckout,
+  resolvePaymentQrSrc,
 } from './membershipPayment'
 
 describe('membership payment status', () => {
@@ -62,28 +63,25 @@ describe('membership payment status', () => {
     expect(isIntentExpired(null)).toBe(false)
   })
 
-  it('writes the alipay form into the checkout window', () => {
-    const popup = {
-      closed: false,
-      location: { href: '' },
-      document: {
-        open: vi.fn(),
-        write: vi.fn(),
-        close: vi.fn(),
-      },
-    }
-    expect(
-      submitAlipayCheckout(popup as unknown as Window, '<form></form>'),
-    ).toBe(true)
-    expect(popup.document.write).toHaveBeenCalledWith('<form></form>')
+  it('turns wechat native content into a qr image', async () => {
+    expect(await resolvePaymentQrSrc('  ')).toBe('')
+    expect(await resolvePaymentQrSrc('https://cdn.example/pay.png')).toBe(
+      'https://cdn.example/pay.png',
+    )
+    const src = await resolvePaymentQrSrc('weixin://wxpay/bizpayurl?pr=abc')
+    expect(src.startsWith('data:image/png;base64,')).toBe(true)
+  })
 
-    expect(
-      submitAlipayCheckout(
-        popup as unknown as Window,
-        'https://pay.example/alipay',
-      ),
-    ).toBe(true)
-    expect(popup.location.href).toBe('https://pay.example/alipay')
-    expect(submitAlipayCheckout(null, '<form></form>')).toBe(false)
+  it('keeps the alipay cashier inside a page modal', () => {
+    expect(readAlipayCheckout('  <form></form>  ')).toEqual({
+      kind: 'html',
+      html: '<form></form>',
+    })
+    expect(readAlipayCheckout('https://pay.example/alipay')).toEqual({
+      kind: 'url',
+      url: 'https://pay.example/alipay',
+    })
+    expect(readAlipayCheckout('  ')).toBeNull()
+    expect(readAlipayCheckout(null)).toBeNull()
   })
 })

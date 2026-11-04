@@ -10,11 +10,17 @@ import PageState from '@/components/PageState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import { useFollowable } from '@/composables/useFollowable'
+import {
+  FOLLOW_ENTERPRISE,
+  FOLLOW_POLICY,
+  useFollowable,
+  useFollowSet,
+} from '@/composables/useFollowable'
 import { useAuthStore } from '@/stores/auth'
 import { triggerNeedLogin } from '@/utils/auth'
 import { downloadCsv } from '@/utils/downloadCsv'
 import { fetchEnterprisePage, fetchEnterpriseRaw } from '@/api/enterprises'
+import { fetchPolicyPage } from '@/api/policies'
 import { fetchEntToPolicy } from '@/api/match'
 import { mapEnterpriseDetail, readIpCounts } from '@/api/mapPortal'
 import { toErrorMessage } from '@/utils/apiError'
@@ -35,7 +41,6 @@ import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'EnterprisePolicyMatch' })
 
-const FOLLOW_KEY = 'pb_followed_enterprise_db'
 const PAGE_SIZE = 8
 /** 实测 PageSize 超过 200 会被截断，与 Swagger 的 MaxPageSize 一致 */
 const SEARCH_PAGE_SIZE = 200
@@ -63,10 +68,30 @@ const currentPage = ref(1)
 const total = ref(0)
 const pageSize = PAGE_SIZE
 const ipCounts = ref({ patent: 0, brand: 0, software: 0, work: 0, policy: 0 })
-const { followed, toggleFollow } = useFollowable(FOLLOW_KEY, enterpriseId)
+const { followed, toggleFollow } = useFollowable(
+  FOLLOW_ENTERPRISE,
+  enterpriseId,
+)
+const { isFollowed: isPolicyFollowed, toggleFollow: togglePolicyFollow } =
+  useFollowSet(FOLLOW_POLICY)
 
 const keywordDraft = ref('')
-const followedPolicyIds = ref<number[]>([])
+const coverageText = ref('正在统计可匹配政策')
+
+const loadCoverage = async () => {
+  try {
+    const [national, provincial, municipal] = await Promise.all([
+      fetchPolicyPage({ grade: '国家级', pageIndex: 1, pageSize: 1 }),
+      fetchPolicyPage({ grade: '省级', pageIndex: 1, pageSize: 1 }),
+      fetchPolicyPage({ grade: '市级', pageIndex: 1, pageSize: 1 }),
+    ])
+    coverageText.value = `目前已有${national.totalElements}条国家级政策、${provincial.totalElements}条省级政策、${municipal.totalElements}条市级政策加入匹配`
+  } catch {
+    coverageText.value = '可匹配政策数量暂时无法获取'
+  }
+}
+
+void loadCoverage()
 
 let loadSeq = 0
 
@@ -129,7 +154,6 @@ const load = async () => {
 watch(
   [enterpriseId, isLoggedIn],
   () => {
-    followedPolicyIds.value = []
     if (currentPage.value !== 1) {
       currentPage.value = 1
       return
@@ -223,18 +247,6 @@ const applySearch = async () => {
   }
 }
 
-const isPolicyFollowed = (id: number) => followedPolicyIds.value.includes(id)
-
-const togglePolicyFollow = (item: MatchPolicy) => {
-  if (!isLoggedIn.value) {
-    triggerNeedLogin()
-    return
-  }
-  followedPolicyIds.value = isPolicyFollowed(item.id)
-    ? followedPolicyIds.value.filter((id) => id !== item.id)
-    : [...followedPolicyIds.value, item.id]
-}
-
 const exportReport = async () => {
   const current = enterprise.value
   if (!current) return
@@ -269,7 +281,7 @@ const exportReport = async () => {
     ...rows.map((item) => [
       item.name,
       item.grade,
-      String(item.score),
+      item.score == null ? '' : String(item.score),
       item.department,
       matchPolicyStatusText[item.status],
       item.maxAmount == null ? '' : String(item.maxAmount),
@@ -290,7 +302,7 @@ const exportReport = async () => {
         <div class="hero-copy">
           <div class="hero-heading">
             <h1>企业找政策（匹配政策）</h1>
-            <p>目前已有22条国家级政策、397条省级政策、809条市级政策加入匹配</p>
+            <p>{{ coverageText }}</p>
           </div>
           <form class="search-box" @submit.prevent="applySearch">
             <input
@@ -399,7 +411,7 @@ const exportReport = async () => {
                 <img :src="matchIcon" alt="" />
                 匹配度：
                 <img class="star" :src="starIcon" alt="" />
-                <em>{{ item.score }}分</em>
+                <em>{{ item.score == null ? '—' : `${item.score}分` }}</em>
               </span>
               <span class="meta-item">
                 <img :src="publisherIcon" alt="" />
@@ -423,7 +435,7 @@ const exportReport = async () => {
               type="button"
               class="follow-chip"
               :class="{ on: isPolicyFollowed(item.id) }"
-              @click="togglePolicyFollow(item)"
+              @click="togglePolicyFollow(item.id)"
             >
               {{ isPolicyFollowed(item.id) ? '已关注' : '+ 关注' }}
             </button>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
@@ -13,17 +13,21 @@ import type { BreadcrumbItem } from '@/components/BreadcrumbNav.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
+import { FOLLOW_ENTERPRISE, useFollowSet } from '@/composables/useFollowable'
 import { useRegionStore } from '@/stores/region'
 import { triggerNeedLogin } from '@/utils/auth'
 import { downloadCsv } from '@/utils/downloadCsv'
 import { toErrorMessage } from '@/utils/apiError'
-import { fetchPolicyPage } from '@/api/policies'
+import {
+  fetchIssuingAuthorityOptions,
+  fetchPolicyPage,
+  type IssuingAuthorityOption,
+} from '@/api/policies'
 import { fetchPolicyToEnt } from '@/api/match'
 import { fetchHotKeywords } from '@/api/home'
 import { loadRegionOptions, type CityOption } from '@/api/meta'
 import type { MatchedEnterprise } from '@/api/mapPortal'
 import type { PolicyDbItem } from '@/mock/policyDb'
-import { policyDepartments } from '@/mock/policyDb'
 import { cities } from '@/mock/nav'
 import buildingIcon from '@/assets/enterpriseDb/match/icon-building.png'
 import exportImg from '@/assets/policyMatch/vip-export@2x.png'
@@ -42,7 +46,6 @@ defineOptions({ name: 'PolicyMatch' })
 
 const PAGE_SIZE = 10
 const BULK_SIZE = 200
-const FOLLOW_KEY = 'pb_followed_enterprise_db'
 const SCORE_OPTIONS = [100, 90, 80, 70, 60]
 const GRADE_COLLAPSE = 10
 const DEPT_COLLAPSE = 6
@@ -101,7 +104,9 @@ const { isLoggedIn } = storeToRefs(auth)
 const keywordDraft = ref(String(route.query.q ?? ''))
 const keyword = ref(keywordDraft.value)
 const grade = ref('')
-const department = ref('')
+const departmentId = ref('')
+const departments = ref<IssuingAuthorityOption[]>([])
+const gradeCities = ref<CityOption[]>([])
 const selectedPolicyId = ref<number | null>(null)
 const score = ref<number | null>(null)
 const currentPage = ref(1)
@@ -113,7 +118,7 @@ const policyLoading = ref(false)
 const listLoading = ref(false)
 const listError = ref('')
 const hotKeywords = ref<string[]>([])
-const followedIds = ref<number[]>([])
+const { isFollowed, toggleFollow } = useFollowSet(FOLLOW_ENTERPRISE)
 
 const provinces = ref<CityOption[]>([])
 const regionCities = ref<CityOption[]>([])
@@ -126,21 +131,60 @@ const usingFallbackRegion = ref(false)
 const gradeOptions = ref<string[]>(['国家级', '河南省', ...cities])
 const gradesExpanded = ref(true)
 const deptsExpanded = ref(false)
+const deptKeyword = ref('')
+const deptListRef = ref<HTMLElement | null>(null)
 const namesExpanded = ref(false)
+const nameKeyword = ref('')
+const nameListRef = ref<HTMLElement | null>(null)
 
 const visibleGrades = computed(() =>
   gradesExpanded.value
     ? gradeOptions.value
     : gradeOptions.value.slice(0, GRADE_COLLAPSE),
 )
-const visibleDepartments = computed(() =>
-  deptsExpanded.value
-    ? policyDepartments
-    : policyDepartments.slice(0, DEPT_COLLAPSE),
+/** 行内只留一排快捷项；已选项不在这排里时补到最前，避免选完就看不见。 */
+const previewDepartments = computed(() => {
+  const head = departments.value.slice(0, DEPT_COLLAPSE)
+  const selected = departments.value.find(
+    (item) => item.id === departmentId.value,
+  )
+  if (!selected || head.some((item) => item.id === selected.id)) return head
+  return [selected, ...head.slice(0, DEPT_COLLAPSE - 1)]
+})
+const filteredDepartments = computed(() => {
+  const keyword = deptKeyword.value.trim()
+  if (!keyword) return departments.value
+  return departments.value.filter((item) => item.name.includes(keyword))
+})
+/**
+ * 政策库 Grade 只认「国家级 / 省级 / 市级 / 区级」。
+ * 页面上的省名、市名分别对应省级、市级，筛出政策名片后再拿 policyId 调匹配接口。
+ */
+const apiGrade = computed(() => {
+  if (!grade.value) return undefined
+  if (grade.value === '国家级') return '国家级'
+  if (gradeCities.value.some((item) => item.label === grade.value)) {
+    return '市级'
+  }
+  return '省级'
+})
+const selectedGradeCity = computed(() =>
+  gradeCities.value.find((item) => item.label === grade.value),
 )
-const visiblePolicies = computed(() =>
-  namesExpanded.value ? policies.value : policies.value.slice(0, NAME_COLLAPSE),
-)
+/** 行内只留一排快捷项；已选项不在这排里时补到最前，避免选完就看不见。 */
+const previewPolicies = computed(() => {
+  const head = policies.value.slice(0, NAME_COLLAPSE)
+  const selected = policies.value.find(
+    (item) => item.id === selectedPolicyId.value,
+  )
+  if (!selected || head.some((item) => item.id === selected.id)) return head
+  return [selected, ...head.slice(0, NAME_COLLAPSE - 1)]
+})
+const filteredPolicies = computed(() => {
+  const keyword = nameKeyword.value.trim()
+  if (!keyword) return policies.value
+  return policies.value.filter((item) => item.name.includes(keyword))
+})
 const visibleHot = computed(() => hotKeywords.value.slice(0, 4))
 const clues = computed(() => {
   if (hotKeywords.value.length) return hotKeywords.value.slice(0, 10)
@@ -211,16 +255,16 @@ const breadcrumbItems = computed<BreadcrumbItem[]>(() => [
 
 const textOrDash = (value: string) => (value && value !== '-' ? value : '—')
 
-const toggleId = (list: number[], id: number) =>
-  list.includes(id) ? list.filter((item) => item !== id) : [...list, id]
+const DIRECT_MUNICIPALITIES = new Set(['北京市', '天津市', '上海市', '重庆市'])
 
-const loadFollowed = () => {
-  try {
-    const raw = localStorage.getItem(FOLLOW_KEY)
-    followedIds.value = raw ? (JSON.parse(raw) as number[]) : []
-  } catch {
-    followedIds.value = []
-  }
+const isDirectMunicipality = (label: string) => DIRECT_MUNICIPALITIES.has(label)
+
+const readChecked = (event: Event) =>
+  Boolean((event.target as HTMLInputElement | null)?.checked)
+
+const setChecked = (list: number[], id: number, checked: boolean) => {
+  if (checked) return list.includes(id) ? list : [...list, id]
+  return list.filter((item) => item !== id)
 }
 
 let policySeq = 0
@@ -230,12 +274,13 @@ const searchPolicies = async () => {
   try {
     const page = await fetchPolicyPage({
       keyword: keyword.value.trim() || undefined,
-      grade: grade.value,
-      department: department.value,
+      grade: apiGrade.value,
+      issuingAuthorityId: departmentId.value || undefined,
       pageIndex: 1,
       pageSize: 20,
     })
     if (seq !== policySeq) return
+    namesExpanded.value = false
     policies.value = page.items
     const stillThere = page.items.some(
       (item) => item.id === selectedPolicyId.value,
@@ -314,14 +359,45 @@ const applyHot = (word: string) => {
 
 const selectPolicy = (id: number) => {
   selectedPolicyId.value = id
+  namesExpanded.value = false
 }
 
 const selectGrade = (value: string) => {
   grade.value = grade.value === value ? '' : value
 }
 
-const selectDepartment = (value: string) => {
-  department.value = department.value === value ? '' : value
+const selectDepartment = (id: string) => {
+  departmentId.value = departmentId.value === id ? '' : id
+  deptsExpanded.value = false
+}
+
+const authorityLevel = () => {
+  if (apiGrade.value === '国家级') return 0
+  if (apiGrade.value === '市级') return 2
+  return 1
+}
+
+let departmentSeq = 0
+const loadDepartments = async () => {
+  const level = authorityLevel()
+  const provinceId = level === 0 ? undefined : (region.provinceId ?? undefined)
+  if (level !== 0 && provinceId == null) return
+  const seq = ++departmentSeq
+  try {
+    const list = await fetchIssuingAuthorityOptions({
+      level,
+      provinceId,
+      cityId:
+        level === 2 && selectedGradeCity.value && selectedGradeCity.value.id > 0
+          ? selectedGradeCity.value.id
+          : undefined,
+    })
+    if (seq !== departmentSeq) return
+    departments.value = list
+  } catch {
+    if (seq !== departmentSeq) return
+    departments.value = []
+  }
 }
 
 const selectScore = (value: number) => {
@@ -343,38 +419,78 @@ const fillRegionPreview = async () => {
     : []
 }
 
+/** 市级选项属于哪个一级省/直辖市，用来在多选后展开对应区县。 */
+const cityOwner = ref(new Map<number, number>())
+let citySeq = 0
+let districtSeq = 0
+
 const syncCities = async () => {
+  const seq = ++citySeq
   if (usingFallbackRegion.value) return
   if (!selectedProvinceIds.value.length) {
     selectedCityIds.value = []
     selectedDistrictIds.value = []
+    cityOwner.value = new Map()
     await fillRegionPreview()
     return
   }
-  const lists = await Promise.all(
-    selectedProvinceIds.value.map((id) =>
-      loadRegionOptions(id).catch(() => [] as CityOption[]),
-    ),
+  const provinceIds = [...selectedProvinceIds.value]
+  const groups = await Promise.all(
+    provinceIds.map(async (id) => ({
+      id,
+      children: await loadRegionOptions(id).catch(() => [] as CityOption[]),
+    })),
   )
-  regionCities.value = lists.flat()
-  const allowed = new Set(regionCities.value.map((item) => item.id))
+  if (seq !== citySeq) return
+  const owner = new Map<number, number>()
+  const cities: CityOption[] = []
+  for (const group of groups) {
+    for (const child of group.children) {
+      owner.set(child.id, group.id)
+      cities.push(child)
+    }
+  }
+  cityOwner.value = owner
+  regionCities.value = cities
+  const allowed = new Set(cities.map((item) => item.id))
   selectedCityIds.value = selectedCityIds.value.filter((id) => allowed.has(id))
   await syncDistricts()
 }
 
-const syncDistricts = async () => {
-  if (usingFallbackRegion.value) return
-  const picked = selectedCityIds.value.length
-    ? regionCities.value.filter((item) =>
-        selectedCityIds.value.includes(item.id),
+const districtSource = () => {
+  const picked = regionCities.value.filter((item) =>
+    selectedCityIds.value.includes(item.id),
+  )
+  const municipalityIds = new Set(
+    provinces.value
+      .filter(
+        (item) =>
+          selectedProvinceIds.value.includes(item.id) &&
+          isDirectMunicipality(item.label),
       )
-    : []
+      .map((item) => item.id),
+  )
+  const municipalityCities = regionCities.value.filter((item) =>
+    municipalityIds.has(cityOwner.value.get(item.id) ?? -1),
+  )
+  const merged = [...picked]
+  for (const city of municipalityCities) {
+    if (!merged.some((item) => item.id === city.id)) merged.push(city)
+  }
+  if (merged.length) return merged
+  if (selectedProvinceIds.value.length !== 1) return []
   const preview =
-    picked[0] ??
     regionCities.value.find((item) => item.label.includes('郑州')) ??
     regionCities.value[0]
-  const source = picked.length ? picked : preview ? [preview] : []
+  return preview ? [preview] : []
+}
+
+const syncDistricts = async () => {
+  const seq = ++districtSeq
+  if (usingFallbackRegion.value) return
+  const source = districtSource()
   if (!source.length) {
+    if (seq !== districtSeq) return
     regionDistricts.value = []
     selectedDistrictIds.value = []
     return
@@ -384,6 +500,7 @@ const syncDistricts = async () => {
       loadRegionOptions(item.id).catch(() => [] as CityOption[]),
     ),
   )
+  if (seq !== districtSeq) return
   regionDistricts.value = lists.flat()
   const allowed = new Set(regionDistricts.value.map((item) => item.id))
   selectedDistrictIds.value = selectedDistrictIds.value.filter((id) =>
@@ -391,20 +508,32 @@ const syncDistricts = async () => {
   )
 }
 
-const toggleProvince = (id: number) => {
-  selectedProvinceIds.value = toggleId(selectedProvinceIds.value, id)
+const onProvinceChange = (id: number, event: Event) => {
+  selectedProvinceIds.value = setChecked(
+    selectedProvinceIds.value,
+    id,
+    readChecked(event),
+  )
   if (currentPage.value !== 1) currentPage.value = 1
   void syncCities()
 }
 
-const toggleCity = (id: number) => {
-  selectedCityIds.value = toggleId(selectedCityIds.value, id)
+const onCityChange = (id: number, event: Event) => {
+  selectedCityIds.value = setChecked(
+    selectedCityIds.value,
+    id,
+    readChecked(event),
+  )
   if (currentPage.value !== 1) currentPage.value = 1
   void syncDistricts()
 }
 
-const toggleDistrict = (id: number) => {
-  selectedDistrictIds.value = toggleId(selectedDistrictIds.value, id)
+const onDistrictChange = (id: number, event: Event) => {
+  selectedDistrictIds.value = setChecked(
+    selectedDistrictIds.value,
+    id,
+    readChecked(event),
+  )
   if (currentPage.value !== 1) currentPage.value = 1
 }
 
@@ -417,6 +546,7 @@ const refreshGrades = async () => {
   const cityOptions = await loadRegionOptions(province.id).catch(
     () => [] as CityOption[],
   )
+  gradeCities.value = cityOptions
   gradeOptions.value = [
     '国家级',
     province.label,
@@ -463,21 +593,6 @@ const initRegions = async () => {
       }
     }
   }
-}
-
-const isFollowed = (id: number) => followedIds.value.includes(id)
-
-const toggleFollow = (id: number) => {
-  if (!isLoggedIn.value) {
-    triggerNeedLogin()
-    return
-  }
-  const next = isFollowed(id)
-    ? followedIds.value.filter((item) => item !== id)
-    : [...followedIds.value, id]
-  localStorage.setItem(FOLLOW_KEY, JSON.stringify(next))
-  followedIds.value = next
-  message.success(isFollowed(id) ? '关注成功' : '已取消关注')
 }
 
 const goEnterpriseMatch = (id: number) => {
@@ -553,10 +668,52 @@ watch(localMode, () => {
   void loadEnterprises()
 })
 
-watch([grade, department], () => {
+watch(deptsExpanded, async (open) => {
+  if (!open) {
+    deptKeyword.value = ''
+    return
+  }
+  await nextTick()
+  deptListRef.value
+    ?.querySelector('.is-active')
+    ?.scrollIntoView({ block: 'nearest' })
+})
+
+watch(namesExpanded, async (open) => {
+  if (!open) {
+    nameKeyword.value = ''
+    return
+  }
+  await nextTick()
+  nameListRef.value
+    ?.querySelector('.is-active')
+    ?.scrollIntoView({ block: 'nearest' })
+})
+
+watch(grade, () => {
+  deptsExpanded.value = false
+  void loadDepartments()
+  if (departmentId.value) {
+    departmentId.value = ''
+    return
+  }
   if (currentPage.value !== 1) currentPage.value = 1
   void searchPolicies()
 })
+
+watch(departmentId, () => {
+  if (currentPage.value !== 1) currentPage.value = 1
+  void searchPolicies()
+})
+
+watch(
+  () => region.provinceId,
+  (id) => {
+    if (id == null || authorityLevel() === 0) return
+    if (departmentId.value) departmentId.value = ''
+    void loadDepartments()
+  },
+)
 
 watch(isLoggedIn, () => {
   void loadEnterprises()
@@ -574,8 +731,8 @@ watch(
 )
 
 onMounted(() => {
-  loadFollowed()
   void initRegions()
+  void loadDepartments()
   void fetchHotKeywords('policy', 10)
     .then((groups) => {
       hotKeywords.value = groups.policies.map((item) => item.keyword)
@@ -679,29 +836,79 @@ onMounted(() => {
             <div class="filter-options">
               <a
                 class="option-link"
-                :class="{ active: department === '' }"
-                @click="department = ''"
+                :class="{ active: departmentId === '' }"
+                @click="departmentId = ''"
               >
                 全部
               </a>
+              <span v-if="!departments.length" class="option-empty">
+                暂无发布单位
+              </span>
               <a
-                v-for="item in visibleDepartments"
-                :key="item"
+                v-for="item in previewDepartments"
+                :key="item.id"
                 class="option-link"
-                :class="{ active: department === item }"
-                @click="selectDepartment(item)"
+                :class="{ active: departmentId === item.id }"
+                @click="selectDepartment(item.id)"
               >
-                {{ item }}
+                {{ item.name }}
               </a>
             </div>
-            <a
-              v-if="policyDepartments.length > DEPT_COLLAPSE"
-              class="more-link"
-              @click="deptsExpanded = !deptsExpanded"
+            <a-popover
+              v-if="departments.length > DEPT_COLLAPSE"
+              v-model:open="deptsExpanded"
+              trigger="click"
+              placement="bottomRight"
+              overlay-class-name="dept-picker-popover"
+              :destroy-tooltip-on-hide="true"
             >
-              {{ deptsExpanded ? '收起' : '展开' }}
-              <DownOutlined :class="{ rotated: deptsExpanded }" />
-            </a>
+              <a class="more-link">
+                {{ deptsExpanded ? '收起' : '展开' }}
+                <DownOutlined :class="{ rotated: deptsExpanded }" />
+              </a>
+              <template #content>
+                <div class="dept-picker">
+                  <a-input
+                    v-model:value="deptKeyword"
+                    allow-clear
+                    autofocus
+                    placeholder="搜索发布单位"
+                  >
+                    <template #prefix>
+                      <SearchOutlined />
+                    </template>
+                  </a-input>
+                  <div ref="deptListRef" class="dept-picker-list">
+                    <button
+                      v-if="!deptKeyword.trim()"
+                      type="button"
+                      class="dept-picker-item"
+                      :class="{ 'is-active': departmentId === '' }"
+                      @click="selectDepartment('')"
+                    >
+                      全部
+                    </button>
+                    <button
+                      v-for="item in filteredDepartments"
+                      :key="item.id"
+                      type="button"
+                      class="dept-picker-item"
+                      :class="{ 'is-active': departmentId === item.id }"
+                      :title="item.name"
+                      @click="selectDepartment(item.id)"
+                    >
+                      {{ item.name }}
+                    </button>
+                    <p
+                      v-if="!filteredDepartments.length"
+                      class="dept-picker-empty"
+                    >
+                      无匹配发布单位
+                    </p>
+                  </div>
+                </div>
+              </template>
+            </a-popover>
           </div>
 
           <div class="filter-row">
@@ -711,7 +918,7 @@ onMounted(() => {
                 搜索后展示政策名称
               </span>
               <a
-                v-for="item in visiblePolicies"
+                v-for="item in previewPolicies"
                 :key="item.id"
                 class="option-link"
                 :class="{ active: selectedPolicyId === item.id }"
@@ -720,14 +927,52 @@ onMounted(() => {
                 {{ item.name }}
               </a>
             </div>
-            <a
+            <a-popover
               v-if="policies.length > NAME_COLLAPSE"
-              class="more-link"
-              @click="namesExpanded = !namesExpanded"
+              v-model:open="namesExpanded"
+              trigger="click"
+              placement="bottomRight"
+              overlay-class-name="dept-picker-popover"
+              :destroy-tooltip-on-hide="true"
             >
-              {{ namesExpanded ? '收起' : '展开' }}
-              <DownOutlined :class="{ rotated: namesExpanded }" />
-            </a>
+              <a class="more-link">
+                {{ namesExpanded ? '收起' : '展开' }}
+                <DownOutlined :class="{ rotated: namesExpanded }" />
+              </a>
+              <template #content>
+                <div class="dept-picker is-wide">
+                  <a-input
+                    v-model:value="nameKeyword"
+                    allow-clear
+                    autofocus
+                    placeholder="搜索政策名称"
+                  >
+                    <template #prefix>
+                      <SearchOutlined />
+                    </template>
+                  </a-input>
+                  <div ref="nameListRef" class="dept-picker-list">
+                    <button
+                      v-for="item in filteredPolicies"
+                      :key="item.id"
+                      type="button"
+                      class="dept-picker-item"
+                      :class="{ 'is-active': selectedPolicyId === item.id }"
+                      :title="item.name"
+                      @click="selectPolicy(item.id)"
+                    >
+                      {{ item.name }}
+                    </button>
+                    <p
+                      v-if="!filteredPolicies.length"
+                      class="dept-picker-empty"
+                    >
+                      无匹配政策
+                    </p>
+                  </div>
+                </div>
+              </template>
+            </a-popover>
           </div>
         </section>
 
@@ -850,7 +1095,7 @@ onMounted(() => {
                 class="region-check"
                 :class="{ on: selectedProvinceIds.includes(item.id) }"
                 :checked="selectedProvinceIds.includes(item.id)"
-                @change="toggleProvince(item.id)"
+                @change="onProvinceChange(item.id, $event)"
               >
                 {{ item.label }}
               </a-checkbox>
@@ -862,7 +1107,7 @@ onMounted(() => {
                 class="region-check"
                 :class="{ on: selectedCityIds.includes(item.id) }"
                 :checked="selectedCityIds.includes(item.id)"
-                @change="toggleCity(item.id)"
+                @change="onCityChange(item.id, $event)"
               >
                 {{ item.label }}
               </a-checkbox>
@@ -874,7 +1119,7 @@ onMounted(() => {
                 class="region-check"
                 :class="{ on: selectedDistrictIds.includes(item.id) }"
                 :checked="selectedDistrictIds.includes(item.id)"
-                @change="toggleDistrict(item.id)"
+                @change="onDistrictChange(item.id, $event)"
               >
                 {{ item.label }}
               </a-checkbox>
@@ -1440,6 +1685,56 @@ onMounted(() => {
 :global(.policy-match-menu) {
   max-height: 320px;
   overflow: auto;
+}
+
+:global(.dept-picker-popover .ant-popover-inner) {
+  padding: 12px;
+}
+
+.dept-picker {
+  width: min(420px, 70vw);
+
+  &.is-wide {
+    width: min(520px, 76vw);
+  }
+}
+
+.dept-picker-list {
+  max-height: 240px;
+  margin: 8px -4px 0;
+  overflow: auto;
+}
+
+.dept-picker-item {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #262626;
+  font-size: 14px;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #f5f8ff;
+    color: var(--pb-primary);
+  }
+
+  &.is-active {
+    background: #e6f4ff;
+    color: var(--pb-primary);
+    font-weight: 600;
+  }
+}
+
+.dept-picker-empty {
+  margin: 0;
+  padding: 16px 8px;
+  color: #bfbfbf;
+  text-align: center;
 }
 
 @include below-lg {

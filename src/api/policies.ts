@@ -45,7 +45,10 @@ export const parseJsonPreservingLongIds = (raw: unknown) => {
   if (typeof raw !== 'string') return raw
   const text = raw.trim()
   if (!text) return raw
-  return JSON.parse(text.replace(/(?<=[:\])\s*(\d{16,})(?=\s*[,}\]])/g, '"$1"'))
+  // 不用字符类写方括号，避免 `\]` 把量词吃掉、把整段 JSON 替换坏
+  return JSON.parse(
+    text.replace(/(:|,|\[)\s*(\d{16,})\s*(?=,|\}|\])/g, '$1"$2"'),
+  )
 }
 
 const mapIssuingAuthorityOption = (
@@ -68,14 +71,14 @@ export const mapIssuingAuthorityOptions = (
     .filter((item): item is IssuingAuthorityOption => Boolean(item))
 }
 
-/** 发布单位下拉。匿名接口，Body：keyword / level / 省市区均可空。 */
+/** 发布单位下拉。Swagger GET /issuingAuthority/nameOptions，查询参数均可空。 */
 export const fetchIssuingAuthorityOptions = async (
   query: IssuingAuthorityQuery,
 ) => {
   const data = await request({
     url: '/issuingAuthority/nameOptions',
-    method: 'put',
-    data: compactParams({
+    method: 'get',
+    params: compactParams({
       keyword: query.keyword?.trim(),
       level: query.level,
       provinceId: query.provinceId,

@@ -13,17 +13,27 @@ import { triggerNeedLogin } from '@/utils/auth'
 import {
   isIntentExpired,
   isMembershipActivated,
+  readAlipayCheckout,
   readMembershipPaymentOutcome,
-  submitAlipayCheckout,
+  resolvePaymentQrSrc,
 } from '../membershipPayment'
 
 defineOptions({ name: 'MemberPayPanel' })
+
+const emit = defineEmits<{
+  paid: []
+}>()
 
 const props = withDefaults(
   defineProps<{
     price: number
     /** 在售档位编码，创建支付意向时提交 */
     planCode: string
+    /**
+     * 购买人数。企业套餐为当前选择的人数，其他会员不传，下单时按 1 提交。
+     * 人数变化会作废进行中的支付，避免按旧人数收款。
+     */
+    quantity?: number
     qrFrame: string
     /** 个人版 / 企业版（二维码区域更高、提示字号更小） */
     variant?: 'personal' | 'enterprise'
@@ -42,6 +52,7 @@ const POLL_INTERVAL_MS = 2000
 const auth = useAuthStore()
 const channel = ref<PayChannel>('alipay')
 const phase = ref<PayPhase>('idle')
+const qrImage = ref('')
 
 const payMethods: Array<{ id: PayChannel; label: string; icon: string }> = [
   { id: 'alipay', label: '支付宝支付', icon: 'icon-zhifubao' },
@@ -50,13 +61,15 @@ const payMethods: Array<{ id: PayChannel; label: string; icon: string }> = [
 
 let pollGeneration = 0
 let pollTimer = 0
-let checkoutWindow: Window | null = null
+
+const cashierOpen = ref(false)
+const cashierHtml = ref('')
+const cashierUrl = ref('')
 
 const isFree = computed(() => props.price <= 0)
 
 const actionLabel = computed(() => {
-  if (phase.value === 'submitting') return '正在跳转'
-  if (phase.value === 'success') return '支付成功'
+  if (phase.value === 'submitting') return '正在打开'
   if (
     phase.value === 'waiting' ||
     phase.value === 'closed' ||
@@ -69,14 +82,22 @@ const actionLabel = computed(() => {
 
 const actionHint = computed(() => {
   if (phase.value === 'submitting') return '正在创建订单'
-  if (phase.value === 'waiting') return '请在支付宝完成支付'
-  if (phase.value === 'success') return '会员即将生效'
+  if (phase.value === 'waiting') return '请在弹窗中完成支付'
   if (phase.value === 'closed') return '订单已关闭，请重新支付'
   if (phase.value === 'expired') return '支付已超时，请重新下单'
-  return isFree.value ? '当前套餐免费开通' : '跳转支付宝收银台'
+  return isFree.value ? '当前套餐免费开通' : '打开支付宝收银台'
 })
 
-/** 伪二维码格子（微信支付视觉占位，非真实码） */
+const wechatHint = computed(() => {
+  if (phase.value === 'submitting') return '正在生成付款码'
+  if (phase.value === 'waiting') return '请使用微信扫码支付'
+  if (phase.value === 'success') return isFree.value ? '开通成功' : '支付成功'
+  if (phase.value === 'closed') return '订单已关闭，点击重新获取'
+  if (phase.value === 'expired') return '支付已超时，点击重新下单'
+  return isFree.value ? '点击立即开通' : '点击获取微信支付码'
+})
+
+/** 尚未拿到微信付款码时的占位格子 */
 function buildQrCells(seed: number) {
   const size = 29
   const cells: Array<[number, number]> = []
@@ -119,29 +140,51 @@ const stopPolling = () => {
   pollTimer = 0
 }
 
-const closeCheckoutWindow = () => {
-  if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close()
-  checkoutWindow = null
+const clearCashier = () => {
+  cashierOpen.value = false
+  cashierHtml.value = ''
+  cashierUrl.value = ''
 }
 
 const resetCheckout = () => {
-  const closeWindow = phase.value === 'submitting'
   stopPolling()
-  if (closeWindow) closeCheckoutWindow()
-  else checkoutWindow = null
+  clearCashier()
+  qrImage.value = ''
   phase.value = 'idle'
 }
 
 function selectChannel(next: PayChannel) {
+  if (next === channel.value) return
+  resetCheckout()
   channel.value = next
+  if (next === 'wechatpay' && auth.isLoggedIn) void startWechatPay()
+}
+
+const notifyPaid = (text: string) => {
+  message.success(text)
+  emit('paid')
+}
+
+const showPaid = () => {
+  qrImage.value = ''
+  cashierHtml.value = ''
+  cashierUrl.value = ''
+  phase.value = 'success'
+  if (channel.value === 'alipay' && !isFree.value) cashierOpen.value = true
+  notifyPaid('支付成功')
 }
 
 const applyOutcome = (
   outcome: ReturnType<typeof readMembershipPaymentOutcome>,
 ) => {
   if (outcome === 'pending') return false
-  phase.value = outcome === 'paid' ? 'success' : outcome
-  if (outcome === 'paid') message.success('支付成功')
+  if (outcome === 'paid') {
+    showPaid()
+    return true
+  }
+  qrImage.value = ''
+  clearCashier()
+  phase.value = outcome
   return true
 }
 
@@ -152,6 +195,8 @@ const pollOrder = async (
 ) => {
   if (generation !== pollGeneration) return
   if (isIntentExpired(expiresAt)) {
+    qrImage.value = ''
+    clearCashier()
     phase.value = 'expired'
     return
   }
@@ -167,12 +212,25 @@ const pollOrder = async (
   }, POLL_INTERVAL_MS)
 }
 
-const openAlipayPlaceholder = (popup: Window) => {
-  popup.document.open()
-  popup.document.write(
-    '<!DOCTYPE html><title>支付宝支付</title><p style="font:14px/1.6 sans-serif;padding:24px;color:#1d2b3a">正在跳转支付宝，请稍候…</p>',
-  )
-  popup.document.close()
+/** 企业套餐提交当前人数，其他会员 quantity 固定为 1。 */
+const placeOrder = (planCode: string) => {
+  const count = Number(props.quantity)
+  const seats = Number.isInteger(count) && count >= 1 ? count : 1
+  return createMembershipOrder(planCode, seats)
+}
+
+const openCashier = (payload?: string | null) => {
+  const checkout = readAlipayCheckout(payload)
+  if (!checkout) return false
+  if (checkout.kind === 'url') {
+    cashierUrl.value = checkout.url
+    cashierHtml.value = ''
+  } else {
+    cashierHtml.value = checkout.html
+    cashierUrl.value = ''
+  }
+  cashierOpen.value = true
+  return true
 }
 
 const goAlipay = async () => {
@@ -189,26 +247,81 @@ const goAlipay = async () => {
   }
 
   stopPolling()
+  clearCashier()
   const generation = pollGeneration
   phase.value = 'submitting'
 
   const payChannel: MembershipPayChannel = isFree.value ? 'free' : 'alipay'
-  if (payChannel === 'alipay') {
-    checkoutWindow = window.open('', '_blank')
-    if (!checkoutWindow) {
-      phase.value = 'idle'
-      message.warning('浏览器拦截了支付窗口，请允许弹窗后重试')
-      return
-    }
-    openAlipayPlaceholder(checkoutWindow)
-  }
 
   try {
-    const intent = await createMembershipOrder(planCode)
+    const intent = await placeOrder(planCode)
     if (generation !== pollGeneration) return
     const orderNo = intent.orderNo?.trim()
     if (!orderNo) {
-      closeCheckoutWindow()
+      phase.value = 'idle'
+      message.error('未获取到订单号')
+      return
+    }
+
+    const ticket = await createMembershipPayment(orderNo, payChannel)
+    if (generation !== pollGeneration) return
+
+    if (payChannel === 'free') {
+      phase.value = 'success'
+      notifyPaid('开通成功')
+      return
+    }
+    if (isMembershipActivated(ticket.membership)) {
+      showPaid()
+      return
+    }
+
+    if (!openCashier(ticket.redirectHtml)) {
+      phase.value = 'idle'
+      message.warning('未获取到支付宝支付页面')
+      return
+    }
+
+    phase.value = 'waiting'
+    void pollOrder(orderNo, intent.expiresAt, generation)
+  } catch {
+    if (generation !== pollGeneration) return
+    clearCashier()
+    phase.value = 'idle'
+  }
+}
+
+const startWechatPay = async () => {
+  if (
+    phase.value === 'submitting' ||
+    phase.value === 'waiting' ||
+    phase.value === 'success'
+  ) {
+    return
+  }
+  if (!auth.isLoggedIn) {
+    triggerNeedLogin()
+    message.warning('请先登录后再支付')
+    return
+  }
+  const planCode = props.planCode.trim()
+  if (!planCode) {
+    message.warning('请选择套餐')
+    return
+  }
+
+  stopPolling()
+  const generation = pollGeneration
+  phase.value = 'submitting'
+  qrImage.value = ''
+
+  const payChannel: MembershipPayChannel = isFree.value ? 'free' : 'wechatpay'
+
+  try {
+    const intent = await placeOrder(planCode)
+    if (generation !== pollGeneration) return
+    const orderNo = intent.orderNo?.trim()
+    if (!orderNo) {
       phase.value = 'idle'
       message.error('未获取到订单号')
       return
@@ -218,43 +331,44 @@ const goAlipay = async () => {
     if (generation !== pollGeneration) return
 
     if (payChannel === 'free' || isMembershipActivated(ticket.membership)) {
-      closeCheckoutWindow()
       phase.value = 'success'
-      message.success(payChannel === 'free' ? '开通成功' : '支付成功')
+      notifyPaid(payChannel === 'free' ? '开通成功' : '支付成功')
       return
     }
 
-    const html = ticket.redirectHtml?.trim() ?? ''
-    if (!html || !submitAlipayCheckout(checkoutWindow, html)) {
-      closeCheckoutWindow()
+    const src = await resolvePaymentQrSrc(ticket.qrCodeContent)
+    if (generation !== pollGeneration) return
+    if (!src) {
       phase.value = 'idle'
-      message.warning(
-        html
-          ? '浏览器拦截了支付窗口，请允许弹窗后重试'
-          : '未获取到支付宝支付页面',
-      )
+      message.warning('未获取到微信支付二维码')
       return
     }
 
+    qrImage.value = src
     phase.value = 'waiting'
     void pollOrder(orderNo, intent.expiresAt, generation)
   } catch {
     if (generation !== pollGeneration) return
-    closeCheckoutWindow()
     phase.value = 'idle'
   }
 }
 
+watch([() => props.planCode, () => props.quantity], () => {
+  resetCheckout()
+  if (channel.value === 'wechatpay' && auth.isLoggedIn) void startWechatPay()
+})
+
 watch(
-  () => props.planCode,
-  () => {
-    resetCheckout()
+  () => auth.isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn && channel.value === 'wechatpay' && phase.value === 'idle') {
+      void startWechatPay()
+    }
   },
 )
 
 onUnmounted(() => {
   stopPolling()
-  checkoutWindow = null
 })
 </script>
 
@@ -278,31 +392,66 @@ onUnmounted(() => {
     </div>
     <div class="qr-box" :style="{ backgroundImage: `url(${qrFrame})` }">
       <div v-if="channel === 'alipay'" class="pay-action">
-        <button
-          type="button"
-          class="pay-go"
-          :class="{ 'is-success': phase === 'success' }"
-          :disabled="phase === 'submitting' || phase === 'success'"
-          @click="goAlipay"
-        >
-          {{ actionLabel }}
-        </button>
-        <p class="pay-action-hint" aria-live="polite">{{ actionHint }}</p>
+        <template v-if="phase === 'success'">
+          <span class="pay-done-mark" aria-hidden="true">
+            <img :src="iconCheck" alt="" />
+          </span>
+          <strong class="pay-done-title">支付成功</strong>
+          <p class="pay-action-hint">会员即将生效</p>
+        </template>
+        <template v-else>
+          <button
+            type="button"
+            class="pay-go"
+            :disabled="phase === 'submitting'"
+            @click="goAlipay"
+          >
+            {{ actionLabel }}
+          </button>
+          <p class="pay-action-hint" aria-live="polite">{{ actionHint }}</p>
+        </template>
       </div>
-      <svg v-else class="qr-code" viewBox="0 0 29 29" aria-hidden="true">
-        <rect width="29" height="29" fill="#fff" />
-        <g fill="#1a1a1a">
-          <rect
-            v-for="cell in qrCells"
-            :key="`${cell[0]}-${cell[1]}`"
-            :x="cell[0]"
-            :y="cell[1]"
-            width="1"
-            height="1"
-          />
-        </g>
-      </svg>
+      <img
+        v-else-if="qrImage"
+        class="qr-code"
+        :src="qrImage"
+        alt="微信支付二维码"
+      />
+      <button
+        v-else
+        type="button"
+        class="qr-fetch"
+        :aria-label="wechatHint"
+        :disabled="phase === 'submitting' || phase === 'success'"
+        @click="startWechatPay"
+      >
+        <svg
+          v-if="phase === 'idle'"
+          class="qr-code"
+          viewBox="0 0 29 29"
+          aria-hidden="true"
+        >
+          <rect width="29" height="29" fill="#fff" />
+          <g fill="#1a1a1a">
+            <rect
+              v-for="cell in qrCells"
+              :key="`${cell[0]}-${cell[1]}`"
+              :x="cell[0]"
+              :y="cell[1]"
+              width="1"
+              height="1"
+            />
+          </g>
+        </svg>
+        <span v-else class="pay-action-hint">{{ wechatHint }}</span>
+      </button>
     </div>
+    <p
+      v-if="channel === 'wechatpay' && (qrImage || phase === 'idle')"
+      class="pay-scan"
+    >
+      {{ wechatHint }}
+    </p>
     <p class="pay-safe">
       <img :src="iconCheck" alt="" />
       放心购
@@ -312,6 +461,53 @@ onUnmounted(() => {
       <li>完成支付后可在个人中心-我的发票中申请发票</li>
       <li>会员自支付完成之时起5分钟内生效</li>
     </ol>
+
+    <a-modal
+      v-if="cashierOpen"
+      :open="true"
+      :width="phase === 'success' ? 420 : 880"
+      :footer="null"
+      :destroy-on-close="true"
+      centered
+      :z-index="1200"
+      wrap-class-name="alipay-cashier-modal"
+      @cancel="cashierOpen = false"
+    >
+      <template #title>
+        <span class="cashier-title">
+          {{ phase === 'success' ? '支付结果' : '支付宝支付' }}
+        </span>
+      </template>
+      <div v-if="phase === 'success'" class="pay-result" role="status">
+        <span class="pay-result-mark" aria-hidden="true">
+          <img :src="iconCheck" alt="" />
+        </span>
+        <strong>支付成功</strong>
+        <p>会员即将生效，可在个人中心查看有效期</p>
+        <button
+          type="button"
+          class="pay-result-ok"
+          @click="cashierOpen = false"
+        >
+          知道了
+        </button>
+      </div>
+      <template v-else>
+        <iframe
+          v-if="cashierHtml"
+          class="alipay-frame"
+          :srcdoc="cashierHtml"
+          title="支付宝收银台"
+        />
+        <iframe
+          v-else-if="cashierUrl"
+          class="alipay-frame"
+          :src="cashierUrl"
+          title="支付宝收银台"
+        />
+        <p class="alipay-wait">请在弹窗中完成支付，成功后将自动显示结果</p>
+      </template>
+    </a-modal>
   </aside>
 </template>
 
@@ -453,10 +649,103 @@ onUnmounted(() => {
     cursor: not-allowed;
     opacity: 0.72;
   }
+}
 
-  &.is-success {
-    background: #07a83a;
+.pay-done-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e9f8ef;
+
+  img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
   }
+}
+
+.pay-done-title {
+  color: #07a83a;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.cashier-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d2b3a;
+}
+
+.alipay-frame {
+  display: block;
+  width: 100%;
+  height: min(640px, calc(100vh - 220px));
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.alipay-wait {
+  margin: 12px 0 0;
+  color: #8a7a66;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.pay-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px 8px;
+  text-align: center;
+
+  strong {
+    margin-top: 14px;
+    color: #1d2b3a;
+    font-size: 20px;
+    line-height: 1.3;
+  }
+
+  p {
+    margin: 8px 0 0;
+    color: #7a8aa0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+}
+
+.pay-result-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #e9f8ef;
+
+  img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+}
+
+.pay-result-ok {
+  margin-top: 22px;
+  min-width: 120px;
+  height: 36px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 18px;
+  background: #1677ff;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .pay-action-hint {
@@ -470,6 +759,31 @@ onUnmounted(() => {
 .qr-code {
   width: 100%;
   height: 100%;
+}
+
+.qr-fetch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.pay-scan {
+  margin: 8px 0 0;
+  max-width: 148px;
+  color: #07a83a;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .pay-safe {
@@ -499,7 +813,26 @@ onUnmounted(() => {
 .is-enterprise .pay-tips {
   font-size: 13px;
 }
+</style>
 
+<style lang="scss">
+.alipay-cashier-modal {
+  .ant-modal {
+    max-width: calc(100vw - 32px);
+  }
+
+  .ant-modal-content {
+    overflow: hidden;
+    border-radius: 16px;
+  }
+
+  .ant-modal-header {
+    margin-bottom: 8px;
+  }
+}
+</style>
+
+<style scoped lang="scss">
 @include below-lg {
   .pay-panel {
     border-left: 0;

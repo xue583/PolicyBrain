@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import DetailPageShell from '@/components/common/DetailPageShell.vue'
-import { findApiItem } from '@/views/api/catalog'
-import { researchDoc, type ApiField } from '@/views/api/document'
+import {
+  findApiItem,
+  type ApiDocument,
+  type ApiField,
+} from '@/views/api/catalog'
+import {
+  buildExampleLines,
+  voidExample,
+  voidResponseParams,
+} from '@/views/api/document'
 
 defineOptions({ name: 'ApiDetail' })
 
@@ -14,13 +22,45 @@ interface FieldRow {
   key: string
 }
 
+const emptyDoc: ApiDocument = {
+  title: '',
+  method: '',
+  path: '',
+  requestContentType: '',
+  responseContentType: '',
+  params: [],
+  statuses: [],
+  responseParams: [],
+  example: '',
+}
+
 const route = useRoute()
-const doc = researchDoc
-const activeStatus = ref(400)
-const expanded = ref(new Set(['query:request']))
+const activeStatus = ref(200)
+const expanded = ref(new Set<string>())
 
 const current = computed(() => findApiItem(Number(route.params.id)))
-const detailLabel = computed(() => (current.value ? doc.title : '接口详情'))
+const doc = computed(() => current.value?.doc ?? emptyDoc)
+const detailLabel = computed(() =>
+  current.value ? doc.value.title : '接口详情',
+)
+
+watch(
+  () => route.params.id,
+  () => {
+    const item = findApiItem(Number(route.params.id))
+    activeStatus.value = item?.doc.statuses.some(
+      (status) => status.code === 200,
+    )
+      ? 200
+      : (item?.doc.statuses[0]?.code ?? 200)
+    expanded.value = new Set(
+      (item?.doc.params ?? [])
+        .filter((field) => field.children?.length)
+        .map((field) => `query:${field.name}`),
+    )
+  },
+  { immediate: true },
+)
 
 const isOpen = (key: string) => expanded.value.has(key)
 
@@ -39,17 +79,36 @@ const flatten = (fields: ApiField[], prefix: string, depth = 0): FieldRow[] => {
     const key = `${prefix}:${field.name}`
     rows.push({ field, depth, key })
     if (field.children?.length && expanded.value.has(key)) {
-      rows.push(...flatten(field.children, prefix, depth + 1))
+      rows.push(...flatten(field.children, key, depth + 1))
     }
   }
   return rows
 }
 
-const requestRows = computed(() => flatten(doc.params, 'query'))
-const responseRows = computed(() => flatten(doc.responseParams, 'res'))
-const responseExample = computed(
-  () =>
-    doc.responseParams.find((field) => field.example?.length)?.example ?? [],
+const requestRows = computed(() => flatten(doc.value.params, 'query'))
+
+const activeResponse = computed(() => {
+  const status = doc.value.statuses.find(
+    (item) => item.code === activeStatus.value,
+  )
+  if (!status || status.code === 200) {
+    return {
+      params: doc.value.responseParams,
+      example: doc.value.example,
+    }
+  }
+  if (!status.schema || status.schema === 'ResponseVoid') {
+    return { params: voidResponseParams, example: voidExample }
+  }
+  return {
+    params: doc.value.responseParams,
+    example: doc.value.example,
+  }
+})
+
+const responseRows = computed(() => flatten(activeResponse.value.params, 'res'))
+const responseExample = computed(() =>
+  buildExampleLines(activeResponse.value.example, activeResponse.value.params),
 )
 
 const copyText = async (text: string, success: string) => {
@@ -92,31 +151,31 @@ const fieldLines = (fields: ApiField[], depth = 0): string[] => {
 }
 
 const copyEndpoint = () => {
-  void copyText(`${doc.method} ${doc.path}`, '已复制接口')
+  void copyText(`${doc.value.method} ${doc.value.path}`, '已复制接口')
 }
 
 const copyAddress = () => {
-  void copyText(doc.path, '已复制地址')
+  void copyText(doc.value.path, '已复制地址')
 }
 
 const copyDocument = () => {
-  const statusLines = doc.statuses
+  const statusLines = doc.value.statuses
     .map((item) => `| ${item.code} | ${item.text} | ${item.schema} |`)
     .join('\n')
   const text = [
-    `# ${doc.title}`,
+    `# ${doc.value.title}`,
     '',
-    `**接口地址**: \`${doc.path}\``,
+    `**接口地址**: \`${doc.value.path}\``,
     '',
-    `**请求方式**: \`${doc.method}\``,
+    `**请求方式**: \`${doc.value.method}\``,
     '',
-    `**请求数据类型**: \`${doc.requestContentType}\``,
+    `**请求数据类型**: \`${doc.value.requestContentType}\``,
     '',
-    `**响应数据类型**: \`${doc.responseContentType}\``,
+    `**响应数据类型**: \`${doc.value.responseContentType}\``,
     '',
     '**请求参数**:',
     '',
-    ...fieldLines(doc.params),
+    ...fieldLines(doc.value.params),
     '',
     '**响应状态**:',
     '',
@@ -126,7 +185,7 @@ const copyDocument = () => {
     '',
     '**响应参数**:',
     '',
-    ...fieldLines(doc.responseParams),
+    ...fieldLines(activeResponse.value.params),
     '',
   ].join('\n')
   void copyText(text, '已复制文档')
@@ -268,7 +327,10 @@ const copyDocument = () => {
       </div>
 
       <h2 class="section-title">响应参数</h2>
-      <div class="table-wrap">
+      <p v-if="!responseRows.length" class="empty-response">
+        成功时直接返回文件，没有 JSON 响应体。
+      </p>
+      <div v-else class="table-wrap">
         <table class="doc-table">
           <colgroup>
             <col class="col-name" />
@@ -315,7 +377,7 @@ const copyDocument = () => {
         </table>
       </div>
 
-      <h2 v-if="responseExample.length" class="section-title">响应参数</h2>
+      <h2 v-if="responseExample.length" class="section-title">响应示例</h2>
       <div v-if="responseExample.length" class="example">
         <div
           v-for="(line, index) in responseExample"
@@ -556,6 +618,12 @@ const copyDocument = () => {
 
 .schema {
   color: #1677ff;
+}
+
+.empty-response {
+  margin: 0;
+  color: #8c8c8c;
+  font-size: 14px;
 }
 
 .status-tabs {

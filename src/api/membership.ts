@@ -1,5 +1,5 @@
 import { request, type RequestConfig } from '@/utils/request'
-import { compactParams, type PageQuery } from '@/api/paging'
+import { asPage, compactParams, type PageQuery } from '@/api/paging'
 
 const silent = (config?: RequestConfig): RequestConfig => ({
   hideError: true,
@@ -80,6 +80,10 @@ export type AccountMembership = {
   expiresAt?: string | null
   remainingDays?: number
   lastOrderNo?: string | null
+  /** 为 true 时是企业会员管理者，可用 managedBatches 批量分配名额 */
+  isBatchManager?: boolean
+  /** 当前用户管理的会员批次，结构与批次详情一致 */
+  managedBatches?: MembershipBatch[] | null
 }
 
 export const fetchMyMembership = () => {
@@ -114,7 +118,9 @@ export type MembershipIntent = {
   level?: number
   durationType?: number
   durationDays?: number
-  /** 实付金额，单位分 */
+  /** 购买数量（名额数） */
+  quantity?: number
+  /** 实付金额，单位分；单价 × 数量 */
   amount?: number
   status?: number
   /** 意向失效时间，超时后需重新下单 */
@@ -131,6 +137,9 @@ export type MembershipOrder = {
   level?: number
   durationType?: number
   durationDays?: number
+  /** 购买数量（名额数） */
+  quantity?: number
+  /** 实付金额，单位分 */
   amount?: number
   status?: number
   channel?: string | null
@@ -168,16 +177,28 @@ export type MembershipPaymentTicket = {
 
 const orderPath = (orderNo: string) => encodeURIComponent(orderNo)
 
-/** 创建支付意向。返回的 orderNo 用于发起支付和轮询。 */
-export const createMembershipOrder = (planCode: string) => {
+/**
+ * 企业套餐编码以 ent_ 开头。
+ * 个人套餐与企业套餐同等级售卖，只能靠编码区分。
+ */
+export const isEnterprisePlanCode = (code?: string | null) =>
+  /^ent_/i.test((code ?? '').trim())
+
+/**
+ * 创建支付意向。返回的 orderNo 用于发起支付和轮询。
+ * 企业套餐传入购买人数；其他会员 quantity 固定为 1。
+ */
+export const createMembershipOrder = (planCode: string, quantity = 1) => {
+  const count = Number(quantity)
+  const seats = Number.isInteger(count) && count >= 1 ? count : 1
   return request<MembershipIntent>({
     url: '/account/memberships/orders',
     method: 'post',
-    data: { planCode },
+    data: { planCode, quantity: seats },
   })
 }
 
-/** 对支付意向发起支付。支付宝返回收银台 HTML，免费渠道直接开通。 */
+/** 对支付意向发起支付。channel 为 wechatpay、alipay 或 free。 */
 export const createMembershipPayment = (
   orderNo: string,
   channel?: MembershipPayChannel,
@@ -198,14 +219,76 @@ export const fetchMembershipOrder = (orderNo: string) => {
   })
 }
 
-export const fetchMembershipOrders = (query: PageQuery = {}) => {
-  return request({
+/** GET /account/memberships/orders 分页查询当前用户的会员订单 */
+export const fetchMembershipOrders = async (query: PageQuery = {}) => {
+  const pageIndex = query.pageIndex ?? 1
+  const pageSize = query.pageSize ?? 10
+  const data = await request({
     url: '/account/memberships/orders',
     method: 'get',
-    params: compactParams({
-      pageIndex: query.pageIndex ?? 1,
-      pageSize: query.pageSize ?? 10,
-    }),
+    params: compactParams({ pageIndex, pageSize }),
     ...silent(),
+  })
+  const page = asPage<MembershipOrder>(data)
+  return {
+    items: page.items,
+    pageIndex: page.pageIndex || pageIndex,
+    pageSize: page.pageSize || pageSize,
+    totalElements: page.totalElements,
+  }
+}
+
+/**
+ * 名额状态。1 待分配，2 已分配。
+ * 待分配时 holderPhone 为空，判断时以手机号为准。
+ */
+export const MembershipSlotStatus = {
+  Pending: 1,
+  Allocated: 2,
+} as const
+
+export type MembershipSlotStatus =
+  (typeof MembershipSlotStatus)[keyof typeof MembershipSlotStatus]
+
+/** GET /account/memberships/batches/{orderNo} 的名额行 */
+export type MembershipSlot = {
+  id?: number | string
+  orderNo?: string | null
+  level?: number
+  durationType?: number
+  durationDays?: number
+  status?: number
+  /** 持有者手机号，待分配为空 */
+  holderPhone?: string | null
+  allocatedAt?: string | null
+}
+
+/** GET /account/memberships/batches/{orderNo} */
+export type MembershipBatch = {
+  order?: MembershipOrder | null
+  slots?: MembershipSlot[] | null
+  totalCount?: number
+  allocatedCount?: number
+  unallocatedCount?: number
+}
+
+/** 批次详情：订单 + 名额列表 + 汇总。orderNo 取当前会员最近一笔生效订单。 */
+export const fetchMembershipBatch = (orderNo: string) => {
+  return request<MembershipBatch>({
+    url: `/account/memberships/batches/${orderPath(orderNo)}`,
+    method: 'get',
+    ...silent(),
+  })
+}
+
+/** 把一个空名额分配给已注册手机号，被分配者时长叠加。 */
+export const allocateMembershipSlot = (
+  slotId: number | string,
+  phone: string,
+) => {
+  return request<MembershipSlot>({
+    url: `/account/memberships/slots/${encodeURIComponent(String(slotId))}/allocation`,
+    method: 'post',
+    data: { phone },
   })
 }

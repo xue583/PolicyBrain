@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { DownOutlined, FileTextOutlined } from '@ant-design/icons-vue'
+import { fetchHotKeywords } from '@/api/home'
+import { fetchIndustryNames, loadRegionOptions } from '@/api/meta'
 import {
   ageOptions,
   capitalOptions,
   economyOptions,
   exportIndustries,
-  hotPolicies,
+  hotPolicies as fallbackHotPolicies,
   ipOptions,
   policyYears,
-  provinces,
+  provinces as fallbackProvinces,
 } from '../../mock/dataExport'
 
 defineOptions({ name: 'ExportFilterSider' })
@@ -40,13 +43,42 @@ const emit = defineEmits<{
   view: []
 }>()
 
-const groupMeta: { key: FilterKey; label: string; options: string[] }[] = [
-  { key: 'industry', label: '所属行业', options: exportIndustries },
-  { key: 'ip', label: '知识产权', options: ipOptions },
-  { key: 'capital', label: '注册资本', options: capitalOptions },
-  { key: 'age', label: '成立年限', options: ageOptions },
-  { key: 'economy', label: '经济类型', options: economyOptions },
-]
+/** 接口失败时先用本地项，避免筛选区空白。地区、行业、热门政策以接口结果为准。 */
+const provinceOptions = ref<string[]>([...fallbackProvinces])
+const industryOptions = ref<string[]>([...exportIndustries])
+const hotPolicyOptions = ref<string[]>([...fallbackHotPolicies])
+
+const groupMeta = computed(() => [
+  {
+    key: 'industry' as const,
+    label: '所属行业',
+    options: industryOptions.value,
+  },
+  { key: 'ip' as const, label: '知识产权', options: ipOptions },
+  { key: 'capital' as const, label: '注册资本', options: capitalOptions },
+  { key: 'age' as const, label: '成立年限', options: ageOptions },
+  { key: 'economy' as const, label: '经济类型', options: economyOptions },
+])
+
+onMounted(() => {
+  void loadRegionOptions()
+    .then((list) => {
+      const labels = list.map((item) => item.label).filter(Boolean)
+      if (labels.length) provinceOptions.value = labels
+    })
+    .catch(() => undefined)
+  void fetchIndustryNames()
+    .then((names) => {
+      if (names.length) industryOptions.value = names
+    })
+    .catch(() => undefined)
+  void fetchHotKeywords('policy', 10)
+    .then((groups) => {
+      const names = groups.policies.map((item) => item.keyword).filter(Boolean)
+      if (names.length) hotPolicyOptions.value = names
+    })
+    .catch(() => undefined)
+})
 
 const toggleTag = (list: string[], value: string) => {
   const index = list.indexOf(value)
@@ -106,7 +138,7 @@ const toggleGroup = (key: FilterKey | 'province') => {
         <label class="field-label">热门政策</label>
         <div class="tag-grid">
           <button
-            v-for="item in hotPolicies"
+            v-for="item in hotPolicyOptions"
             :key="item"
             type="button"
             class="filter-tag"
@@ -157,7 +189,7 @@ const toggleGroup = (key: FilterKey | 'province') => {
           </button>
           <div v-show="openGroups.province" class="tag-grid">
             <button
-              v-for="item in provinces"
+              v-for="item in provinceOptions"
               :key="item"
               type="button"
               class="filter-tag"

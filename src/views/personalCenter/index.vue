@@ -34,6 +34,7 @@ import UploadAvatarModal from './UploadAvatarModal.vue'
 import IdentityAuthModal from './IdentityAuthModal.vue'
 import NicknameModal from './NicknameModal.vue'
 import RenewMembershipModal from './RenewMembershipModal.vue'
+import EnterpriseMemberPanel from './EnterpriseMemberPanel.vue'
 
 defineOptions({ name: 'PersonalCenter' })
 
@@ -145,6 +146,9 @@ const hasMembershipPlan = computed(() => {
   const code = membership.value?.planCode
   return typeof code === 'string' && code.trim().length > 0
 })
+const isEnterpriseMembership = computed(
+  () => membership.value?.isBatchManager === true,
+)
 const renewOpen = ref(false)
 
 const loadMembership = () => {
@@ -289,7 +293,13 @@ onMounted(() => {
             <span class="section-dot"></span>
             会员信息
           </h3>
-          <div class="member-row">
+          <EnterpriseMemberPanel
+            v-if="isEnterpriseMembership"
+            :membership="membership"
+            :owner-phone="user?.phone || ''"
+            @changed="loadMembership"
+          />
+          <div v-else class="member-row">
             <span class="member-label">个人会员：</span>
             <span v-if="membershipPeriod" class="member-period">
               {{ membershipPeriod }}
@@ -336,7 +346,11 @@ onMounted(() => {
     <UploadAvatarModal v-model:open="uploadAvatarOpen" />
     <IdentityAuthModal v-model:open="identityAuthOpen" />
     <NicknameModal v-model:open="nicknameOpen" />
-    <RenewMembershipModal v-model:open="renewOpen" />
+    <RenewMembershipModal
+      v-model:open="renewOpen"
+      :membership="membership"
+      @paid="loadMembership"
+    />
   </div>
 </template>
 

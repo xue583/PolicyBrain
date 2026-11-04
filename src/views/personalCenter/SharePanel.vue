@@ -10,7 +10,11 @@ import {
   RollbackOutlined,
   TrophyOutlined,
 } from '@ant-design/icons-vue'
-import { exportAccountShares, fetchAccountShares } from '@/api/account'
+import {
+  exportAccountShares,
+  fetchAccountShares,
+  type AccountShare,
+} from '@/api/account'
 import { ApiError } from '@/utils/request'
 import { useServerPage } from '@/composables/useServerPage'
 import { useAuthStore } from '@/stores/auth'
@@ -26,16 +30,6 @@ defineOptions({ name: 'SharePanel' })
 
 const router = useRouter()
 const { user } = storeToRefs(useAuthStore())
-
-type InviteRecord = {
-  id: string
-  index: number
-  inviteePhone: string
-  createdAt: string
-  inviterPhone: string
-  inviterRole: string
-  reward: string
-}
 
 const {
   currentPage,
@@ -72,41 +66,30 @@ const rewardLabel = (days?: number) => {
   return `赠送${value}天`
 }
 
-const inviteRecords = computed<InviteRecord[]>(() =>
-  shareItems.value.map((item, index) => ({
-    id: `${item.inviteePhone || 'invite'}-${item.createTime || index}`,
-    index: (currentPage.value - 1) * pageSize + index + 1,
-    inviteePhone: item.inviteePhone || '-',
-    createdAt: formatInviteTime(item.createTime),
-    inviterPhone: inviterPhone.value,
-    inviterRole: inviterRole.value,
-    reward: rewardLabel(item.rewardDays),
-  })),
-)
-
-const phoneOptions = computed(() =>
-  [
-    ...new Set(
-      inviteRecords.value.flatMap((item) => [
-        item.inviteePhone,
-        item.inviterPhone,
-      ]),
-    ),
-  ]
-    .filter((phone) => phone && phone !== '-')
-    .map((phone) => ({ value: phone })),
-)
+const phoneOptions = computed(() => {
+  const phones = new Set<string>()
+  for (const item of shareItems.value) {
+    if (item.inviteePhone) phones.add(item.inviteePhone)
+  }
+  if (inviterPhone.value && inviterPhone.value !== '-') {
+    phones.add(inviterPhone.value)
+  }
+  return [...phones].map((phone) => ({ value: phone }))
+})
 
 const selectedPhone = ref<string | undefined>()
-const filteredInvites = computed(() =>
+const filteredShares = computed(() =>
   selectedPhone.value
-    ? inviteRecords.value.filter(
+    ? shareItems.value.filter(
         (item) =>
           item.inviteePhone === selectedPhone.value ||
-          item.inviterPhone === selectedPhone.value,
+          inviterPhone.value === selectedPhone.value,
       )
-    : inviteRecords.value,
+    : shareItems.value,
 )
+
+const shareRowKey = (record: AccountShare) =>
+  `${record.inviteePhone || 'invite'}-${record.createTime || ''}`
 
 const posterOpen = ref(false)
 const exportOpen = ref(false)
@@ -337,36 +320,47 @@ const rewardTagClass = (reward: string) =>
 
     <a-table
       class="invite-table"
-      :class="{ 'with-frame': !loading && filteredInvites.length === 0 }"
+      :class="{ 'with-frame': !loading && filteredShares.length === 0 }"
       :loading="loading"
-      row-key="id"
+      :row-key="shareRowKey"
       :columns="[
-        { title: '序号', dataIndex: 'index', width: 50 },
+        { title: '序号', key: 'index', width: 50 },
         { title: '被邀用户', dataIndex: 'inviteePhone', width: 120 },
-        { title: '创建时间', dataIndex: 'createdAt', width: 160 },
-        { title: '邀请人', dataIndex: 'inviterPhone', width: 120 },
-        { title: '邀请人身份', dataIndex: 'inviterRole', width: 100 },
-        { title: '赠送情况', dataIndex: 'reward', width: 110 },
+        { title: '创建时间', dataIndex: 'createTime', width: 160 },
+        { title: '邀请人', key: 'inviterPhone', width: 120 },
+        { title: '邀请人身份', key: 'inviterRole', width: 100 },
+        { title: '赠送情况', dataIndex: 'rewardDays', width: 110 },
       ]"
-      :data-source="filteredInvites"
+      :data-source="filteredShares"
       :pagination="false"
       :scroll="{ x: 660 }"
     >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'inviterRole'">
-          <span
-            class="role-tag"
-            :class="roleTagClass((record as InviteRecord).inviterRole)"
-          >
-            {{ (record as InviteRecord).inviterRole }}
+      <template #bodyCell="{ column, record, index }">
+        <template v-if="column.key === 'index'">
+          {{ (currentPage - 1) * pageSize + index + 1 }}
+        </template>
+        <template v-else-if="column.dataIndex === 'inviteePhone'">
+          {{ (record as AccountShare).inviteePhone || '-' }}
+        </template>
+        <template v-else-if="column.dataIndex === 'createTime'">
+          {{ formatInviteTime((record as AccountShare).createTime) }}
+        </template>
+        <template v-else-if="column.key === 'inviterPhone'">
+          {{ inviterPhone }}
+        </template>
+        <template v-else-if="column.key === 'inviterRole'">
+          <span class="role-tag" :class="roleTagClass(inviterRole)">
+            {{ inviterRole }}
           </span>
         </template>
-        <template v-else-if="column.dataIndex === 'reward'">
+        <template v-else-if="column.dataIndex === 'rewardDays'">
           <span
             class="role-tag reward-tag"
-            :class="rewardTagClass((record as InviteRecord).reward)"
+            :class="
+              rewardTagClass(rewardLabel((record as AccountShare).rewardDays))
+            "
           >
-            {{ (record as InviteRecord).reward }}
+            {{ rewardLabel((record as AccountShare).rewardDays) }}
           </span>
         </template>
       </template>

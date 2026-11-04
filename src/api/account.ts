@@ -224,3 +224,70 @@ export const exportAccountShares = async (query: ShareExportQuery) => {
   })
   return typeof data === 'string' ? data.trim() : ''
 }
+
+/** 关注对象：1 企业 / 2 政策 */
+export const FOLLOW_ENTERPRISE = 1 as const
+export const FOLLOW_POLICY = 2 as const
+export type FollowTargetType = typeof FOLLOW_ENTERPRISE | typeof FOLLOW_POLICY
+
+/** GET /account/follows 列表行。企业、政策的摘要字段按 targetType 取舍 */
+export type AccountFollow = {
+  followId?: number
+  targetType?: FollowTargetType
+  targetId?: number
+  name?: string | null
+  followTime?: string | null
+  provinceName?: string | null
+  cityName?: string | null
+  legalPerson?: string | null
+  /** 0 国家 / 1 省 / 2 市 / 3 区县，仅政策关注有值 */
+  policyLevel?: number | null
+  issuingAuthority?: string | null
+}
+
+export type AccountFollowQuery = PageQuery & {
+  targetType?: FollowTargetType
+}
+
+/** GET /account/follows 分页查询我的关注 */
+export const fetchAccountFollows = async (query: AccountFollowQuery = {}) => {
+  const pageIndex = query.pageIndex ?? 1
+  const pageSize = query.pageSize ?? 10
+  const data = await request({
+    url: '/account/follows',
+    method: 'get',
+    params: compactParams({
+      targetType: query.targetType,
+      pageIndex,
+      pageSize,
+    }),
+    hideError: true,
+  })
+  return asPage<AccountFollow>(data)
+}
+
+/** POST /account/follows 关注企业或政策。重复关注时后端返回原记录 */
+export const followTarget = (
+  targetType: FollowTargetType,
+  targetId: number,
+) => {
+  return request({
+    url: '/account/follows',
+    method: 'post',
+    data: { targetType, targetId },
+    hideError: true,
+  })
+}
+
+/** DELETE /account/follows 取消关注。未关注时后端视为已取消 */
+export const unfollowTarget = (
+  targetType: FollowTargetType,
+  targetId: number,
+) => {
+  return request({
+    url: '/account/follows',
+    method: 'delete',
+    params: { TargetType: targetType, TargetId: targetId },
+    hideError: true,
+  })
+}

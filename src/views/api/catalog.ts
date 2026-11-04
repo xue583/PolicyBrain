@@ -1,3 +1,33 @@
+import rawCatalog from '@/mock/apiCatalog.json'
+
+export interface ApiField {
+  name: string
+  description?: string
+  requestType?: string
+  required?: boolean
+  dataType: string
+  schema?: string
+  children?: ApiField[]
+}
+
+export interface ApiStatus {
+  code: number
+  text: string
+  schema: string
+}
+
+export interface ApiDocument {
+  title: string
+  method: string
+  path: string
+  requestContentType: string
+  responseContentType: string
+  params: ApiField[]
+  statuses: ApiStatus[]
+  responseParams: ApiField[]
+  example: string
+}
+
 export interface ApiItem {
   id: number
   name: string
@@ -5,65 +35,50 @@ export interface ApiItem {
   code: string
   returnData: string
   isOpen: boolean
+  doc: ApiDocument
 }
 
-export interface ApiSubGroup {
+export interface ApiCategory {
   name: string
   count: number
   items: ApiItem[]
 }
 
-export interface ApiMainCategory {
-  name: string
-  count: number
-  groups: ApiSubGroup[]
-}
-
-const fileReturn = '发布单位、发布科室、文件等级、联系方式、发布时间、标题'
-const fileDesc =
-  '根据区域查询政策文件，包含：发布单位、发布科室、原文链接、联系方式等'
-
-const makeItem = (
-  id: number,
-  name: string,
-  isOpen: boolean,
-  description = fileDesc,
-  returnData = fileReturn,
-): ApiItem => ({
-  id,
-  name,
-  description,
-  code: '100011',
-  returnData,
-  isOpen,
+const normalizeField = (field: ApiField): ApiField => ({
+  ...field,
+  description: field.description ?? '',
+  children: field.children?.map(normalizeField),
 })
 
-export const apiMainCategory: ApiMainCategory = {
-  name: '政策接口',
-  count: 9,
-  groups: [
-    {
-      name: '政策文件',
-      count: 3,
-      items: [
-        makeItem(1, '查询政策文件列表', true),
-        makeItem(2, '查询政策文件列表', true),
-        makeItem(3, '查询政策文件列表', false),
-      ],
+export const apiCategories: ApiCategory[] = (
+  rawCatalog as unknown as ApiCategory[]
+).map((category) => ({
+  ...category,
+  items: category.items.map((item) => ({
+    ...item,
+    description: item.description ?? '',
+    code: item.code ?? '',
+    doc: {
+      ...item.doc,
+      params: (item.doc.params ?? []).map(normalizeField),
+      statuses: (item.doc.statuses ?? []).map((status) => ({
+        ...status,
+        schema: status.schema ?? '',
+      })),
+      responseParams: (item.doc.responseParams ?? []).map(normalizeField),
+      example: item.doc.example ?? '',
     },
-    {
-      name: '政策数据',
-      count: 9,
-      items: Array.from({ length: 9 }, (_, index) =>
-        makeItem(index + 4, '查询政策资讯', true),
-      ),
-    },
-  ],
-}
+  })),
+}))
+
+export const totalApiCount = apiCategories.reduce(
+  (sum, category) => sum + category.items.length,
+  0,
+)
 
 export const findApiItem = (id: number) => {
-  for (const group of apiMainCategory.groups) {
-    const found = group.items.find((item) => item.id === id)
+  for (const category of apiCategories) {
+    const found = category.items.find((item) => item.id === id)
     if (found) return found
   }
   return undefined

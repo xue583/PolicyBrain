@@ -1,21 +1,57 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import dayjs from 'dayjs'
 import { PhoneOutlined } from '@ant-design/icons-vue'
+import {
+  fetchMembershipOrders,
+  MembershipOrderStatus,
+  type MembershipOrder,
+} from '@/api/membership'
+import { useServerPage } from '@/composables/useServerPage'
 import EmptyState from '@/components/common/EmptyState.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
 import PanelTabs from '@/components/common/PanelTabs.vue'
 import emptyImg from '@/assets/personalCenter/empty-invoice.png'
 import invoiceMark from '@/assets/personalCenter/编组@2x.png'
+import InvoiceApplyModal from './InvoiceApplyModal.vue'
 
 defineOptions({ name: 'InvoicePanel' })
 
-type ConsumRecord = {
-  id: number
-  changedAt: string
-  changeType: string
-  planName: string
-  quantity: number
-  amount: string
+const formatOrderAmount = (amount?: number | null) => {
+  const fen = Number(amount)
+  if (!Number.isFinite(fen)) return '0.00'
+  return (Math.round(fen) / 100).toFixed(2)
 }
+
+const formatOrderTime = (order: MembershipOrder) => {
+  const value = order.paidAt || order.createTime
+  if (!value) return '—'
+  const time = dayjs(value)
+  return time.isValid() ? time.format('YYYY-MM-DD HH:mm') : value
+}
+
+const changeTypeText = (status?: number) => {
+  if (status == null) return '—'
+  const labels: Record<number, string> = {
+    [MembershipOrderStatus.Pending]: '待支付',
+    [MembershipOrderStatus.Paid]: '已支付',
+    [MembershipOrderStatus.Closed]: '已关闭',
+    [MembershipOrderStatus.Expired]: '已失效',
+  }
+  return labels[status] ?? '—'
+}
+
+const consumColumns = [
+  { title: '变动时间', dataIndex: 'paidAt', width: 170 },
+  { title: '变更类型', dataIndex: 'status', width: 100 },
+  { title: '套餐名称', dataIndex: 'planName', ellipsis: true },
+  { title: '数量', dataIndex: 'quantity', width: 70 },
+  { title: '金额', dataIndex: 'amount', width: 110 },
+  { title: '操作', key: 'action', width: 90 },
+]
+
+const orderRowKey = (order: MembershipOrder) =>
+  String(order.id ?? order.orderNo ?? '')
 
 type InvoiceStatus = 'issued' | 'applying'
 
@@ -35,8 +71,28 @@ const statusText: Record<InvoiceStatus, string> = {
   applying: '申请中',
 }
 
-/** 视觉还原用 Mock 数据，接入后端后替换 */
-const consumRecords = ref<ConsumRecord[]>([])
+const {
+  currentPage,
+  pageSize,
+  items: orders,
+  total,
+  loading,
+  error,
+  reload,
+} = useServerPage(
+  (pageIndex, size) => fetchMembershipOrders({ pageIndex, pageSize: size }),
+  () => 'orders',
+)
+
+const applyOpen = ref(false)
+const applyAmountText = ref('0.00')
+
+const openApply = (order: MembershipOrder) => {
+  applyAmountText.value = formatOrderAmount(order.amount)
+  applyOpen.value = true
+}
+
+/** 发票记录仍为视觉还原数据，开票申请接口接入后替换 */
 const invoiceRecords = ref<InvoiceRecord[]>([
   {
     id: 1,
@@ -90,24 +146,71 @@ const switchTab = (tab: 'consum' | 'invoice') => {
       @update:active-key="switchTab"
     />
 
-    <a-table
-      v-if="activeTab === 'consum'"
-      class="invoice-table"
-      :columns="[
-        { title: '变动时间', dataIndex: 'changedAt', width: 150 },
-        { title: '变更类型', dataIndex: 'changeType', width: 90 },
-        { title: '套餐名称', dataIndex: 'planName' },
-        { title: '数量', dataIndex: 'quantity', width: 70 },
-        { title: '金额', dataIndex: 'amount', width: 90 },
-        { title: '操作', dataIndex: 'action', width: 70 },
-      ]"
-      :data-source="consumRecords"
-      :pagination="false"
-    >
-      <template #emptyText>
-        <EmptyState :image="emptyImg" style="--empty-padding: 48px 0 56px" />
-      </template>
-    </a-table>
+    <template v-if="activeTab === 'consum'">
+      <a-alert
+        v-if="error"
+        class="order-error"
+        type="error"
+        show-icon
+        :message="error"
+      >
+        <template #action>
+          <a-button size="small" @click="reload">重试</a-button>
+        </template>
+      </a-alert>
+
+      <a-table
+        class="invoice-table"
+        :columns="consumColumns"
+        :data-source="orders"
+        :loading="loading"
+        :pagination="false"
+        :row-key="orderRowKey"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.dataIndex === 'paidAt'">
+            {{ formatOrderTime(record) }}
+          </template>
+          <template v-else-if="column.dataIndex === 'status'">
+            {{ changeTypeText(record.status) }}
+          </template>
+          <template v-else-if="column.dataIndex === 'planName'">
+            {{ record.planName || '—' }}
+          </template>
+          <template v-else-if="column.dataIndex === 'quantity'">
+            {{ record.quantity ?? 0 }}
+          </template>
+          <template v-else-if="column.dataIndex === 'amount'">
+            ¥{{ formatOrderAmount(record.amount) }}
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <button type="button" class="apply-link" @click="openApply(record)">
+              去开票
+            </button>
+          </template>
+        </template>
+        <template #emptyText>
+          <EmptyState
+            v-if="!loading"
+            :image="emptyImg"
+            text="暂无消费记录"
+            style="--empty-padding: 48px 0 56px"
+          />
+        </template>
+      </a-table>
+
+      <PaginationBar
+        v-if="total > 0"
+        v-model:current="currentPage"
+        :total="total"
+        :page-size="pageSize"
+      />
+
+      <InvoiceApplyModal
+        v-model:open="applyOpen"
+        :amount-text="applyAmountText"
+      />
+    </template>
 
     <EmptyState
       v-else-if="invoiceRecords.length === 0"
@@ -158,8 +261,22 @@ const switchTab = (tab: 'consum' | 'invoice') => {
   margin: 16px 0 18px;
 }
 
+.order-error {
+  margin-bottom: 16px;
+}
+
 .invoice-table {
   @include pc-table($header-dividers: true);
+}
+
+.apply-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--pb-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 .invoice-grid {

@@ -14,6 +14,19 @@ vi.mock('ant-design-vue', () => ({
   },
 }))
 
+vi.mock('../membershipPayment', async () => {
+  const actual = await vi.importActual<typeof import('../membershipPayment')>(
+    '../membershipPayment',
+  )
+  return {
+    ...actual,
+    resolvePaymentQrSrc: vi.fn(async (content?: string | null) => {
+      const value = content?.trim() ?? ''
+      return value ? `data:image/png;base64,${value}` : ''
+    }),
+  }
+})
+
 vi.mock('@/api/membership', async () => {
   const actual =
     await vi.importActual<typeof import('@/api/membership')>('@/api/membership')
@@ -39,21 +52,6 @@ const mountPanel = (props?: { price?: number; planCode?: string }) => {
     },
     global: { plugins: [pinia] },
   })
-}
-
-const checkoutWindow = () => {
-  const popup = {
-    closed: false,
-    close: vi.fn(),
-    location: { href: '' },
-    document: {
-      open: vi.fn(),
-      write: vi.fn(),
-      close: vi.fn(),
-    },
-  }
-  vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window)
-  return popup
 }
 
 describe('MemberPayPanel alipay checkout', () => {
@@ -91,9 +89,9 @@ describe('MemberPayPanel alipay checkout', () => {
     stop()
   })
 
-  it('creates an intent, opens alipay, and polls until the order is paid', async () => {
+  it('creates an intent, opens alipay in a modal, and shows success on the page', async () => {
     vi.useFakeTimers()
-    const popup = checkoutWindow()
+    const open = vi.spyOn(window, 'open')
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
@@ -117,28 +115,40 @@ describe('MemberPayPanel alipay checkout', () => {
 
     const wrapper = mount(MemberPayPanel, {
       props: { price: 368, planCode: 'vip_yearly', qrFrame: 'frame.png' },
-      global: { plugins: [pinia] },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          AModal: {
+            template:
+              '<div class="cashier-stub"><slot name="title" /><slot /></div>',
+          },
+        },
+      },
     })
 
     await wrapper.get('.pay-go').trigger('click')
     await flushPromises()
 
-    expect(createMembershipOrder).toHaveBeenCalledWith('vip_yearly')
+    expect(open).not.toHaveBeenCalled()
+    expect(createMembershipOrder).toHaveBeenCalledWith('vip_yearly', 1)
     expect(createMembershipPayment).toHaveBeenCalledWith(
       'M20261029001',
       'alipay',
     )
-    expect(popup.document.write).toHaveBeenCalledWith(
+    expect(wrapper.get('iframe.alipay-frame').attributes('srcdoc')).toBe(
       '<form id="alipay"></form>',
     )
-    expect(wrapper.text()).toContain('请在支付宝完成支付')
+    expect(wrapper.text()).toContain('请在弹窗中完成支付')
 
     await vi.advanceTimersByTimeAsync(2000)
     await flushPromises()
 
     expect(fetchMembershipOrder).toHaveBeenCalledTimes(2)
-    expect(wrapper.get('.pay-go').text()).toBe('支付成功')
+    expect(wrapper.get('.pay-done-title').text()).toBe('支付成功')
+    expect(wrapper.get('.pay-result').text()).toContain('会员即将生效')
+    expect(wrapper.find('iframe.alipay-frame').exists()).toBe(false)
     expect(message.success).toHaveBeenCalledWith('支付成功')
+    expect(wrapper.emitted('paid')).toHaveLength(1)
     vi.useRealTimers()
   })
 
@@ -167,7 +177,98 @@ describe('MemberPayPanel alipay checkout', () => {
 
     expect(open).not.toHaveBeenCalled()
     expect(createMembershipPayment).toHaveBeenCalledWith('FREE1', 'free')
-    expect(wrapper.get('.pay-go').text()).toBe('支付成功')
+    expect(wrapper.get('.pay-done-title').text()).toBe('支付成功')
+    expect(wrapper.find('.pay-result').exists()).toBe(false)
     expect(message.success).toHaveBeenCalledWith('开通成功')
+    expect(wrapper.emitted('paid')).toHaveLength(1)
+  })
+
+  it('pays with wechatpay and shows the returned qr code', async () => {
+    vi.useFakeTimers()
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().token = 'access'
+    vi.mocked(createMembershipOrder).mockResolvedValue({
+      orderNo: 'M20261030001',
+      status: 1,
+      expiresAt: '2099-01-01T00:00:00Z',
+    })
+    vi.mocked(createMembershipPayment).mockResolvedValue({
+      channel: 'wechatpay',
+      qrCodeContent: 'weixin://wxpay/bizpayurl?pr=abc',
+    })
+    vi.mocked(fetchMembershipOrder)
+      .mockResolvedValueOnce({ orderNo: 'M20261030001', status: 1 })
+      .mockResolvedValueOnce({
+        orderNo: 'M20261030001',
+        status: 2,
+        paidAt: '2026-10-30T01:00:00Z',
+      })
+
+    const wrapper = mount(MemberPayPanel, {
+      props: { price: 368, planCode: 'vip_yearly', qrFrame: 'frame.png' },
+      global: { plugins: [pinia] },
+    })
+
+    await wrapper.get('.is-wechatpay').trigger('click')
+    await flushPromises()
+
+    expect(createMembershipOrder).toHaveBeenCalledWith('vip_yearly', 1)
+    expect(createMembershipPayment).toHaveBeenCalledWith(
+      'M20261030001',
+      'wechatpay',
+    )
+    const qr = wrapper.get('img.qr-code')
+    expect(qr.attributes('alt')).toBe('微信支付二维码')
+    expect(qr.attributes('src')).toBe(
+      'data:image/png;base64,weixin://wxpay/bizpayurl?pr=abc',
+    )
+    expect(wrapper.text()).toContain('请使用微信扫码支付')
+
+    await vi.advanceTimersByTimeAsync(2000)
+    await flushPromises()
+
+    expect(fetchMembershipOrder).toHaveBeenCalledWith('M20261030001')
+    expect(wrapper.text()).toContain('支付成功')
+    expect(message.success).toHaveBeenCalledWith('支付成功')
+    expect(wrapper.emitted('paid')).toHaveLength(1)
+    vi.useRealTimers()
+  })
+
+  it('writes the seat count into an enterprise order', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().token = 'access'
+    vi.mocked(createMembershipOrder).mockResolvedValue({
+      orderNo: 'ENT1',
+      status: 1,
+      quantity: 5,
+      expiresAt: '2099-01-01T00:00:00Z',
+    })
+    vi.mocked(createMembershipPayment).mockResolvedValue({
+      channel: 'alipay',
+      redirectHtml: '<form id="alipay"></form>',
+    })
+
+    const wrapper = mount(MemberPayPanel, {
+      props: {
+        price: 8400,
+        planCode: 'ent_vip_3y',
+        quantity: 5,
+        qrFrame: 'frame.png',
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          AModal: { template: '<div class="cashier-stub"><slot /></div>' },
+        },
+      },
+    })
+
+    await wrapper.get('.pay-go').trigger('click')
+    await flushPromises()
+
+    expect(createMembershipOrder).toHaveBeenCalledWith('ent_vip_3y', 5)
+    wrapper.unmount()
   })
 })

@@ -12,7 +12,8 @@ export interface MatchPolicy {
   name: string
   badge?: MatchPolicyBadge
   grade: string
-  score: number
+  /** 接口未返回匹配分时为 null，页面显示为破折号 */
+  score: number | null
   department: string
   status: MatchPolicyStatus
   maxAmount?: number
