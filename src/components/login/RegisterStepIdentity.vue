@@ -47,8 +47,8 @@ const emit = defineEmits<{
   </div>
 
   <div class="reg-actions">
-    <button type="button" class="btn-primary" @click="emit('next')">
+    <a-button class="btn-primary" @click="emit('next')">
       下一步：身份认证
-    </button>
+    </a-button>
   </div>
 </template>

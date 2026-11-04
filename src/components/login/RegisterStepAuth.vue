@@ -37,16 +37,11 @@ const emit = defineEmits<{
       <div class="form-row">
         <label class="form-item">
           <span class="form-label"><i>*</i>公司名称或简称</span>
-          <input
+          <a-input
             :value="companyName"
             class="form-input"
             placeholder="请输入内容"
-            @input="
-              emit(
-                'update:companyName',
-                ($event.target as HTMLInputElement).value,
-              )
-            "
+            @update:value="emit('update:companyName', $event)"
           />
         </label>
       </div>
@@ -57,16 +52,11 @@ const emit = defineEmits<{
             ><i v-if="identity === PolicyUserType.EnterpriseSpecialist">*</i
             >统一社会信用代码</span
           >
-          <input
+          <a-input
             :value="unifiedSocialCreditCode"
             class="form-input"
             placeholder="请输入内容"
-            @input="
-              emit(
-                'update:unifiedSocialCreditCode',
-                ($event.target as HTMLInputElement).value,
-              )
-            "
+            @update:value="emit('update:unifiedSocialCreditCode', $event)"
           />
         </label>
       </div>
@@ -74,24 +64,20 @@ const emit = defineEmits<{
       <div class="form-row form-row--2">
         <label class="form-item">
           <span class="form-label">职务</span>
-          <input
+          <a-input
             :value="jobTitle"
             class="form-input"
             placeholder="请输入内容"
-            @input="
-              emit('update:jobTitle', ($event.target as HTMLInputElement).value)
-            "
+            @update:value="emit('update:jobTitle', $event)"
           />
         </label>
         <label class="form-item">
           <span class="form-label">个人昵称</span>
-          <input
+          <a-input
             :value="nickname"
             class="form-input"
             placeholder="请输入内容"
-            @input="
-              emit('update:nickname', ($event.target as HTMLInputElement).value)
-            "
+            @update:value="emit('update:nickname', $event)"
           />
         </label>
       </div>
@@ -112,12 +98,12 @@ const emit = defineEmits<{
     </div>
 
     <div class="reg-actions">
-      <button type="button" class="btn-ghost" @click="emit('prev')">
+      <a-button class="btn-ghost" @click="emit('prev')">
         上一步：身份选择
-      </button>
-      <button type="submit" class="btn-primary" :disabled="submitting">
+      </a-button>
+      <a-button class="btn-primary" html-type="submit" :disabled="submitting">
         {{ submitting ? '提交中...' : '下一步：完成认证并领取VIP' }}
-      </button>
+      </a-button>
     </div>
   </form>
 </template>

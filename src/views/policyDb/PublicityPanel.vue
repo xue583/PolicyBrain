@@ -277,7 +277,7 @@ const columns = [
   border-bottom: 1px solid #f0f0f0;
 
   :deep(.panel-tabs.is-underline) {
-    gap: 28px;
+    --panel-tab-gap: 28px;
     min-width: 0;
     border-bottom: none;
   }

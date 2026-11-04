@@ -18,18 +18,27 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <nav class="breadcrumb">
-    <button type="button" class="back-btn" @click="emit('back')">
-      <LeftOutlined />
-    </button>
-    <div class="breadcrumb-trail">
-      <template v-for="(item, index) in items" :key="`${item.label}-${index}`">
-        <span v-if="index > 0" class="sep">&gt;</span>
-        <a v-if="item.onClick" @click="item.onClick">{{ item.label }}</a>
-        <span v-else class="current">{{ item.label }}</span>
-      </template>
-    </div>
-  </nav>
+  <a-config-provider :wave="{ disabled: true }">
+    <nav class="breadcrumb">
+      <a-button
+        type="text"
+        class="back-btn"
+        aria-label="返回"
+        @click="emit('back')"
+      >
+        <LeftOutlined />
+      </a-button>
+      <a-breadcrumb class="breadcrumb-trail" separator=">">
+        <a-breadcrumb-item
+          v-for="(item, index) in items"
+          :key="`${item.label}-${index}`"
+        >
+          <a v-if="item.onClick" @click="item.onClick">{{ item.label }}</a>
+          <span v-else class="current">{{ item.label }}</span>
+        </a-breadcrumb-item>
+      </a-breadcrumb>
+    </nav>
+  </a-config-provider>
 </template>
 
 <style scoped lang="scss">
@@ -41,7 +50,7 @@ const emit = defineEmits<{
   font-size: 14px;
 }
 
-.back-btn {
+.back-btn.ant-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -53,20 +62,19 @@ const emit = defineEmits<{
   background: #fff;
   color: #595959;
   font-size: 14px;
-  cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  transition: color 0.2s;
 
-  &:hover {
+  &:hover,
+  &:focus {
     color: var(--pb-primary);
+    background: #fff;
+    border-color: transparent;
   }
 }
 
-.breadcrumb-trail {
+.breadcrumb-trail.ant-breadcrumb {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
   min-height: 36px;
   min-width: 0;
   padding: 0 16px;
@@ -74,20 +82,29 @@ const emit = defineEmits<{
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 
-  a {
-    color: var(--pb-primary);
-    cursor: pointer;
-
-    &:hover {
-      color: #4096ff;
-    }
+  :deep(ol) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
   }
 
-  .sep {
+  :deep(.ant-breadcrumb-separator) {
+    margin-inline: 8px;
     color: #bfbfbf;
   }
 
-  .current {
+  :deep(a) {
+    color: var(--pb-primary);
+
+    &:hover {
+      color: #4096ff;
+      background: transparent;
+    }
+  }
+
+  :deep(.current) {
     color: #595959;
   }
 }

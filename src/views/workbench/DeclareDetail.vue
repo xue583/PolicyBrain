@@ -52,16 +52,29 @@ const onEnter = () => {
 
 <template>
   <div class="declare-detail">
-    <div class="crumb-bar">
-      <button type="button" class="back-btn" @click="emit('back')">
-        <LeftOutlined />
-      </button>
-      <div class="crumb-pill">
-        <a class="crumb-link" @click="emit('back')">政策列表</a>
-        <LeftOutlined class="crumb-sep" />
-        <span class="crumb-current">政策选择</span>
+    <a-config-provider :wave="{ disabled: true }">
+      <div class="crumb-bar">
+        <a-button
+          type="text"
+          class="back-btn"
+          aria-label="返回"
+          @click="emit('back')"
+        >
+          <LeftOutlined />
+        </a-button>
+        <a-breadcrumb class="crumb-pill">
+          <template #separator>
+            <LeftOutlined class="crumb-sep" />
+          </template>
+          <a-breadcrumb-item>
+            <a class="crumb-link" @click="emit('back')">政策列表</a>
+          </a-breadcrumb-item>
+          <a-breadcrumb-item>
+            <span class="crumb-current">政策选择</span>
+          </a-breadcrumb-item>
+        </a-breadcrumb>
       </div>
-    </div>
+    </a-config-provider>
 
     <div class="detail-card">
       <div class="detail-left">
@@ -193,53 +206,68 @@ const onEnter = () => {
   margin-bottom: 14px;
 }
 
-.back-btn {
+.crumb-bar .back-btn.ant-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
+  padding: 0;
   color: #333;
   font-size: 14px;
   background: #fff;
   border: none;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(31, 56, 88, 0.06);
-  cursor: pointer;
 
-  &:hover {
+  &:hover,
+  &:focus {
     color: var(--pb-primary);
+    background: #fff;
+    border-color: transparent;
   }
 }
 
-.crumb-pill {
+.crumb-pill.ant-breadcrumb {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   padding: 10px 18px;
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(31, 56, 88, 0.06);
-}
 
-.crumb-link {
-  color: #333;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--pb-primary);
+  :deep(ol) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
   }
-}
 
-.crumb-sep {
-  color: #8ab6f5;
-  font-size: 12px;
-}
+  :deep(.ant-breadcrumb-separator) {
+    margin: 0;
+  }
 
-.crumb-current {
-  color: var(--pb-primary);
-  font-size: 14px;
+  :deep(a.crumb-link) {
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--pb-primary);
+      background: transparent;
+    }
+  }
+
+  :deep(.crumb-sep) {
+    color: #8ab6f5;
+    font-size: 12px;
+  }
+
+  :deep(.crumb-current) {
+    color: var(--pb-primary);
+    font-size: 14px;
+  }
 }
 
 .detail-card {

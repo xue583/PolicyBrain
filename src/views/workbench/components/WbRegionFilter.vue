@@ -106,17 +106,21 @@ const clear = () => {
   <div v-if="selected.length" class="filter-row selected-row">
     <span class="filter-label">已选：</span>
     <div class="filter-body selected-body">
-      <span
+      <a-tag
         v-for="tag in selected"
         :key="tag"
+        closable
         class="selected-tag"
         :class="{ 'is-filled': props.filledTag }"
+        @close="toggle(tag)"
       >
         {{ tag }}
-        <span class="tag-close" @click="toggle(tag)">
-          <svg viewBox="0 0 10 10"><path d="m2 2 6 6M8 2 2 8" /></svg>
-        </span>
-      </span>
+        <template #closeIcon>
+          <span class="tag-close">
+            <svg viewBox="0 0 10 10"><path d="m2 2 6 6M8 2 2 8" /></svg>
+          </span>
+        </template>
+      </a-tag>
       <span class="clear-btn" @click="clear">
         <ClearOutlined class="clear-icon" />
         清空
@@ -173,10 +177,11 @@ const clear = () => {
   padding-right: 0;
 }
 
-.selected-tag {
+.selected-tag.ant-tag {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  margin-inline-end: 0;
   padding: 2px 10px;
   color: var(--pb-primary);
   font-size: 14px;
@@ -187,6 +192,11 @@ const clear = () => {
 
   &.is-filled {
     background: #e9f2ff;
+  }
+
+  :deep(.ant-tag-close-icon) {
+    margin-inline-start: 0;
+    color: inherit;
   }
 }
 

@@ -51,8 +51,8 @@ const emit = defineEmits<{
       @send-code="emit('sendCode')"
     />
 
-    <button type="submit" class="login-submit" :disabled="submitting">
+    <a-button class="login-submit" html-type="submit" :disabled="submitting">
       {{ submitting ? '登录中...' : '登录账号' }}
-    </button>
+    </a-button>
   </form>
 </template>

@@ -440,7 +440,7 @@ const exportList = () => {
   padding: 48px 16px !important;
 }
 
-:deep(.ant-empty-image) {
+:deep(.ant-table-placeholder .ant-empty:not(.pb-empty) .ant-empty-image) {
   display: none;
 }
 

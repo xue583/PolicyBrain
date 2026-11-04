@@ -12,26 +12,40 @@ withDefaults(
 </script>
 
 <template>
-  <div class="pb-empty">
-    <img :src="image" alt="" :style="{ width: `${imageWidth}px` }" />
-    <p class="pb-empty-text">{{ text }}</p>
-  </div>
+  <a-empty class="pb-empty">
+    <template #image>
+      <img :src="image" alt="" :style="{ width: `${imageWidth}px` }" />
+    </template>
+    <template #description>
+      <p class="pb-empty-text">{{ text }}</p>
+    </template>
+  </a-empty>
 </template>
 
 <style scoped lang="scss">
-.pb-empty {
+.pb-empty.ant-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--empty-gap, 20px);
+  margin: 0;
   padding: var(--empty-padding, 40px 0 48px);
   background: white;
   border-radius: 20px;
 
-  img {
+  :deep(.ant-empty-image) {
     height: auto;
-    object-fit: contain;
-    user-select: none;
+    margin: 0;
+
+    img {
+      height: auto;
+      object-fit: contain;
+      user-select: none;
+    }
+  }
+
+  :deep(.ant-empty-description) {
+    margin: 0;
   }
 }
 

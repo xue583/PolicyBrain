@@ -186,60 +186,36 @@ const submitRegister = async () => {
 
 <template>
   <Teleport to="body">
-    <Transition name="login-fade">
-      <div v-if="open" class="login-overlay" @click.self="close">
-        <div
-          class="login-dialog"
-          :class="{ 'is-register': tab === 'register' }"
-          role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            class="login-close"
-            aria-label="关闭"
-            @click="close"
+    <a-config-provider
+      :wave="{ disabled: true }"
+      :auto-insert-space-in-button="false"
+    >
+      <Transition name="login-fade">
+        <div v-if="open" class="login-overlay" @click.self="close">
+          <div
+            class="login-dialog"
+            :class="{ 'is-register': tab === 'register' }"
+            role="dialog"
+            aria-modal="true"
           >
-            <img :src="closeIcon" alt="" />
-          </button>
+            <button
+              type="button"
+              class="login-close"
+              aria-label="关闭"
+              @click="close"
+            >
+              <img :src="closeIcon" alt="" />
+            </button>
 
-          <div class="login-card">
-            <div
-              class="login-header"
-              :style="{ backgroundImage: `url(${frameBg})` }"
-            ></div>
+            <div class="login-card">
+              <div
+                class="login-header"
+                :style="{ backgroundImage: `url(${frameBg})` }"
+              ></div>
 
-            <div class="login-body">
-              <LoginForm
-                v-if="tab === 'login'"
-                v-model:phone="phone"
-                v-model:code="code"
-                :phone-error="phoneError"
-                :countdown="countdown"
-                :sending-code="sendingCode"
-                :submitting="submitting"
-                :code-btn-text="codeBtnText"
-                @switch-tab="switchTab"
-                @blur-phone="onPhoneBlur"
-                @send-code="sendCode"
-                @submit="onLoginSubmit"
-              />
-
-              <template v-else>
-                <p class="login-welcome">{{ registerTitle }}</p>
-
-                <div class="login-tabs">
-                  <button
-                    type="button"
-                    class="login-tab"
-                    @click="switchTab('login')"
-                  >
-                    登录
-                  </button>
-                  <button type="button" class="login-tab active">注册</button>
-                </div>
-
-                <RegisterStepAccount
+              <div class="login-body">
+                <LoginForm
+                  v-if="tab === 'login'"
                   v-model:phone="phone"
                   v-model:code="code"
                   :phone-error="phoneError"
@@ -247,18 +223,47 @@ const submitRegister = async () => {
                   :sending-code="sendingCode"
                   :submitting="submitting"
                   :code-btn-text="codeBtnText"
-                  :vip-banner="vipBanner"
-                  :vip-badge="vipBadge"
+                  @switch-tab="switchTab"
                   @blur-phone="onPhoneBlur"
                   @send-code="sendCode"
-                  @submit="submitRegister"
+                  @submit="onLoginSubmit"
                 />
-              </template>
+
+                <template v-else>
+                  <p class="login-welcome">{{ registerTitle }}</p>
+
+                  <div class="login-tabs">
+                    <button
+                      type="button"
+                      class="login-tab"
+                      @click="switchTab('login')"
+                    >
+                      登录
+                    </button>
+                    <button type="button" class="login-tab active">注册</button>
+                  </div>
+
+                  <RegisterStepAccount
+                    v-model:phone="phone"
+                    v-model:code="code"
+                    :phone-error="phoneError"
+                    :countdown="countdown"
+                    :sending-code="sendingCode"
+                    :submitting="submitting"
+                    :code-btn-text="codeBtnText"
+                    :vip-banner="vipBanner"
+                    :vip-badge="vipBadge"
+                    @blur-phone="onPhoneBlur"
+                    @send-code="sendCode"
+                    @submit="submitRegister"
+                  />
+                </template>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </a-config-provider>
   </Teleport>
 </template>
 

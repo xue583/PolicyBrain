@@ -153,72 +153,81 @@ const submitAuth = async () => {
 
 <template>
   <Teleport to="body">
-    <Transition name="login-fade">
-      <div v-if="open" class="login-overlay" @click.self="close">
-        <div
-          class="login-dialog is-register identity-auth-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-label="身份认证"
-        >
-          <button
-            type="button"
-            class="login-close"
-            aria-label="关闭"
-            @click="close"
+    <a-config-provider
+      :wave="{ disabled: true }"
+      :auto-insert-space-in-button="false"
+    >
+      <Transition name="login-fade">
+        <div v-if="open" class="login-overlay" @click.self="close">
+          <div
+            class="login-dialog is-register identity-auth-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="身份认证"
           >
-            <img :src="closeIcon" alt="" />
-          </button>
+            <button
+              type="button"
+              class="login-close"
+              aria-label="关闭"
+              @click="close"
+            >
+              <img :src="closeIcon" alt="" />
+            </button>
 
-          <div class="login-card">
-            <div class="login-body">
-              <p class="login-welcome">完善身份认证</p>
+            <div class="login-card">
+              <div class="login-body">
+                <p class="login-welcome">完善身份认证</p>
 
-              <a-steps
-                class="reg-steps"
-                label-placement="vertical"
-                :current="stepsCurrent"
-              >
-                <a-step v-for="s in authSteps" :key="s.title" :title="s.title">
-                  <template #icon>
-                    <img class="reg-step-icon" :src="s.icon" :alt="s.title" />
-                  </template>
-                </a-step>
-              </a-steps>
+                <a-steps
+                  class="reg-steps"
+                  label-placement="vertical"
+                  :current="stepsCurrent"
+                >
+                  <a-step
+                    v-for="s in authSteps"
+                    :key="s.title"
+                    :title="s.title"
+                  >
+                    <template #icon>
+                      <img class="reg-step-icon" :src="s.icon" :alt="s.title" />
+                    </template>
+                  </a-step>
+                </a-steps>
 
-              <RegisterStepIdentity
-                v-if="step === 1"
-                :identity="identity"
-                :identity-error="identityError"
-                :roles="roles"
-                @update:identity="onIdentityChange"
-                @next="goAuthForm"
-              />
+                <RegisterStepIdentity
+                  v-if="step === 1"
+                  :identity="identity"
+                  :identity-error="identityError"
+                  :roles="roles"
+                  @update:identity="onIdentityChange"
+                  @next="goAuthForm"
+                />
 
-              <RegisterStepAuth
-                v-else
-                :identity="identity"
-                :form-error="formError"
-                :submitting="submitting"
-                :vip-banner="vipBanner"
-                :company-name="authForm.companyName"
-                :unified-social-credit-code="authForm.unifiedSocialCreditCode"
-                :job-title="authForm.jobTitle"
-                :nickname="authForm.nickname"
-                @update:company-name="authForm.companyName = $event"
-                @update:unified-social-credit-code="
-                  authForm.unifiedSocialCreditCode = $event
-                "
-                @update:job-title="authForm.jobTitle = $event"
-                @update:nickname="authForm.nickname = $event"
-                @prev="step = 1"
-                @submit="submitAuth"
-              />
+                <RegisterStepAuth
+                  v-else
+                  :identity="identity"
+                  :form-error="formError"
+                  :submitting="submitting"
+                  :vip-banner="vipBanner"
+                  :company-name="authForm.companyName"
+                  :unified-social-credit-code="authForm.unifiedSocialCreditCode"
+                  :job-title="authForm.jobTitle"
+                  :nickname="authForm.nickname"
+                  @update:company-name="authForm.companyName = $event"
+                  @update:unified-social-credit-code="
+                    authForm.unifiedSocialCreditCode = $event
+                  "
+                  @update:job-title="authForm.jobTitle = $event"
+                  @update:nickname="authForm.nickname = $event"
+                  @prev="step = 1"
+                  @submit="submitAuth"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </a-config-provider>
   </Teleport>
 </template>
 

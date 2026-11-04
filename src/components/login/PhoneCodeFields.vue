@@ -22,32 +22,30 @@ const emit = defineEmits<{
   <p v-if="phoneError" class="login-error">{{ phoneError }}</p>
   <div v-else class="login-error-slot" />
 
-  <input
+  <a-input
     :value="phone"
     class="login-input"
     type="tel"
-    maxlength="11"
+    :maxlength="11"
     placeholder="请输入手机号"
-    @input="emit('update:phone', ($event.target as HTMLInputElement).value)"
+    @update:value="emit('update:phone', $event)"
     @blur="emit('blurPhone')"
   />
 
   <div class="login-code-row">
-    <input
+    <a-input
       :value="code"
       class="login-input login-input--code"
-      type="text"
-      maxlength="4"
+      :maxlength="4"
       placeholder="请输入短信验证码"
-      @input="emit('update:code', ($event.target as HTMLInputElement).value)"
+      @update:value="emit('update:code', $event)"
     />
-    <button
-      type="button"
+    <a-button
       class="code-btn"
       :disabled="countdown > 0 || sendingCode"
       @click="emit('sendCode')"
     >
       {{ codeBtnText }}
-    </button>
+    </a-button>
   </div>
 </template>

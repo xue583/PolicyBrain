@@ -14,22 +14,40 @@ withDefaults(
 </script>
 
 <template>
-  <div class="wb-empty">
-    <img
-      :src="image"
-      alt=""
-      class="empty-img"
-      :style="{ width: `${imageWidth}px` }"
-    />
-    <p class="empty-text">{{ text }}</p>
-  </div>
+  <a-empty class="wb-empty">
+    <template #image>
+      <img
+        :src="image"
+        alt=""
+        class="empty-img"
+        :style="{ width: `${imageWidth}px` }"
+      />
+    </template>
+    <template #description>
+      <p class="empty-text">{{ text }}</p>
+    </template>
+  </a-empty>
 </template>
 
 <style scoped lang="scss">
-.wb-empty {
+.wb-empty.ant-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin: 0;
+
+  :deep(.ant-empty-image) {
+    height: auto;
+    margin: 0;
+
+    img {
+      height: auto;
+    }
+  }
+
+  :deep(.ant-empty-description) {
+    margin: 0;
+  }
 }
 
 .empty-img {
