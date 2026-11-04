@@ -259,8 +259,9 @@ const DIRECT_MUNICIPALITIES = new Set(['北京市', '天津市', '上海市', '�
 
 const isDirectMunicipality = (label: string) => DIRECT_MUNICIPALITIES.has(label)
 
-const readChecked = (event: Event) =>
-  Boolean((event.target as HTMLInputElement | null)?.checked)
+/** a-checkbox @change 可能是原生 Event 或 Ant CheckboxChangeEvent */
+const readChecked = (event: { target?: { checked?: boolean } | null }) =>
+  Boolean(event.target?.checked)
 
 const setChecked = (list: number[], id: number, checked: boolean) => {
   if (checked) return list.includes(id) ? list : [...list, id]
@@ -508,7 +509,10 @@ const syncDistricts = async () => {
   )
 }
 
-const onProvinceChange = (id: number, event: Event) => {
+const onProvinceChange = (
+  id: number,
+  event: { target?: { checked?: boolean } | null },
+) => {
   selectedProvinceIds.value = setChecked(
     selectedProvinceIds.value,
     id,
@@ -518,7 +522,10 @@ const onProvinceChange = (id: number, event: Event) => {
   void syncCities()
 }
 
-const onCityChange = (id: number, event: Event) => {
+const onCityChange = (
+  id: number,
+  event: { target?: { checked?: boolean } | null },
+) => {
   selectedCityIds.value = setChecked(
     selectedCityIds.value,
     id,
@@ -528,7 +535,10 @@ const onCityChange = (id: number, event: Event) => {
   void syncDistricts()
 }
 
-const onDistrictChange = (id: number, event: Event) => {
+const onDistrictChange = (
+  id: number,
+  event: { target?: { checked?: boolean } | null },
+) => {
   selectedDistrictIds.value = setChecked(
     selectedDistrictIds.value,
     id,
