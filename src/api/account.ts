@@ -291,3 +291,162 @@ export const unfollowTarget = (
     hideError: true,
   })
 }
+
+/** GET /account/users/me/enterprises 已绑定企业 */
+export type PolicyUserEnterprise = {
+  enterpriseId: number
+  name?: string | null
+  creditCode?: string | null
+  provinceName?: string | null
+  cityName?: string | null
+  legalPerson?: string | null
+  isCurrent?: boolean
+  bindTime?: string | null
+}
+
+/** 绑定列表。maxBindings 为 0 表示不限（企服人员），企业专员上限为 1 */
+export type PolicyUserEnterpriseList = {
+  items: PolicyUserEnterprise[]
+  identity?: number | null
+  currentEnterpriseId?: number | null
+  canBindMore?: boolean
+  maxBindings?: number
+}
+
+/** POST /account/users/me/enterprises。信用代码与企业 Id 二选一，同时传时以企业 Id 为准 */
+export type BindPolicyEnterprisePayload = {
+  creditCode?: string
+  enterpriseId?: number
+}
+
+const asEnterpriseRecord = (value: unknown): Record<string, unknown> => {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+const readEnterpriseId = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const id = Number(value)
+    if (Number.isFinite(id)) return id
+  }
+  return null
+}
+
+const readEnterpriseText = (value: unknown) => {
+  if (typeof value === 'string') return value
+  return null
+}
+
+const mapUserEnterprise = (raw: unknown): PolicyUserEnterprise | null => {
+  const body = asEnterpriseRecord(raw)
+  const enterpriseId = readEnterpriseId(
+    body.enterpriseId ?? body.EnterpriseId ?? body.id,
+  )
+  if (enterpriseId == null) return null
+  return {
+    enterpriseId,
+    name: readEnterpriseText(body.name ?? body.Name),
+    creditCode: readEnterpriseText(body.creditCode ?? body.CreditCode),
+    provinceName: readEnterpriseText(body.provinceName ?? body.ProvinceName),
+    cityName: readEnterpriseText(body.cityName ?? body.CityName),
+    legalPerson: readEnterpriseText(body.legalPerson ?? body.LegalPerson),
+    isCurrent: Boolean(body.isCurrent ?? body.IsCurrent),
+    bindTime: readEnterpriseText(body.bindTime ?? body.BindTime),
+  }
+}
+
+/** 列表文档是对象；解绑等接口同样返回该结构。兼容直接给数组的情况。 */
+export const normalizeUserEnterpriseList = (
+  data: unknown,
+): PolicyUserEnterpriseList => {
+  if (Array.isArray(data)) {
+    return {
+      items: data
+        .map(mapUserEnterprise)
+        .filter((item): item is PolicyUserEnterprise => item != null),
+    }
+  }
+  const body = asEnterpriseRecord(data)
+  const rawItems = Array.isArray(body.items)
+    ? body.items
+    : Array.isArray(body.Items)
+      ? body.Items
+      : []
+  const maxRaw = body.maxBindings ?? body.MaxBindings
+  const maxBindings = typeof maxRaw === 'number' ? maxRaw : Number(maxRaw)
+  const canBindMore = body.canBindMore ?? body.CanBindMore
+  return {
+    items: rawItems
+      .map(mapUserEnterprise)
+      .filter((item): item is PolicyUserEnterprise => item != null),
+    identity: readEnterpriseId(body.identity ?? body.Identity),
+    currentEnterpriseId: readEnterpriseId(
+      body.currentEnterpriseId ?? body.CurrentEnterpriseId,
+    ),
+    canBindMore: typeof canBindMore === 'boolean' ? canBindMore : undefined,
+    maxBindings: Number.isFinite(maxBindings) ? maxBindings : undefined,
+  }
+}
+
+export const readBoundEnterpriseId = (data: unknown) => {
+  const body = asEnterpriseRecord(data)
+  return readEnterpriseId(body.enterpriseId ?? body.EnterpriseId ?? body.id)
+}
+
+/**
+ * 统一社会信用代码与企业 Id 二选一。
+ * 两边都有时只提交企业 Id，与接口「同时传入时以企业 Id 为准」一致。
+ */
+export const buildBindEnterprisePayload = (input: {
+  creditCode?: string | null
+  enterpriseId?: number | null
+}): BindPolicyEnterprisePayload | null => {
+  const enterpriseId = readEnterpriseId(input.enterpriseId)
+  if (enterpriseId != null && enterpriseId > 0) return { enterpriseId }
+  const creditCode = (input.creditCode || '').replace(/\s+/g, '').toUpperCase()
+  if (!creditCode) return null
+  return { creditCode }
+}
+
+/** GET /account/users/me/enterprises 查询我绑定的企业与是否还能继续绑定 */
+export const fetchMyEnterprises = async () => {
+  const data = await request({
+    url: '/account/users/me/enterprises',
+    method: 'get',
+    hideError: true,
+  })
+  return normalizeUserEnterpriseList(data)
+}
+
+/** POST /account/users/me/enterprises 绑定企业。重复绑定同一企业视为成功 */
+export const bindMyEnterprise = (data: BindPolicyEnterprisePayload) => {
+  return request({
+    url: '/account/users/me/enterprises',
+    method: 'post',
+    data,
+    hideError: true,
+  })
+}
+
+/** DELETE /account/users/me/enterprises/{enterpriseId} 解绑。未绑定时视为已解绑 */
+export const unbindMyEnterprise = async (enterpriseId: number) => {
+  const data = await request({
+    url: `/account/users/me/enterprises/${enterpriseId}`,
+    method: 'delete',
+    hideError: true,
+  })
+  return normalizeUserEnterpriseList(data)
+}
+
+/** PUT /account/users/me/enterprises/current 切换当前企业，须为已绑定企业 */
+export const setCurrentEnterprise = async (enterpriseId: number) => {
+  const data = await request({
+    url: '/account/users/me/enterprises/current',
+    method: 'put',
+    data: { enterpriseId },
+    hideError: true,
+  })
+  return normalizeUserEnterpriseList(data)
+}

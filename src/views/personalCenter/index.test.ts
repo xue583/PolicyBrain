@@ -30,6 +30,22 @@ vi.mock('@/api/auth', async () => {
   }
 })
 
+vi.mock('@/api/account', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/api/account')>('@/api/account')
+  return {
+    ...actual,
+    fetchMyEnterprises: vi.fn(async () => ({
+      items: [],
+      canBindMore: true,
+      maxBindings: 1,
+      identity: 1,
+      currentEnterpriseId: null,
+    })),
+    unbindMyEnterprise: vi.fn(),
+  }
+})
+
 vi.mock('@/api/membership', async () => {
   const actual =
     await vi.importActual<typeof import('@/api/membership')>('@/api/membership')
@@ -43,10 +59,11 @@ vi.mock('@/api/membership', async () => {
 })
 
 const { fetchCurrentUser } = await import('@/api/auth')
+const { fetchMyEnterprises } = await import('@/api/account')
 const { fetchMyMembership, allocateMembershipSlot } =
   await import('@/api/membership')
 
-const mountPage = async (stubs?: Record<string, unknown>) => {
+const mountPage = async (stubs?: Record<string, unknown>, identity = 1) => {
   localStorage.setItem('pb_access_token', 'access')
   const pinia = createPinia()
   setActivePinia(pinia)
@@ -54,7 +71,7 @@ const mountPage = async (stubs?: Record<string, unknown>) => {
   auth.user = {
     phone: '19545670526',
     nickname: '李四',
-    identity: 1,
+    identity,
     companyName: '河南省政策宝数字科技有限公司',
   }
 
@@ -89,6 +106,13 @@ describe('PersonalCenter membership period', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    vi.mocked(fetchMyEnterprises).mockResolvedValue({
+      items: [],
+      canBindMore: true,
+      maxBindings: 1,
+      identity: 1,
+      currentEnterpriseId: null,
+    })
     vi.mocked(fetchCurrentUser).mockResolvedValue({
       phone: '19545670526',
       nickname: '李四',
@@ -221,6 +245,99 @@ describe('PersonalCenter membership period', () => {
     expect(modal.props('open')).toBe(false)
     await wrapper.get('[aria-label="编辑用户名"]').trigger('click')
     expect(modal.props('open')).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('shows bind for a specialist with no company, and unbind after one is bound', async () => {
+    vi.mocked(fetchMyMembership).mockResolvedValue({
+      level: 0,
+      planCode: '',
+      startedAt: null,
+      expiresAt: null,
+      remainingDays: 0,
+      lastOrderNo: null,
+    })
+
+    const openWrapper = await mountPage()
+    expect(openWrapper.text()).toContain('绑定企业')
+    expect(openWrapper.text()).not.toContain('解绑')
+    openWrapper.unmount()
+
+    vi.mocked(fetchMyEnterprises).mockResolvedValue({
+      items: [
+        {
+          enterpriseId: 8,
+          name: '郑州源创基因科技有限公司',
+          creditCode: '91410100MA9G00018X',
+          isCurrent: true,
+        },
+      ],
+      canBindMore: false,
+      maxBindings: 1,
+      identity: 1,
+      currentEnterpriseId: 8,
+    })
+    const boundWrapper = await mountPage()
+    expect(boundWrapper.text()).toContain('郑州源创基因科技有限公司')
+    expect(boundWrapper.text()).toContain('解绑')
+    expect(boundWrapper.text()).not.toContain('企业信息')
+    expect(boundWrapper.find('.identity-btn').exists()).toBe(false)
+    boundWrapper.unmount()
+  })
+
+  it('lists each bound company for service staff and keeps a separate unbind action', async () => {
+    vi.mocked(fetchCurrentUser).mockResolvedValue({
+      phone: '19545670526',
+      nickname: '李四',
+      identity: 2,
+    })
+    vi.mocked(fetchMyMembership).mockResolvedValue({
+      level: 0,
+      planCode: '',
+      startedAt: null,
+      expiresAt: null,
+      remainingDays: 0,
+      lastOrderNo: null,
+    })
+    vi.mocked(fetchMyEnterprises).mockResolvedValue({
+      items: [
+        {
+          enterpriseId: 8,
+          name: '郑州源创基因科技有限公司',
+          creditCode: '91410100MA9G00018X',
+          provinceName: '河南省',
+          cityName: '郑州市',
+          legalPerson: '郭峰',
+          bindTime: '2026-11-05T10:00:00',
+          isCurrent: true,
+        },
+        {
+          enterpriseId: 9,
+          name: '唐河县大华机械设备有限公司',
+          creditCode: '91411328698705730A',
+          provinceName: '河南省',
+          cityName: '南阳市',
+          legalPerson: '李明',
+          bindTime: '2026-11-01T08:00:00',
+          isCurrent: false,
+        },
+      ],
+      canBindMore: true,
+      maxBindings: 0,
+      identity: 2,
+      currentEnterpriseId: 8,
+    })
+
+    const wrapper = await mountPage(undefined, 2)
+
+    expect(wrapper.text()).toContain('企业信息')
+    expect(wrapper.text()).toContain('郑州源创基因科技有限公司')
+    expect(wrapper.text()).toContain('唐河县大华机械设备有限公司')
+    expect(wrapper.text()).toContain('91410100MA9G00018X')
+    expect(wrapper.text()).toContain('河南省/郑州市')
+    expect(wrapper.text()).toContain('郭峰')
+    expect(wrapper.findAll('.enterprise-table .unbind-link')).toHaveLength(2)
+    expect(wrapper.find('.bound-row').exists()).toBe(false)
     wrapper.unmount()
   })
 })

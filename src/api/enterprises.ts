@@ -6,6 +6,7 @@ import {
   type PageQuery,
   type RegionIdQuery,
 } from '@/api/paging'
+import { asRecord, pickNumber, pickString } from '@/api/record'
 import {
   mapCertPerson,
   mapCertReview,
@@ -48,6 +49,50 @@ export const fetchEnterprisePage = async (query: EnterpriseQuery) => {
   })
   const page = asPage<unknown>(data)
   return { ...page, items: page.items.map(mapEnterpriseCard) }
+}
+
+/** 绑定企业下拉项。搜索结果带 creditCode，选中后回填到表单。 */
+export type EnterpriseBindOption = {
+  id: number
+  name: string
+  creditCode: string
+}
+
+export const mapEnterpriseBindOption = (
+  raw: unknown,
+): EnterpriseBindOption | null => {
+  const record = asRecord(raw)
+  const nested = asRecord(record.enterprise)
+  const source = { ...record, ...nested }
+  const id = pickNumber(source, ['id', 'enterpriseId'])
+  const name = pickString(source, ['name', 'enterpriseName']).trim()
+  const creditCode = pickString(source, [
+    'creditCode',
+    'unifiedSocialCreditCode',
+  ])
+    .replace(/\s+/g, '')
+    .toUpperCase()
+  if (!Number.isSafeInteger(id) || id <= 0 || !name) return null
+  return { id, name, creditCode }
+}
+
+/** GET /search/enterprises，供绑定弹窗按名称检索 */
+export const searchEnterpriseBindOptions = async (keyword: string) => {
+  const text = keyword.trim()
+  const data = await request({
+    url: '/search/enterprises',
+    method: 'get',
+    params: compactParams({
+      keyword: text,
+      q: text,
+      pageIndex: 1,
+      pageSize: 20,
+    }),
+    hideError: true,
+  })
+  return asPage<unknown>(data)
+    .items.map(mapEnterpriseBindOption)
+    .filter((item): item is EnterpriseBindOption => item != null)
 }
 
 /** GET /enterprises/{id} 企业详情画像。隐藏或不存在时 404。 */

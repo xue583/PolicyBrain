@@ -7,7 +7,10 @@ import {
   EditOutlined,
   CrownOutlined,
 } from '@ant-design/icons-vue'
+import type { PolicyUserEnterprise } from '@/api/account'
+import { PolicyUserType } from '@/api/auth'
 import { fetchMyMembership, type AccountMembership } from '@/api/membership'
+import { useMyEnterprises } from '@/composables/useMyEnterprises'
 import { useAuthStore } from '@/stores/auth'
 import {
   formatLastLogin,
@@ -35,6 +38,7 @@ import IdentityAuthModal from './IdentityAuthModal.vue'
 import NicknameModal from './NicknameModal.vue'
 import RenewMembershipModal from './RenewMembershipModal.vue'
 import EnterpriseMemberPanel from './EnterpriseMemberPanel.vue'
+import BindEnterpriseModal from './BindEnterpriseModal.vue'
 
 defineOptions({ name: 'PersonalCenter' })
 
@@ -163,11 +167,67 @@ const loadMembership = () => {
 const uploadAvatarOpen = ref(false)
 const identityAuthOpen = ref(false)
 const nicknameOpen = ref(false)
+const bindEnterpriseOpen = ref(false)
+
+const {
+  items: boundEnterprises,
+  loading: enterprisesLoading,
+  loaded: enterprisesLoaded,
+  canBindMore,
+  load: loadEnterprises,
+  unbind: unbindEnterprise,
+} = useMyEnterprises()
+
+const isServiceStaff = computed(
+  () => Number(user.value?.identity) === PolicyUserType.EnterpriseService,
+)
+
+const enterpriseColumns = [
+  { title: '序号', dataIndex: 'index', width: 64 },
+  { title: '企业名称', dataIndex: 'name', ellipsis: true },
+  { title: '统一社会信用代码', dataIndex: 'creditCode', width: 200 },
+  { title: '所在地区', dataIndex: 'region', ellipsis: true },
+  { title: '法定代表人', dataIndex: 'legalPerson', width: 110 },
+  { title: '绑定时间', dataIndex: 'bindTime', width: 120 },
+  { title: '操作', dataIndex: 'action', width: 80 },
+]
+
+const enterpriseRegion = (item: PolicyUserEnterprise) => {
+  const text = [item.provinceName, item.cityName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join('/')
+  return text || '--'
+}
+
+const enterpriseTime = (value?: string | null) => formatLastLogin(value) || '--'
+
+const asBoundEnterprise = (record: unknown) => record as PolicyUserEnterprise
+
+const showBindEnterprise = computed(() => {
+  if (!certifiedIdentity.value) return false
+  if (enterprisesLoading.value && !enterprisesLoaded.value) return false
+  return canBindMore.value || !enterprisesLoaded.value
+})
+
+const onEnterpriseBound = async () => {
+  await loadEnterprises()
+  await auth.loadCurrentUser().catch(() => undefined)
+}
 
 onMounted(() => {
   void auth.loadCurrentUser().catch(() => undefined)
   loadMembership()
+  void loadEnterprises()
 })
+
+watch(
+  () => user.value?.identity,
+  (next, prev) => {
+    if (next === prev) return
+    void loadEnterprises()
+  },
+)
 </script>
 
 <template>
@@ -282,7 +342,42 @@ onMounted(() => {
                 >
                   身份认证
                 </a-button>
-                <span v-else class="info-value">{{ certifiedIdentity }}</span>
+                <template v-else>
+                  <span class="info-value">{{ certifiedIdentity }}</span>
+                  <a-button
+                    v-if="showBindEnterprise"
+                    type="primary"
+                    size="small"
+                    class="identity-btn"
+                    @click="bindEnterpriseOpen = true"
+                  >
+                    绑定企业
+                  </a-button>
+                </template>
+              </div>
+              <div
+                v-if="boundEnterprises.length && !isServiceStaff"
+                class="bound-row"
+              >
+                <span class="info-label">已绑定企业：</span>
+                <div class="bound-list">
+                  <span
+                    v-for="item in boundEnterprises"
+                    :key="item.enterpriseId"
+                    class="bound-item"
+                  >
+                    <span class="bound-name">{{
+                      item.name || item.creditCode || '未命名企业'
+                    }}</span>
+                    <button
+                      type="button"
+                      class="unbind-link"
+                      @click="unbindEnterprise(item)"
+                    >
+                      解绑
+                    </button>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -324,6 +419,61 @@ onMounted(() => {
             </a-button>
           </div>
         </div>
+
+        <div v-if="isServiceStaff" class="section">
+          <h3 class="section-title">
+            <span class="section-dot"></span>
+            企业信息
+            <a-button
+              v-if="showBindEnterprise"
+              type="primary"
+              size="small"
+              class="identity-btn section-bind"
+              @click="bindEnterpriseOpen = true"
+            >
+              绑定企业
+            </a-button>
+          </h3>
+          <a-table
+            class="enterprise-table"
+            :columns="enterpriseColumns"
+            :data-source="boundEnterprises"
+            :loading="enterprisesLoading"
+            :pagination="false"
+            :locale="{ emptyText: '暂无绑定企业' }"
+            row-key="enterpriseId"
+          >
+            <template #bodyCell="{ column, record, index }">
+              <template v-if="column.dataIndex === 'index'">
+                {{ index + 1 }}
+              </template>
+              <template v-else-if="column.dataIndex === 'name'">
+                {{ asBoundEnterprise(record).name || '未命名企业' }}
+              </template>
+              <template v-else-if="column.dataIndex === 'creditCode'">
+                {{ asBoundEnterprise(record).creditCode || '--' }}
+              </template>
+              <template v-else-if="column.dataIndex === 'region'">
+                {{ enterpriseRegion(asBoundEnterprise(record)) }}
+              </template>
+              <template v-else-if="column.dataIndex === 'legalPerson'">
+                {{ asBoundEnterprise(record).legalPerson || '--' }}
+              </template>
+              <template v-else-if="column.dataIndex === 'bindTime'">
+                {{ enterpriseTime(asBoundEnterprise(record).bindTime) }}
+              </template>
+              <template v-else-if="column.dataIndex === 'action'">
+                <button
+                  type="button"
+                  class="unbind-link"
+                  @click="unbindEnterprise(asBoundEnterprise(record))"
+                >
+                  解绑
+                </button>
+              </template>
+            </template>
+          </a-table>
+        </div>
       </template>
 
       <template v-else>
@@ -350,6 +500,10 @@ onMounted(() => {
       v-model:open="renewOpen"
       :membership="membership"
       @paid="loadMembership"
+    />
+    <BindEnterpriseModal
+      v-model:open="bindEnterpriseOpen"
+      @bound="onEnterpriseBound"
     />
   </div>
 </template>
@@ -592,6 +746,16 @@ onMounted(() => {
   border-radius: 50%;
 }
 
+.section-bind {
+  margin-left: auto;
+}
+
+.enterprise-table {
+  :deep(.ant-table) {
+    color: var(--pb-text);
+  }
+}
+
 .profile-card {
   display: flex;
   gap: 40px;
@@ -649,8 +813,45 @@ onMounted(() => {
 .info-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   font-size: 14px;
+}
+
+.bound-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.bound-list {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+.bound-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.bound-name {
+  color: var(--pb-text);
+}
+
+.unbind-link {
+  padding: 0;
+  color: var(--pb-primary);
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 }
 
 .info-label {

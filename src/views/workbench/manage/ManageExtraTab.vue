@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { message } from 'ant-design-vue'
-import { getEnterpriseDetail } from '@/mock/enterpriseDb'
+import type { EnterpriseDetail } from '@/mock/enterpriseDb/types'
 import {
   manageAssetMetrics,
   manageAssets,
@@ -26,9 +26,12 @@ import ManageRecordPanel from './ManageRecordPanel.vue'
 
 defineOptions({ name: 'ManageExtraTab' })
 
-defineProps<{ tab: string }>()
+const props = defineProps<{
+  tab: string
+  enterprise?: EnterpriseDetail | null
+}>()
 
-const enterprise = computed(() => getEnterpriseDetail(1))
+const enterprise = computed(() => props.enterprise ?? null)
 
 const staffColumns = [
   { title: '姓名', dataIndex: 'name', key: 'name', width: 100 },

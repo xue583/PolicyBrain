@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   ApartmentOutlined,
   MenuOutlined,
   PlusOutlined,
 } from '@ant-design/icons-vue'
-import { declareEnterprises } from '@/mock/declare'
-import {
-  manageFollowSummary,
-  manageHero,
-  manageProfile,
-  manageTabs,
-} from '@/mock/manage'
+import { setCurrentEnterprise } from '@/api/account'
+import { fetchEnterpriseDetail } from '@/api/enterprises'
+import { displayRegisteredCapital } from '@/api/mapPortal'
+import { useMyEnterprises } from '@/composables/useMyEnterprises'
+import { enterpriseStatusText } from '@/mock/enterpriseDb/list'
+import type { EnterpriseDetail } from '@/mock/enterpriseDb/types'
+import { manageTabs } from '@/mock/manage'
+import BindEnterpriseModal from '@/views/personalCenter/BindEnterpriseModal.vue'
 import ManageExtraTab from './manage/ManageExtraTab.vue'
 
 defineProps<{ role: 'enterprise' | 'service' }>()
@@ -22,245 +23,391 @@ const activeTab = ref<string>('基本信息')
 
 /** 企服左侧企业面板，卡头 ☰ 图标可收起/展开 */
 const panelOpen = ref(true)
-const companyId = ref<number | undefined>(declareEnterprises[0]?.id)
-const companyOptions = declareEnterprises.map((e) => ({
-  label: e.name,
-  value: e.id,
-}))
+const bindOpen = ref(false)
+const companyId = ref<number | undefined>(undefined)
+const enterprise = ref<EnterpriseDetail | null>(null)
+const detailLoading = ref(false)
 
-/** 企业概况的是/否选择（设计稿：上市=否，高新区=是） */
-const overview = ref({ ...manageProfile.overview })
+const { list, items, loading, canBindMore, load, unbind } = useMyEnterprises()
+
+const companyOptions = computed(() =>
+  items.value.map((item) => ({
+    label: item.name || item.creditCode || String(item.enterpriseId),
+    value: item.enterpriseId,
+  })),
+)
+
+const asideSummary = computed(() => {
+  const count = items.value.length
+  const max = list.value.maxBindings ?? 0
+  const quota = max > 0 ? `${count}/${max}` : String(count)
+  return `已绑定企业 ${quota} 家`
+})
+
+const currentBound = computed(
+  () =>
+    items.value.find((item) => item.enterpriseId === companyId.value) ?? null,
+)
+
+const textOrDash = (value?: string | null) => {
+  const text = (value ?? '').trim()
+  if (!text || text === '-' || text === '--') return '--'
+  return text
+}
+
+const hero = computed(() => {
+  const bound = currentBound.value
+  const detail = enterprise.value
+  const name = textOrDash(detail?.name || bound?.name)
+  const industry = textOrDash(detail?.industry)
+  const place = [
+    bound?.provinceName || detail?.province,
+    bound?.cityName || detail?.city,
+  ]
+    .map((part) => textOrDash(part))
+    .filter((part) => part !== '--')
+  const status = detail ? enterpriseStatusText[detail.status] : ''
+  const meta = [...(industry !== '--' ? [industry] : []), ...place, status]
+    .filter(Boolean)
+    .join('/')
+  return {
+    name: name === '--' ? '未命名企业' : name,
+    meta: meta || '--',
+  }
+})
+
+const profile = computed(() => {
+  const bound = currentBound.value
+  const detail = enterprise.value
+  const region =
+    [detail?.province, detail?.city, detail?.district]
+      .map((part) => textOrDash(part))
+      .filter((part) => part !== '--')
+      .join('/') ||
+    [bound?.provinceName, bound?.cityName]
+      .map((part) => textOrDash(part))
+      .filter((part) => part !== '--')
+      .join('/')
+  const capital = detail
+    ? displayRegisteredCapital(detail.registeredCapital)
+    : '--'
+  return {
+    creditCode: textOrDash(detail?.creditCode || bound?.creditCode),
+    status: detail ? enterpriseStatusText[detail.status] : '--',
+    industry: textOrDash(detail?.industry),
+    foundedDate: textOrDash(detail?.foundedDate),
+    regAddress: textOrDash(
+      detail?.businessInfo.registeredAddress || detail?.address,
+    ),
+    name: textOrDash(detail?.name || bound?.name),
+    companyType: textOrDash(detail?.enterpriseType),
+    registeredCapital: textOrDash(capital),
+    region: region || '--',
+  }
+})
 
 interface TextField {
   label: string
   value: string
 }
 
-const legalRepLeft: TextField[] = [
-  { label: '姓名', value: manageProfile.legalRep.name },
-  { label: '联系电话', value: manageProfile.legalRep.tel },
-  { label: 'E-mail', value: manageProfile.legalRep.email },
-]
-const legalRepRight: TextField[] = [
-  { label: '手机', value: manageProfile.legalRep.phone },
-  { label: '传真', value: manageProfile.legalRep.fax },
-]
+const legalRepLeft = computed<TextField[]>(() => [
+  {
+    label: '姓名',
+    value: textOrDash(
+      enterprise.value?.legalRep || currentBound.value?.legalPerson,
+    ),
+  },
+  { label: '联系电话', value: '--' },
+  { label: 'E-mail', value: textOrDash(enterprise.value?.email) },
+])
+const legalRepRight = computed<TextField[]>(() => [
+  { label: '手机', value: textOrDash(enterprise.value?.phone) },
+  { label: '传真', value: '--' },
+])
 const contactLeft: TextField[] = [
-  { label: '姓名', value: manageProfile.contact.name },
-  { label: '联系电话', value: manageProfile.contact.tel },
-  { label: 'E-mail', value: manageProfile.contact.email },
+  { label: '姓名', value: '--' },
+  { label: '联系电话', value: '--' },
+  { label: 'E-mail', value: '--' },
 ]
 const contactRight: TextField[] = [
-  { label: '手机', value: manageProfile.contact.phone },
-  { label: '传真', value: manageProfile.contact.fax },
+  { label: '手机', value: '--' },
+  { label: '传真', value: '--' },
 ]
+
+const loadDetail = async (id?: number) => {
+  if (!id) {
+    enterprise.value = null
+    return
+  }
+  detailLoading.value = true
+  try {
+    enterprise.value = await fetchEnterpriseDetail(id)
+  } catch {
+    enterprise.value = null
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+const selectCompany = (id?: number, syncCurrent = false) => {
+  if (!id) {
+    companyId.value = undefined
+    enterprise.value = null
+    return
+  }
+  companyId.value = id
+  void loadDetail(id)
+  const current = items.value.find((item) => item.enterpriseId === id)
+  if (syncCurrent && current && !current.isCurrent) {
+    void setCurrentEnterprise(id)
+      .then((next) => {
+        if (!next.items.length) return
+        list.value = next
+        if (!next.items.some((item) => item.enterpriseId === id)) return
+        companyId.value = id
+      })
+      .catch(() => undefined)
+  }
+}
+
+const pickInitialCompany = (preferId?: number) => {
+  const bound = items.value
+  const prefer =
+    preferId && bound.some((item) => item.enterpriseId === preferId)
+      ? preferId
+      : undefined
+  const next =
+    prefer ??
+    bound.find((item) => item.isCurrent)?.enterpriseId ??
+    list.value.currentEnterpriseId ??
+    bound[0]?.enterpriseId
+  selectCompany(next ?? undefined, prefer != null)
+}
+
+const onCompanyChange = (value: unknown) => {
+  const raw =
+    value && typeof value === 'object' && 'value' in value
+      ? (value as { value: unknown }).value
+      : value
+  const id = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isSafeInteger(id) || id <= 0) return
+  selectCompany(id, true)
+}
+
+const unbindCurrent = () => {
+  if (currentBound.value) unbind(currentBound.value)
+}
+
+const onBound = (enterpriseId?: number) => {
+  void load().then(() => {
+    pickInitialCompany(enterpriseId)
+  })
+}
+
+onMounted(() => {
+  void load().then(() => {
+    pickInitialCompany()
+  })
+})
 </script>
 
 <template>
   <div class="manage-list">
     <aside v-if="role === 'service' && panelOpen" class="manage-aside">
       <h3 class="aside-title">企业管理</h3>
-      <p class="aside-sub">{{ manageFollowSummary }}</p>
+      <p class="aside-sub">{{ asideSummary }}</p>
       <a-select
-        v-model:value="companyId"
+        :value="companyId"
         class="aside-select"
         :options="companyOptions"
+        placeholder="暂无绑定企业"
+        @change="onCompanyChange"
       />
-      <button type="button" class="add-btn">
+      <button
+        type="button"
+        class="add-btn"
+        :disabled="!canBindMore"
+        @click="bindOpen = true"
+      >
         <PlusOutlined class="add-icon" />
         <span>新增企业</span>
       </button>
     </aside>
 
-    <section class="company-card">
-      <div class="card-head">
-        <span
-          v-if="role === 'service'"
-          class="collapse-btn"
-          @click="panelOpen = !panelOpen"
-        >
-          <MenuOutlined class="collapse-icon" />
-        </span>
-        <span class="hero-avatar">
-          <ApartmentOutlined class="avatar-glyph" />
-        </span>
-        <div class="hero-info">
-          <h2 class="hero-name">{{ manageHero.name }}</h2>
-          <p class="hero-meta">{{ manageHero.meta }}</p>
-        </div>
-      </div>
-
-      <div class="tabs-row">
-        <span
-          v-for="tab in manageTabs"
-          :key="tab"
-          class="tab"
-          :class="{ 'is-active': activeTab === tab }"
-          @click="activeTab = tab"
-        >
-          {{ tab }}
-        </span>
-      </div>
-
-      <div v-if="activeTab === '基本信息'" class="tab-panel">
-        <div class="field-grid">
-          <div class="field-col">
-            <div class="field-row">
-              <span class="field-label">统一社会信用代码</span>
-              <span class="field-value">{{ manageProfile.creditCode }}</span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">经营状态</span>
-              <span class="field-value is-tag">
-                <span class="status-tag">{{ manageProfile.status }}</span>
-              </span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">所属行业</span>
-              <span class="field-value">{{ manageProfile.industry }}</span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">注册时间</span>
-              <span class="field-value">{{ manageProfile.foundedDate }}</span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">注册地址</span>
-              <span class="field-value">{{ manageProfile.regAddress }}</span>
-            </div>
-          </div>
-          <div class="field-col">
-            <div class="field-row">
-              <span class="field-label">企业名称</span>
-              <span class="field-value">{{ manageProfile.name }}</span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">公司类型</span>
-              <span class="field-value">{{ manageProfile.companyType }}</span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">注册资本</span>
-              <span class="field-value">{{
-                manageProfile.registeredCapital
-              }}</span>
-            </div>
-            <div class="field-row">
-              <span class="field-label">行政区域</span>
-              <span class="field-value">{{ manageProfile.region }}</span>
-            </div>
-          </div>
-        </div>
-
-        <h3 class="sec-title"><span class="sec-bar" />企业法定代表人</h3>
-        <div class="field-grid">
-          <div class="field-col">
-            <div v-for="f in legalRepLeft" :key="f.label" class="field-row">
-              <span class="field-label">{{ f.label }}</span>
-              <span
-                class="field-value"
-                :class="{ 'is-empty': f.value === '--' }"
-              >
-                {{ f.value }}
-              </span>
-            </div>
-          </div>
-          <div class="field-col">
-            <div v-for="f in legalRepRight" :key="f.label" class="field-row">
-              <span class="field-label">{{ f.label }}</span>
-              <span
-                class="field-value"
-                :class="{ 'is-empty': f.value === '--' }"
-              >
-                {{ f.value }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <h3 class="sec-title"><span class="sec-bar" />联系人</h3>
-        <div class="field-grid">
-          <div class="field-col">
-            <div v-for="f in contactLeft" :key="f.label" class="field-row">
-              <span class="field-label">{{ f.label }}</span>
-              <span
-                class="field-value"
-                :class="{ 'is-empty': f.value === '--' }"
-              >
-                {{ f.value }}
-              </span>
-            </div>
-          </div>
-          <div class="field-col">
-            <div v-for="f in contactRight" :key="f.label" class="field-row">
-              <span class="field-label">{{ f.label }}</span>
-              <span
-                class="field-value"
-                :class="{ 'is-empty': f.value === '--' }"
-              >
-                {{ f.value }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <h3 class="sec-title"><span class="sec-bar" />企业概况信息</h3>
-        <div class="field-grid overview-grid">
-          <div class="field-row">
-            <span class="field-label ov-label">企业是否上市</span>
-            <span class="choice-group">
-              <button
-                type="button"
-                class="choice-btn"
-                :class="{ 'is-active': overview.listed }"
-                @click="overview.listed = true"
-              >
-                是
-              </button>
-              <button
-                type="button"
-                class="choice-btn"
-                :class="{ 'is-active': !overview.listed }"
-                @click="overview.listed = false"
-              >
-                否
-              </button>
-            </span>
-          </div>
-          <div class="field-row">
-            <span class="field-label ov-label">上市时间/股票代码/上市类型</span>
-            <span class="field-value">{{ overview.listedInfo }}</span>
-          </div>
-          <div class="field-row">
-            <span class="field-label ov-label">是否属于国家高新区内企业</span>
-            <span class="choice-group">
-              <button
-                type="button"
-                class="choice-btn"
-                :class="{ 'is-active': overview.inHighTechZone }"
-                @click="overview.inHighTechZone = true"
-              >
-                是
-              </button>
-              <button
-                type="button"
-                class="choice-btn"
-                :class="{ 'is-active': !overview.inHighTechZone }"
-                @click="overview.inHighTechZone = false"
-              >
-                否
-              </button>
-            </span>
-          </div>
-          <div class="field-row">
-            <span class="field-label ov-label">高新区名称/技术领域</span>
-            <span class="field-value">{{ overview.zoneInfo }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="tab-panel">
-        <ManageExtraTab :tab="activeTab" />
-      </div>
+    <section v-if="!currentBound" class="company-card empty-card">
+      <a-empty description="尚未绑定企业" />
+      <a-button
+        v-if="canBindMore"
+        type="primary"
+        class="empty-bind"
+        @click="bindOpen = true"
+      >
+        绑定企业
+      </a-button>
     </section>
+
+    <section v-else class="company-card">
+      <a-spin :spinning="loading || detailLoading">
+        <div class="card-head">
+          <span
+            v-if="role === 'service'"
+            class="collapse-btn"
+            @click="panelOpen = !panelOpen"
+          >
+            <MenuOutlined class="collapse-icon" />
+          </span>
+          <span class="hero-avatar">
+            <ApartmentOutlined class="avatar-glyph" />
+          </span>
+          <div class="hero-info">
+            <h2 class="hero-name">{{ hero.name }}</h2>
+            <p class="hero-meta">{{ hero.meta }}</p>
+          </div>
+          <a-button class="unbind-btn" @click="unbindCurrent">解绑</a-button>
+        </div>
+
+        <div class="tabs-row">
+          <span
+            v-for="tab in manageTabs"
+            :key="tab"
+            class="tab"
+            :class="{ 'is-active': activeTab === tab }"
+            @click="activeTab = tab"
+          >
+            {{ tab }}
+          </span>
+        </div>
+
+        <div v-if="activeTab === '基本信息'" class="tab-panel">
+          <div class="field-grid">
+            <div class="field-col">
+              <div class="field-row">
+                <span class="field-label">统一社会信用代码</span>
+                <span class="field-value">{{ profile.creditCode }}</span>
+              </div>
+              <div class="field-row">
+                <span class="field-label">经营状态</span>
+                <span v-if="profile.status !== '--'" class="field-value is-tag">
+                  <span class="status-tag">{{ profile.status }}</span>
+                </span>
+                <span v-else class="field-value is-empty">--</span>
+              </div>
+              <div class="field-row">
+                <span class="field-label">所属行业</span>
+                <span class="field-value">{{ profile.industry }}</span>
+              </div>
+              <div class="field-row">
+                <span class="field-label">注册时间</span>
+                <span class="field-value">{{ profile.foundedDate }}</span>
+              </div>
+              <div class="field-row">
+                <span class="field-label">注册地址</span>
+                <span class="field-value">{{ profile.regAddress }}</span>
+              </div>
+            </div>
+            <div class="field-col">
+              <div class="field-row">
+                <span class="field-label">企业名称</span>
+                <span class="field-value">{{ profile.name }}</span>
+              </div>
+              <div class="field-row">
+                <span class="field-label">公司类型</span>
+                <span class="field-value">{{ profile.companyType }}</span>
+              </div>
+              <div class="field-row">
+                <span class="field-label">注册资本</span>
+                <span class="field-value">{{ profile.registeredCapital }}</span>
+              </div>
+              <div class="field-row">
+                <span class="field-label">行政区域</span>
+                <span class="field-value">{{ profile.region }}</span>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="sec-title"><span class="sec-bar" />企业法定代表人</h3>
+          <div class="field-grid">
+            <div class="field-col">
+              <div v-for="f in legalRepLeft" :key="f.label" class="field-row">
+                <span class="field-label">{{ f.label }}</span>
+                <span
+                  class="field-value"
+                  :class="{ 'is-empty': f.value === '--' }"
+                >
+                  {{ f.value }}
+                </span>
+              </div>
+            </div>
+            <div class="field-col">
+              <div v-for="f in legalRepRight" :key="f.label" class="field-row">
+                <span class="field-label">{{ f.label }}</span>
+                <span
+                  class="field-value"
+                  :class="{ 'is-empty': f.value === '--' }"
+                >
+                  {{ f.value }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="sec-title"><span class="sec-bar" />联系人</h3>
+          <div class="field-grid">
+            <div class="field-col">
+              <div v-for="f in contactLeft" :key="f.label" class="field-row">
+                <span class="field-label">{{ f.label }}</span>
+                <span
+                  class="field-value"
+                  :class="{ 'is-empty': f.value === '--' }"
+                >
+                  {{ f.value }}
+                </span>
+              </div>
+            </div>
+            <div class="field-col">
+              <div v-for="f in contactRight" :key="f.label" class="field-row">
+                <span class="field-label">{{ f.label }}</span>
+                <span
+                  class="field-value"
+                  :class="{ 'is-empty': f.value === '--' }"
+                >
+                  {{ f.value }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="sec-title"><span class="sec-bar" />企业概况信息</h3>
+          <div class="field-grid overview-grid">
+            <div class="field-row">
+              <span class="field-label ov-label">企业是否上市</span>
+              <span class="field-value is-empty">未知</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label ov-label"
+                >上市时间/股票代码/上市类型</span
+              >
+              <span class="field-value is-empty">--</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label ov-label">是否属于国家高新区内企业</span>
+              <span class="field-value is-empty">未知</span>
+            </div>
+            <div class="field-row">
+              <span class="field-label ov-label">高新区名称/技术领域</span>
+              <span class="field-value is-empty">--</span>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="tab-panel">
+          <ManageExtraTab :tab="activeTab" :enterprise="enterprise" />
+        </div>
+      </a-spin>
+    </section>
+
+    <BindEnterpriseModal v-model:open="bindOpen" @bound="onBound" />
   </div>
 </template>
 
@@ -315,9 +462,14 @@ const contactRight: TextField[] = [
     color 0.2s ease,
     border-color 0.2s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     color: var(--pb-primary);
     border-color: var(--pb-primary);
+  }
+
+  &:disabled {
+    color: #bbb;
+    cursor: not-allowed;
   }
 }
 
@@ -374,7 +526,25 @@ const contactRight: TextField[] = [
 }
 
 .hero-info {
+  flex: 1;
   min-width: 0;
+}
+
+.unbind-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.empty-bind {
+  margin-top: 16px;
 }
 
 .hero-name {
