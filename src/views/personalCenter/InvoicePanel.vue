@@ -1,12 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
-import { PhoneOutlined } from '@ant-design/icons-vue'
+import { MailOutlined } from '@ant-design/icons-vue'
 import {
   fetchMembershipOrders,
   MembershipOrderStatus,
   type MembershipOrder,
 } from '@/api/membership'
+import {
+  InvoiceApplicationStatus,
+  fetchInvoiceApplications,
+  formatInvoiceAmount,
+  invoiceStatusLabel,
+  invoiceTypeLabel,
+  type InvoiceApplication,
+} from '@/api/invoices'
 import { useServerPage } from '@/composables/useServerPage'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
@@ -14,14 +22,9 @@ import PanelTabs from '@/components/common/PanelTabs.vue'
 import emptyImg from '@/assets/personalCenter/empty-invoice.png'
 import invoiceMark from '@/assets/personalCenter/编组@2x.png'
 import InvoiceApplyModal from './InvoiceApplyModal.vue'
+import InvoiceDetailModal from './InvoiceDetailModal.vue'
 
 defineOptions({ name: 'InvoicePanel' })
-
-const formatOrderAmount = (amount?: number | null) => {
-  const fen = Number(amount)
-  if (!Number.isFinite(fen)) return '0.00'
-  return (Math.round(fen) / 100).toFixed(2)
-}
 
 const formatOrderTime = (order: MembershipOrder) => {
   const value = order.paidAt || order.createTime
@@ -53,24 +56,6 @@ const consumColumns = [
 const orderRowKey = (order: MembershipOrder) =>
   String(order.id ?? order.orderNo ?? '')
 
-type InvoiceStatus = 'issued' | 'applying'
-
-type InvoiceRecord = {
-  id: number
-  companyName: string
-  invoiceType: string
-  amount: string
-  appliedAt: string
-  status: InvoiceStatus
-  phone: string
-  address: string
-}
-
-const statusText: Record<InvoiceStatus, string> = {
-  issued: '已开票',
-  applying: '申请中',
-}
-
 const {
   currentPage,
   pageSize,
@@ -84,54 +69,117 @@ const {
   () => 'orders',
 )
 
+const {
+  currentPage: invoicePage,
+  pageSize: invoicePageSize,
+  items: invoices,
+  total: invoiceTotal,
+  loading: invoiceLoading,
+  error: invoiceError,
+  reload: reloadInvoices,
+} = useServerPage(
+  (pageIndex, size) => fetchInvoiceApplications({ pageIndex, pageSize: size }),
+  () => 'invoices',
+)
+
+const activeTab = ref<'consum' | 'invoice'>('invoice')
 const applyOpen = ref(false)
-const applyAmountText = ref('0.00')
+const applyAmountFen = ref(0)
+const applyOrderNo = ref('')
+/** 刚提交、列表尚未刷新到的订单号，避免同一订单重复申请 */
+const submittedOrderNos = ref<string[]>([])
+
+const orderNoOf = (order: MembershipOrder) => order.orderNo?.trim() || ''
+
+const isPaidOrder = (order: MembershipOrder) =>
+  order.status === MembershipOrderStatus.Paid && !!orderNoOf(order)
+
+const activeApplication = (order: MembershipOrder) => {
+  const no = orderNoOf(order)
+  if (!no) return undefined
+  return invoices.value.find(
+    (item) =>
+      item.orderNo?.trim() === no &&
+      item.status !== InvoiceApplicationStatus.Cancelled &&
+      item.id != null,
+  )
+}
+
+const isApplied = (order: MembershipOrder) => {
+  if (activeApplication(order)) return true
+  const no = orderNoOf(order)
+  return !!no && submittedOrderNos.value.includes(no)
+}
 
 const openApply = (order: MembershipOrder) => {
-  applyAmountText.value = formatOrderAmount(order.amount)
+  if (!isPaidOrder(order) || isApplied(order)) return
+  const fen = Math.round(Number(order.amount))
+  if (!Number.isFinite(fen) || fen < 0) return
+  applyOrderNo.value = orderNoOf(order)
+  applyAmountFen.value = fen
   applyOpen.value = true
 }
 
-/** 发票记录仍为视觉还原数据，开票申请接口接入后替换 */
-const invoiceRecords = ref<InvoiceRecord[]>([
-  {
-    id: 1,
-    companyName: '郑州政策宝企业管理咨询有限公司',
-    invoiceType: '普票',
-    amount: '0.01',
-    appliedAt: '2024-05-04',
-    status: 'issued',
-    phone: '15390929874',
-    address: '地址文案地址',
-  },
-  {
-    id: 2,
-    companyName: '郑州政策宝企业管理咨询有限公司',
-    invoiceType: '普票',
-    amount: '0.01',
-    appliedAt: '2024-05-04',
-    status: 'issued',
-    phone: '15390929874',
-    address: '地址文案地址',
-  },
-  {
-    id: 3,
-    companyName: '郑州政策宝企业管理咨询有限公司',
-    invoiceType: '普票',
-    amount: '0.01',
-    appliedAt: '2024-05-04',
-    status: 'applying',
-    phone: '15390929874',
-    address: '地址文案地址',
-  },
-])
+const onInvoiceSubmitted = () => {
+  const no = applyOrderNo.value.trim()
+  if (no && !submittedOrderNos.value.includes(no)) {
+    submittedOrderNos.value = [...submittedOrderNos.value, no]
+  }
+  activeTab.value = 'invoice'
+  if (invoicePage.value !== 1) invoicePage.value = 1
+  else void reloadInvoices()
+}
 
-const activeTab = ref<'consum' | 'invoice'>('invoice')
-const selectedId = ref(invoiceRecords.value[0]?.id ?? 0)
+const selectedId = ref(0)
+const detailOpen = ref(false)
+const detailId = ref<number | null>(null)
 
 const switchTab = (tab: 'consum' | 'invoice') => {
   activeTab.value = tab
 }
+
+const openDetail = (id?: number) => {
+  if (id == null) return
+  selectedId.value = id
+  detailId.value = id
+  detailOpen.value = true
+}
+
+const onInvoiceUpdated = (item: InvoiceApplication) => {
+  const no = item.orderNo?.trim()
+  if (no && item.status === InvoiceApplicationStatus.Cancelled) {
+    submittedOrderNos.value = submittedOrderNos.value.filter(
+      (orderNo) => orderNo !== no,
+    )
+  }
+  void reloadInvoices()
+}
+
+const statusClass = (status?: number) => {
+  switch (status) {
+    case InvoiceApplicationStatus.Pending:
+      return 'is-pending'
+    case InvoiceApplicationStatus.Issued:
+      return 'is-issued'
+    case InvoiceApplicationStatus.Sent:
+      return 'is-sent'
+    case InvoiceApplicationStatus.Cancelled:
+      return 'is-cancelled'
+    default:
+      return ''
+  }
+}
+
+const formatApplyDay = (value?: string | null) => {
+  if (!value) return '—'
+  const time = dayjs(value)
+  return time.isValid() ? time.format('YYYY-MM-DD') : value
+}
+
+const showInvoiceEmpty = computed(
+  () =>
+    !invoiceLoading.value && invoices.value.length === 0 && !invoiceError.value,
+)
 </script>
 
 <template>
@@ -181,12 +229,29 @@ const switchTab = (tab: 'consum' | 'invoice') => {
             {{ record.quantity ?? 0 }}
           </template>
           <template v-else-if="column.dataIndex === 'amount'">
-            ¥{{ formatOrderAmount(record.amount) }}
+            ¥{{ formatInvoiceAmount(record.amount) }}
           </template>
           <template v-else-if="column.key === 'action'">
-            <button type="button" class="apply-link" @click="openApply(record)">
+            <button
+              v-if="isPaidOrder(record) && !isApplied(record)"
+              type="button"
+              class="apply-link"
+              @click="openApply(record)"
+            >
               去开票
             </button>
+            <button
+              v-else-if="activeApplication(record)"
+              type="button"
+              class="apply-link"
+              @click="openDetail(activeApplication(record)?.id)"
+            >
+              已申请
+            </button>
+            <span v-else-if="isApplied(record)" class="applied-text">
+              已申请
+            </span>
+            <span v-else class="applied-text">—</span>
           </template>
         </template>
         <template #emptyText>
@@ -208,51 +273,90 @@ const switchTab = (tab: 'consum' | 'invoice') => {
 
       <InvoiceApplyModal
         v-model:open="applyOpen"
-        :amount-text="applyAmountText"
+        :amount-fen="applyAmountFen"
+        :order-no="applyOrderNo"
+        @submitted="onInvoiceSubmitted"
       />
     </template>
 
-    <EmptyState
-      v-else-if="invoiceRecords.length === 0"
-      :image="emptyImg"
-      style="--empty-padding: 48px 0 56px"
-    />
-
-    <div v-else class="invoice-grid">
-      <button
-        v-for="item in invoiceRecords"
-        :key="item.id"
-        type="button"
-        class="invoice-card"
-        :class="{ active: selectedId === item.id }"
-        @click="selectedId = item.id"
+    <template v-else>
+      <a-alert
+        v-if="invoiceError"
+        class="order-error"
+        type="error"
+        show-icon
+        :message="invoiceError"
       >
-        <span class="status" :class="`is-${item.status}`">
-          {{ statusText[item.status] }}
-        </span>
-        <img class="card-icon" :src="invoiceMark" alt="" />
-        <div class="card-main">
-          <div class="company">{{ item.companyName }}</div>
-          <div class="amount-row">
-            <span
-              >金额:<span class="amount-value">¥{{ item.amount }}</span></span
-            >
-            <span class="type-tag">{{ item.invoiceType }}</span>
-          </div>
-          <div class="date">{{ item.appliedAt }}</div>
-          <div class="contact-row">
-            <span class="contact">
-              <PhoneOutlined />
-              {{ item.phone }}
+        <template #action>
+          <a-button size="small" @click="reloadInvoices">重试</a-button>
+        </template>
+      </a-alert>
+
+      <a-spin
+        v-if="invoiceLoading || invoices.length || showInvoiceEmpty"
+        class="invoice-spin"
+        :spinning="invoiceLoading"
+      >
+        <EmptyState
+          v-if="showInvoiceEmpty"
+          :image="emptyImg"
+          text="暂无发票记录"
+          style="--empty-padding: 48px 0 56px"
+        />
+        <div v-else-if="invoices.length" class="invoice-grid">
+          <button
+            v-for="item in invoices"
+            :key="item.id"
+            type="button"
+            class="invoice-card"
+            :class="{ active: selectedId === item.id }"
+            @click="openDetail(item.id)"
+          >
+            <span class="status" :class="statusClass(item.status)">
+              {{ invoiceStatusLabel(item.status) }}
             </span>
-            <span class="contact">
-              <i class="aim-icon" />
-              地址: {{ item.address }}
-            </span>
-          </div>
+            <img class="card-icon" :src="invoiceMark" alt="" />
+            <div class="card-main">
+              <div class="company">{{ item.companyName || '—' }}</div>
+              <div class="amount-row">
+                <span>
+                  金额:<span class="amount-value">
+                    ¥{{ formatInvoiceAmount(item.amount) }}
+                  </span>
+                </span>
+                <span class="type-tag">
+                  {{ invoiceTypeLabel(item.invoiceType) }}
+                </span>
+              </div>
+              <div class="date">{{ formatApplyDay(item.applyDate) }}</div>
+              <div class="contact-row">
+                <span class="contact">
+                  <MailOutlined />
+                  {{ item.email || '—' }}
+                </span>
+                <span class="contact">
+                  <i class="aim-icon" />
+                  地址: {{ item.address || '—' }}
+                </span>
+              </div>
+            </div>
+          </button>
         </div>
-      </button>
-    </div>
+      </a-spin>
+
+      <PaginationBar
+        v-if="invoiceTotal > 0"
+        v-model:current="invoicePage"
+        :total="invoiceTotal"
+        :page-size="invoicePageSize"
+      />
+    </template>
+
+    <InvoiceDetailModal
+      v-model:open="detailOpen"
+      :application-id="detailId"
+      @updated="onInvoiceUpdated"
+    />
   </div>
 </template>
 
@@ -277,6 +381,16 @@ const switchTab = (tab: 'consum' | 'invoice') => {
   font: inherit;
   font-size: 13px;
   cursor: pointer;
+}
+
+.applied-text {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.invoice-spin {
+  display: block;
+  min-height: 180px;
 }
 
 .invoice-grid {
@@ -322,14 +436,24 @@ const switchTab = (tab: 'consum' | 'invoice') => {
   font-size: 12px;
   line-height: 20px;
 
+  &.is-pending {
+    color: #2ec4b0;
+    background: #e7f8f5;
+  }
+
   &.is-issued {
     color: #f0a020;
     background: #fff3e4;
   }
 
-  &.is-applying {
-    color: #2ec4b0;
-    background: #e7f8f5;
+  &.is-sent {
+    color: #1677ff;
+    background: #e8f3ff;
+  }
+
+  &.is-cancelled {
+    color: #8c8c8c;
+    background: #f5f5f5;
   }
 }
 

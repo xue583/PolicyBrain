@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { displayRegisteredCapital } from '@/api/mapPortal'
+import { usePagination } from '@/composables/usePagination'
 import {
   enterpriseStatusText,
   type EnterpriseDetail,
+  type EnterpriseShareholder,
 } from '../../mock/enterpriseDb'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PagedTable from '@/components/common/PagedTable.vue'
+import SectionTitle from '@/components/common/SectionTitle.vue'
+import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'EnterpriseBusinessInfoPanel' })
 
@@ -20,6 +27,50 @@ const industryPath = computed(() =>
     ),
   ].join('、'),
 )
+
+const capitalText = computed(() =>
+  displayRegisteredCapital(props.enterprise.registeredCapital),
+)
+
+const PAGE_SIZE = 10
+const { currentPage, pagedList, total, pageSize } = usePagination(
+  () => props.enterprise.shareholders ?? [],
+  { pageSize: PAGE_SIZE },
+)
+
+const shareholderColumns = [
+  { title: '股东名称', dataIndex: 'name', key: 'name', ellipsis: true },
+  {
+    title: '股东类型',
+    dataIndex: 'shareholderType',
+    key: 'shareholderType',
+    width: 160,
+  },
+  {
+    title: '持股比例',
+    dataIndex: 'shareholdingRatio',
+    key: 'shareholdingRatio',
+    width: 120,
+  },
+  {
+    title: '认缴出资额',
+    dataIndex: 'subscribedCapital',
+    key: 'subscribedCapital',
+    width: 160,
+  },
+  {
+    title: '实缴出资额',
+    dataIndex: 'paidInCapital',
+    key: 'paidInCapital',
+    width: 160,
+  },
+  {
+    title: '出资比例',
+    dataIndex: 'shouldProportion',
+    key: 'shouldProportion',
+    width: 140,
+  },
+]
 
 const bizLabelStyle = {
   background: '#f4f7fc',
@@ -51,7 +102,7 @@ const bizLabelStyle = {
       {{ enterprise.legalRep }}
     </a-descriptions-item>
     <a-descriptions-item label="注册资本">
-      {{ enterprise.registeredCapital }}万元
+      {{ capitalText }}
     </a-descriptions-item>
     <a-descriptions-item label="企业类型">
       {{ enterprise.enterpriseType }}
@@ -78,6 +129,32 @@ const bizLabelStyle = {
       {{ enterprise.businessScope }}
     </a-descriptions-item>
   </a-descriptions>
+
+  <section class="shareholder-block">
+    <SectionTitle
+      title="股东信息"
+      :count="enterprise.shareholders?.length ?? 0"
+    />
+    <PagedTable
+      v-model:current="currentPage"
+      class="shareholder-table"
+      :show-pagination="total > 0"
+      :total="total"
+      :page-size="pageSize"
+      :columns="shareholderColumns"
+      :data-source="pagedList"
+      :row-key="(row: EnterpriseShareholder) => row.id"
+    >
+      <template #emptyText>
+        <EmptyState
+          class="shareholder-empty"
+          :image="emptyNews"
+          text="暂无股东信息"
+          :image-width="202"
+        />
+      </template>
+    </PagedTable>
+  </section>
 </template>
 
 <style scoped lang="scss">
@@ -126,5 +203,28 @@ const bizLabelStyle = {
     color: #262626;
     background: #fff;
   }
+}
+
+.shareholder-block {
+  margin-top: 24px;
+}
+
+.shareholder-table {
+  --pagination-padding: 20px 0 0;
+
+  :deep(.ant-table-placeholder) {
+    padding: 48px 16px !important;
+  }
+
+  :deep(.ant-table-placeholder .ant-empty:not(.pb-empty) .ant-empty-image) {
+    display: none;
+  }
+}
+
+.shareholder-empty {
+  --empty-gap: 8px;
+  --empty-padding: 12px 0 8px;
+  --empty-text-size: 15px;
+  --empty-text-weight: 400;
 }
 </style>

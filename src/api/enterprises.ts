@@ -7,10 +7,13 @@ import {
   type RegionIdQuery,
 } from '@/api/paging'
 import {
+  mapCertPerson,
+  mapCertReview,
   mapContact,
   mapEnterpriseCard,
   mapEnterpriseDetail,
   mapPatent,
+  mapShareholder,
   mapPolicyRecord,
   mapProducts,
   mapQualification,
@@ -86,6 +89,9 @@ export const fetchEnterpriseDetail = async (id: number) => {
     software,
     works,
     qualifications,
+    certPersons,
+    certReviews,
+    shareholders,
     contacts,
     products,
   ] = await Promise.all([
@@ -117,6 +123,18 @@ export const fetchEnterpriseDetail = async (id: number) => {
       pageIndex: 1,
       pageSize: 100,
     }),
+    safePage(`/enterprises/${id}/cert-persons`, {
+      pageIndex: 1,
+      pageSize: 100,
+    }),
+    safePage(`/enterprises/${id}/cert-reviews`, {
+      pageIndex: 1,
+      pageSize: 100,
+    }),
+    safePage(`/enterprises/${id}/shareholders`, {
+      pageIndex: 1,
+      pageSize: 100,
+    }),
     safePage(`/enterprises/${id}/contacts`, { pageIndex: 1, pageSize: 100 }),
     request({
       url: `/enterprises/${id}/products`,
@@ -132,6 +150,9 @@ export const fetchEnterpriseDetail = async (id: number) => {
     softwareCopyrights: software.items.map(mapSoftware),
     workCopyrights: works.items.map(mapWork),
     qualifications: qualifications.items.map(mapQualification),
+    qualificationPersonnel: certPersons.items.map(mapCertPerson),
+    qualificationReviews: certReviews.items.map(mapCertReview),
+    shareholders: shareholders.items.map(mapShareholder),
     contacts: contacts.items.map(mapContact),
     products: mapProducts(products),
   }

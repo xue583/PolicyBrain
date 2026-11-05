@@ -233,7 +233,7 @@ export const filterEnterpriseQualPersonnel = (
   list.filter((item) =>
     matchQualFilters(
       item.year,
-      [item.name, item.certNo, item.status, item.issuer],
+      [item.name, item.personType ?? '', item.certNo, item.status, item.issuer],
       filters,
     ),
   )

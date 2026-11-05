@@ -99,6 +99,7 @@ export const getEnterpriseDetail = (
     qualifications: buildQualifications(item),
     qualificationPersonnel: buildQualPersonnel(item),
     qualificationReviews: buildQualReviews(item),
+    shareholders: [],
     contacts: buildContacts(item),
     ...buildProductIndustry(item),
     portrait: {

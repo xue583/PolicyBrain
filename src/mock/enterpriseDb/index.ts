@@ -11,6 +11,7 @@ export type {
   EnterpriseProduct,
   EnterpriseQualPersonnel,
   EnterpriseQualReview,
+  EnterpriseShareholder,
   EnterpriseQualification,
   EnterpriseSoftwareCopyright,
   EnterpriseStatus,

@@ -1,28 +1,47 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
-import dayjs from 'dayjs'
+import { computed, reactive, ref, watch } from 'vue'
+import dayjs, { type Dayjs } from 'dayjs'
 import { message } from 'ant-design-vue'
+import {
+  InvoiceType,
+  createInvoiceApplication,
+  formatInvoiceAmount,
+} from '@/api/invoices'
 import { useAuthStore } from '@/stores/auth'
+import { toErrorMessage } from '@/utils/apiError'
 
 defineOptions({ name: 'InvoiceApplyModal' })
 
 const open = defineModel<boolean>('open', { default: false })
 
-defineProps<{
-  /** 订单金额，单位元，已格式化为两位小数 */
-  amountText: string
+const props = defineProps<{
+  /** 订单实付金额，单位分。提交时原样上送，不超过实付 */
+  amountFen: number
+  /** 会员订单号。填写后由后端校验订单归属、已支付与实付金额 */
+  orderNo: string
+}>()
+
+const emit = defineEmits<{
+  submitted: []
 }>()
 
 const auth = useAuthStore()
+const submitting = ref(false)
+const submitError = ref('')
+
+const amountText = computed(() => formatInvoiceAmount(props.amountFen))
 
 const invoiceTypes = [
-  { value: '普票', label: '增值税普通发票' },
-  { value: '专票', label: '增值税专用发票' },
+  { value: InvoiceType.Ordinary, label: '增值税普通发票' },
+  { value: InvoiceType.Special, label: '增值税专用发票' },
 ]
+
+const disableFutureDate = (current: Dayjs) =>
+  !!current && current.startOf('day').isAfter(dayjs().startOf('day'))
 
 const form = reactive({
   appliedAt: '',
-  invoiceType: undefined as string | undefined,
+  invoiceType: undefined as number | undefined,
   companyName: '',
   taxNo: '',
   bankName: '',
@@ -55,6 +74,7 @@ const resetErrors = () => {
 
 const resetForm = () => {
   resetErrors()
+  submitError.value = ''
   form.appliedAt = dayjs().format('YYYY-MM-DD')
   form.invoiceType = undefined
   form.companyName = auth.user?.companyName?.trim() || ''
@@ -85,7 +105,15 @@ const validate = () => {
   form.address = form.address.trim()
   form.email = form.email.trim()
 
-  errors.appliedAt = form.appliedAt ? '' : '请选择申请日期'
+  const today = dayjs().startOf('day')
+  const picked = dayjs(form.appliedAt)
+  errors.appliedAt = !form.appliedAt
+    ? '请选择申请日期'
+    : !picked.isValid()
+      ? '请选择申请日期'
+      : picked.startOf('day').isAfter(today)
+        ? '申请日期不得晚于当天'
+        : ''
   errors.invoiceType = form.invoiceType ? '' : '请选择发票类型'
   errors.companyName = form.companyName ? '' : '请输入单位名称'
   errors.taxNo = !form.taxNo
@@ -105,10 +133,42 @@ const validate = () => {
   return Object.values(errors).every((item) => !item)
 }
 
-const submit = () => {
-  if (!validate()) return
-  message.success('开票申请已提交')
-  close()
+const submit = async () => {
+  if (submitting.value || !validate()) return
+  const amount = Math.round(Number(props.amountFen))
+  const orderNo = props.orderNo.trim()
+  if (!orderNo) {
+    submitError.value = '缺少订单号，无法申请开票'
+    return
+  }
+  if (!Number.isFinite(amount) || amount < 0) {
+    submitError.value = '发票金额无效'
+    return
+  }
+
+  submitting.value = true
+  submitError.value = ''
+  try {
+    await createInvoiceApplication({
+      invoiceType: form.invoiceType!,
+      companyName: form.companyName,
+      taxNumber: form.taxNo,
+      email: form.email,
+      amount,
+      orderNo,
+      applyDate: `${form.appliedAt}T00:00:00`,
+      bankName: form.bankName,
+      bankAccount: form.bankAccount,
+      address: form.address,
+    })
+    message.success('开票申请已提交')
+    emit('submitted')
+    close()
+  } catch (err) {
+    submitError.value = toErrorMessage(err, '开票申请提交失败')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -130,6 +190,7 @@ const submit = () => {
           class="control"
           value-format="YYYY-MM-DD"
           placeholder="请选择申请日期"
+          :disabled-date="disableFutureDate"
           :status="errors.appliedAt ? 'error' : undefined"
           @change="clearError('appliedAt')"
         />
@@ -236,10 +297,14 @@ const submit = () => {
       <div class="field">
         <span class="field-label">操作</span>
         <div class="action-row">
-          <a-button @click="close">取消</a-button>
-          <a-button type="primary" html-type="submit">提交</a-button>
+          <a-button :disabled="submitting" @click="close">取消</a-button>
+          <a-button type="primary" html-type="submit" :loading="submitting">
+            提交
+          </a-button>
         </div>
       </div>
+
+      <p v-if="submitError" class="form-error">{{ submitError }}</p>
     </form>
   </a-modal>
 </template>
@@ -275,11 +340,16 @@ const submit = () => {
   width: 100%;
 }
 
-.field-error {
+.field-error,
+.form-error {
   margin: 0;
   font-size: 12px;
   line-height: 18px;
   color: #ff4d4f;
+}
+
+.form-error {
+  grid-column: 1 / -1;
 }
 
 .amount-input {

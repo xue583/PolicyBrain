@@ -19,7 +19,10 @@ import type {
   EnterprisePolicyRecord,
   EnterprisePortrait,
   EnterpriseProduct,
+  EnterpriseQualPersonnel,
+  EnterpriseQualReview,
   EnterpriseQualification,
+  EnterpriseShareholder,
   EnterpriseSoftwareCopyright,
   EnterpriseStatus,
   EnterpriseTrademark,
@@ -350,9 +353,54 @@ export const mapEnterpriseCard = (raw: unknown): EnterpriseItem => {
   }
 }
 
-const capitalNumber = (value: string) => {
-  const matched = value.match(/[\d.]+/)
-  return matched ? matched[0] : value || '-'
+/** 注册资本保留接口原文；纯数字补单位，空值显示 -。 */
+export const displayRegisteredCapital = (value: string) => {
+  const text = value.trim()
+  if (!text || text === '-' || text === 'null') return '-'
+  if (/[万亿元]/.test(text)) return text
+  return `${text}万元`
+}
+
+const isBlankValue = (value: unknown) =>
+  value === undefined ||
+  value === null ||
+  (typeof value === 'string' && value.trim() === '')
+
+/** 后者覆盖前者，但空值不能盖掉已有内容。 */
+const mergeDefined = (...records: Record<string, unknown>[]) => {
+  const result: Record<string, unknown> = {}
+  for (const record of records) {
+    for (const [key, value] of Object.entries(record)) {
+      if (isBlankValue(value) && !isBlankValue(result[key])) continue
+      result[key] = value
+    }
+  }
+  return result
+}
+
+const displayDate = (value: unknown) => {
+  const text = formatDate(value)
+  if (text === '-' || text.startsWith('1970-01-01')) return '-'
+  return text
+}
+
+const ratioText = (value: unknown) => {
+  if (value === undefined || value === null || value === '') return '-'
+  const text = String(value).trim()
+  if (!text || text === 'null') return '-'
+  if (text.includes('%')) return text
+  const num = Number(text)
+  if (!Number.isFinite(num)) return text
+  const display = Number.isInteger(num)
+    ? String(num)
+    : String(Number(num.toFixed(4)))
+  return `${display}%`
+}
+
+const yearOf = (dateText: string) => {
+  if (dateText === '-') return 0
+  const year = Number(dateText.slice(0, 4))
+  return Number.isFinite(year) ? year : 0
 }
 
 const shortNameOf = (name: string) => {
@@ -550,6 +598,9 @@ export type EnterpriseExtras = {
   softwareCopyrights?: EnterpriseSoftwareCopyright[]
   workCopyrights?: EnterpriseWorkCopyright[]
   qualifications?: EnterpriseQualification[]
+  qualificationPersonnel?: EnterpriseQualPersonnel[]
+  qualificationReviews?: EnterpriseQualReview[]
+  shareholders?: EnterpriseShareholder[]
   contacts?: EnterpriseContact[]
   products?: EnterpriseProduct[]
   policyCount?: number
@@ -563,7 +614,7 @@ export const mapEnterpriseDetail = (
   const enterprise = asRecord(root.enterprise)
   const industry = asRecord(root.industry)
   const industryExt = asRecord(root.industryExt)
-  const flat = { ...industryExt, ...industry, ...enterprise }
+  const flat = mergeDefined(industryExt, industry, enterprise)
   const card = mapEnterpriseCard({ ...flat, id: flat.id })
   const former = Array.isArray(root.formerNames)
     ? root.formerNames
@@ -580,6 +631,12 @@ export const mapEnterpriseDetail = (
   const chains: EnterpriseIndustryChain[] = industryLevels.length
     ? [{ id: 1, levels: industryLevels }]
     : []
+  const contactPhone = (extras.contacts ?? [])
+    .map((item) => item.phone.trim())
+    .find(Boolean)
+  const contactEmail = (extras.contacts ?? [])
+    .map((item) => item.email.trim())
+    .find(Boolean)
   return {
     ...card,
     policyCount: extras.policyCount ?? card.policyCount,
@@ -589,13 +646,15 @@ export const mapEnterpriseDetail = (
     honorTags: [],
     publicityAmount: 0,
     legalRep: pickString(flat, ['legalPerson'], '-'),
-    registeredCapital: capitalNumber(pickString(flat, ['registeredCapital'])),
+    registeredCapital: displayRegisteredCapital(
+      pickString(flat, ['registeredCapital']),
+    ),
     creditCode: pickString(flat, ['creditCode'], '-'),
     enterpriseType: pickString(flat, ['companyType'], '-'),
-    phone: pickString(flat, ['phone'], '-'),
-    email: pickString(flat, ['email'], '-'),
+    phone: contactPhone || pickString(flat, ['phone'], '-'),
+    email: contactEmail || pickString(flat, ['email'], '-'),
     foundedDate: formatDate(pick(flat, ['establishTime'])),
-    staffScale: pickString(flat, ['staffNumber'], '-'),
+    staffScale: pickString(flat, ['staffNumber'], '-') || '-',
     website: pickString(industryExt, ['website']),
     businessScope: pickString(industryExt, ['businessScope']),
     status: mapEnterpriseStatus(pick(industry, ['businessStatus'])),
@@ -608,7 +667,7 @@ export const mapEnterpriseDetail = (
       organizationCode: pickString(industry, ['orgCode'], '-'),
       registrationAuthority: pickString(industry, ['registerAuthority'], '-'),
       businessTerm: pickString(industry, ['businessPeriod'], '-'),
-      approvalDate: formatDate(pick(industry, ['approveDate'])),
+      approvalDate: displayDate(pick(industry, ['approveDate'])),
       insuredCount: pickNumber(industry, ['socialSecurityNum']),
       formerName: former || '-',
       registeredAddress: pickString(
@@ -616,7 +675,7 @@ export const mapEnterpriseDetail = (
         ['registerAddress'],
         card.address,
       ),
-      addressChangeDate: '-',
+      addressChangeDate: displayDate(pick(industry, ['addressLastChangeDate'])),
     },
     policyRecords: extras.policyRecords ?? [],
     patents: extras.patents ?? [],
@@ -624,8 +683,9 @@ export const mapEnterpriseDetail = (
     softwareCopyrights: extras.softwareCopyrights ?? [],
     workCopyrights: extras.workCopyrights ?? [],
     qualifications: extras.qualifications ?? [],
-    qualificationPersonnel: [],
-    qualificationReviews: [],
+    qualificationPersonnel: extras.qualificationPersonnel ?? [],
+    qualificationReviews: extras.qualificationReviews ?? [],
+    shareholders: extras.shareholders ?? [],
     contacts: extras.contacts ?? [],
     products: extras.products ?? [],
     industryChains: chains,
@@ -742,14 +802,77 @@ export const mapQualification = (
   }
 }
 
-export const mapContact = (raw: unknown, index: number): EnterpriseContact => {
+export const mapShareholder = (
+  raw: unknown,
+  index: number,
+): EnterpriseShareholder => {
   const record = asRecord(raw)
-  const detail = pickString(record, ['detail', 'phone', 'mobile'])
-  const emailLike = detail.includes('@')
   return {
     id: pickNumber(record, ['id'], index + 1),
-    name: pickString(record, ['person', 'name'], '-'),
-    title: pickString(record, ['position', 'title'], '-'),
+    name: pickString(record, ['name', 'shareholderName'], '-'),
+    shareholderType: pickString(record, ['shareholderType', 'type'], '-'),
+    shareholdingRatio: ratioText(
+      pick(record, ['shareholdingRatio', 'shareRatio']),
+    ),
+    subscribedCapital: pickString(record, ['subscribedCapital'], '-'),
+    paidInCapital: pickString(record, ['paidInCapital'], '-'),
+    shouldProportion: pickString(record, ['shouldProportion'], '-'),
+  }
+}
+
+export const mapCertPerson = (
+  raw: unknown,
+  index: number,
+): EnterpriseQualPersonnel => {
+  const record = asRecord(raw)
+  const issueDate = formatDate(pick(record, ['issueDate', 'date']))
+  return {
+    id: pickNumber(record, ['id'], index + 1),
+    name: pickString(record, ['personName', 'name'], '-'),
+    personType: pickString(record, ['personType', 'type'], '-'),
+    certNo: pickString(record, ['certNo', 'certificateNo'], '-'),
+    issueDate,
+    expireDate: formatDate(pick(record, ['expireDate', 'validUntil'])),
+    status: pickString(record, ['status'], '-'),
+    issuer: pickString(record, ['issuer', 'issueOrg'], '-'),
+    year: yearOf(issueDate),
+  }
+}
+
+export const mapCertReview = (
+  raw: unknown,
+  index: number,
+): EnterpriseQualReview => {
+  const record = asRecord(raw)
+  const announceDate = formatDate(
+    pick(record, ['reviewTime', 'announceDate', 'date']),
+  )
+  return {
+    id: pickNumber(record, ['id'], index + 1),
+    matter: pickString(record, ['content', 'matter', 'reviewContent'], '-'),
+    decision: pickString(record, ['result', 'decision'], '-'),
+    reason: pickString(record, ['reason'], '-'),
+    announceDate,
+    year: yearOf(announceDate),
+  }
+}
+
+const CONTACT_EMAIL_TYPE = 3
+
+export const mapContact = (raw: unknown, index: number): EnterpriseContact => {
+  const record = asRecord(raw)
+  const detail = pickString(record, [
+    'contactDetail',
+    'detail',
+    'phone',
+    'mobile',
+  ])
+  const contactType = Number(pick(record, ['contactType']))
+  const emailLike = contactType === CONTACT_EMAIL_TYPE || detail.includes('@')
+  return {
+    id: pickNumber(record, ['id'], index + 1),
+    name: pickString(record, ['contactPerson', 'person', 'name'], '-'),
+    title: pickString(record, ['contactPosition', 'position', 'title'], '-'),
     phone: emailLike ? '' : detail,
     email: emailLike ? detail : pickString(record, ['email']),
   }

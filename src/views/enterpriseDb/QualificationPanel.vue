@@ -105,7 +105,14 @@ const certColumns = [
 const personnelColumns = [
   { title: '姓名', dataIndex: 'name', key: 'name', width: 120 },
   {
-    title: '人员证书编号',
+    title: '人员类型',
+    dataIndex: 'personType',
+    key: 'personType',
+    width: 160,
+    ellipsis: true,
+  },
+  {
+    title: '资格证书号',
     dataIndex: 'certNo',
     key: 'certNo',
     ellipsis: true,
@@ -118,28 +125,28 @@ const personnelColumns = [
 
 const reviewColumns = [
   {
-    title: '资质申请事项',
+    title: '审查内容',
     dataIndex: 'matter',
     key: 'matter',
     ellipsis: true,
   },
   {
-    title: '申请事项审查决定',
+    title: '审查结果',
     dataIndex: 'decision',
     key: 'decision',
-    width: 180,
+    width: 160,
   },
   {
-    title: '审查决定原因',
+    title: '审查原因',
     dataIndex: 'reason',
     key: 'reason',
     ellipsis: true,
   },
   {
-    title: '审查决定公告日期',
+    title: '审查时间',
     dataIndex: 'announceDate',
     key: 'announceDate',
-    width: 180,
+    width: 160,
   },
 ]
 
@@ -160,7 +167,8 @@ const exportList = () => {
       [
         '序号',
         '姓名',
-        '人员证书编号',
+        '人员类型',
+        '资格证书号',
         '发证日期',
         '到期日期',
         '证书状态',
@@ -169,6 +177,7 @@ const exportList = () => {
       ...filteredPersonnel.value.map((item, index) => [
         String(index + 1),
         item.name,
+        item.personType || '-',
         item.certNo,
         item.issueDate,
         item.expireDate,
@@ -182,13 +191,7 @@ const exportList = () => {
 
   if (subTab.value === 'reviews') {
     downloadCsv('申请审查.csv', [
-      [
-        '序号',
-        '资质申请事项',
-        '申请事项审查决定',
-        '审查决定原因',
-        '审查决定公告日期',
-      ],
+      ['序号', '审查内容', '审查结果', '审查原因', '审查时间'],
       ...filteredReviews.value.map((item, index) => [
         String(index + 1),
         item.matter,
@@ -237,12 +240,24 @@ const exportList = () => {
           @click="selectSubTab('personnel')"
         >
           人员信息
+          <span
+            class="tab-count"
+            :style="{ backgroundImage: `url(${tipsIcon})` }"
+          >
+            {{ personnel.length }}
+          </span>
         </a>
         <a
           :class="{ active: subTab === 'reviews' }"
           @click="selectSubTab('reviews')"
         >
           申请/审查
+          <span
+            class="tab-count"
+            :style="{ backgroundImage: `url(${tipsIcon})` }"
+          >
+            {{ reviews.length }}
+          </span>
         </a>
       </div>
       <button type="button" class="export-btn" @click="exportList">

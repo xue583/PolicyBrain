@@ -367,7 +367,6 @@ onMounted(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  // gap: 16px;
 }
 
 .sidebar-card {

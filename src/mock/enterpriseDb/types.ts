@@ -86,12 +86,23 @@ export interface EnterpriseQualification {
 export interface EnterpriseQualPersonnel {
   id: number
   name: string
+  personType?: string
   certNo: string
   issueDate: string
   expireDate: string
   status: string
   issuer: string
   year: number
+}
+
+export interface EnterpriseShareholder {
+  id: number
+  name: string
+  shareholderType: string
+  shareholdingRatio: string
+  subscribedCapital: string
+  paidInCapital: string
+  shouldProportion: string
 }
 
 export interface EnterpriseQualReview {
@@ -194,6 +205,7 @@ export interface EnterpriseDetail extends EnterpriseItem {
   qualifications: EnterpriseQualification[]
   qualificationPersonnel: EnterpriseQualPersonnel[]
   qualificationReviews: EnterpriseQualReview[]
+  shareholders: EnterpriseShareholder[]
   contacts: EnterpriseContact[]
   products: EnterpriseProduct[]
   industryChains: EnterpriseIndustryChain[]

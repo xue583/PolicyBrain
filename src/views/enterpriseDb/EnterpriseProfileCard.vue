@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { HeartFilled } from '@ant-design/icons-vue'
+import { displayRegisteredCapital } from '@/api/mapPortal'
 import {
   enterpriseStatusText,
   type EnterpriseDetail,
@@ -113,7 +114,9 @@ const openWebsite = () => {
       </p>
       <p class="info-item">
         <span class="info-label">注册资本：</span>
-        <span class="info-value">{{ enterprise.registeredCapital }}万元</span>
+        <span class="info-value">{{
+          displayRegisteredCapital(enterprise.registeredCapital)
+        }}</span>
       </p>
       <p class="info-item">
         <span class="info-label">企业类型：</span>

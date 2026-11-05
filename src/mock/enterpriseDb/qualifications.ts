@@ -26,6 +26,11 @@ const QUAL_CERT_SEEDS = [
 ]
 
 const QUAL_PERSON_NAMES = ['张三丰', '赵燕', '昭子裙'] as const
+const QUAL_PERSON_TYPES = [
+  '注册建造师',
+  '注册工程师',
+  '注册监理工程师',
+] as const
 
 /** 根据索引生成不同的日期 */
 const generateDate = (index: number, baseYear: number): string => {
@@ -67,6 +72,8 @@ const buildQualPersonnel = (
     return {
       id: item.id * 500 + index + 1,
       name: QUAL_PERSON_NAMES[index % QUAL_PERSON_NAMES.length] ?? '张三丰',
+      personType:
+        QUAL_PERSON_TYPES[index % QUAL_PERSON_TYPES.length] ?? '注册建造师',
       certNo: seed.certNo,
       issueDate,
       expireDate,
