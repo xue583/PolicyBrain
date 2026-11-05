@@ -77,7 +77,7 @@ export const fetchIssuingAuthorityOptions = async (
 ) => {
   const data = await request({
     url: '/issuingAuthority/nameOptions',
-    method: 'get',
+    method: 'put',
     params: compactParams({
       keyword: query.keyword?.trim(),
       level: query.level,
