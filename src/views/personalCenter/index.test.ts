@@ -18,6 +18,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { resetMyEnterprises } from '@/composables/useMyEnterprises'
 import PersonalCenter from './index.vue'
 
 vi.mock('@/api/auth', async () => {
@@ -105,6 +106,7 @@ const mountPage = async (stubs?: Record<string, unknown>, identity = 1) => {
 describe('PersonalCenter membership period', () => {
   beforeEach(() => {
     localStorage.clear()
+    resetMyEnterprises()
     vi.clearAllMocks()
     vi.mocked(fetchMyEnterprises).mockResolvedValue({
       items: [],

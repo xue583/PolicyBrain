@@ -5,25 +5,15 @@ import vipGem from '@/assets/membership/vip-gem.png'
 import qrFrame from '@/assets/membership/enterprise/qr-frame.png'
 import planHighlight from '@/assets/membership/enterprise/plan-highlight.png'
 import svipPlanHighlight from '@/assets/membership/enterprise/svip-plan-highlight.png'
-import benefitSearch from '@/assets/membership/enterprise/benefit-search.png'
-import benefitDeclare from '@/assets/membership/enterprise/benefit-declare.png'
-import benefitBatch from '@/assets/membership/enterprise/benefit-batch.png'
-import benefitMatch from '@/assets/membership/enterprise/benefit-match.png'
-import benefitNurture from '@/assets/membership/enterprise/benefit-nurture.png'
-import benefitRecommend from '@/assets/membership/enterprise/benefit-recommend.png'
-import svipBenefitSearch from '@/assets/membership/enterprise/svip-benefit-search.png'
-import svipBenefitDeclare from '@/assets/membership/enterprise/svip-benefit-declare.png'
-import svipBenefitBatch from '@/assets/membership/enterprise/svip-benefit-batch.png'
-import svipBenefitMatch from '@/assets/membership/enterprise/svip-benefit-match.png'
-import svipBenefitNurture from '@/assets/membership/enterprise/svip-benefit-nurture.png'
-import svipBenefitRecommend from '@/assets/membership/enterprise/svip-benefit-recommend.png'
 import perkDiscount from '@/assets/membership/enterprise/perk-discount.png'
 import perkConvenient from '@/assets/membership/enterprise/perk-convenient.png'
 import perkFlexible from '@/assets/membership/enterprise/perk-flexible.png'
 import perkCustom from '@/assets/membership/enterprise/perk-custom.png'
+import { enterpriseBenefitIcon } from './benefitIcons'
 import MemberCompareTable from './components/MemberCompareTable.vue'
 import MemberCrownIcon from './components/MemberCrownIcon.vue'
 import MemberPayPanel from './components/MemberPayPanel.vue'
+import PlanCard from './components/PlanCard.vue'
 import {
   benefitsForEnterpriseTab,
   type MembershipBenefitCard,
@@ -75,53 +65,6 @@ watch(
   },
   { immediate: true },
 )
-
-const tierIcons = {
-  vip: [
-    benefitSearch,
-    benefitDeclare,
-    benefitBatch,
-    benefitMatch,
-    benefitNurture,
-    benefitRecommend,
-  ],
-  svip: [
-    svipBenefitSearch,
-    svipBenefitDeclare,
-    svipBenefitBatch,
-    svipBenefitMatch,
-    svipBenefitNurture,
-    svipBenefitRecommend,
-  ],
-  org: [perkDiscount, perkConvenient, perkFlexible, perkCustom],
-}
-
-const benefitIcon = (name: string, index: number) => {
-  const pool = tierIcons[tab.value]
-  if (/申报/.test(name)) {
-    return tab.value === 'svip' ? svipBenefitDeclare : benefitDeclare
-  }
-  if (/批量/.test(name)) {
-    return tab.value === 'svip' ? svipBenefitBatch : benefitBatch
-  }
-  if (/匹配/.test(name)) {
-    return tab.value === 'svip' ? svipBenefitMatch : benefitMatch
-  }
-  if (/培育/.test(name)) {
-    return tab.value === 'svip' ? svipBenefitNurture : benefitNurture
-  }
-  if (/推荐/.test(name)) {
-    return tab.value === 'svip' ? svipBenefitRecommend : benefitRecommend
-  }
-  if (/搜索|查询/.test(name)) {
-    return tab.value === 'svip' ? svipBenefitSearch : benefitSearch
-  }
-  if (/优惠/.test(name)) return perkDiscount
-  if (/便捷|发票/.test(name)) return perkConvenient
-  if (/灵活|成员/.test(name)) return perkFlexible
-  if (/定制/.test(name)) return perkCustom
-  return pool[index % pool.length] ?? benefitSearch
-}
 
 const personalLevelPlans = computed(() => personalPlans(props.plans))
 
@@ -288,40 +231,28 @@ const changeSeats = (delta: number) => {
 
           <p v-if="!currentPlans.length" class="scene-note">{{ emptyText }}</p>
           <div v-else class="plan-row" :class="`is-${tab}`">
-            <button
+            <PlanCard
               v-for="plan in currentPlans"
               :key="plan.id"
-              type="button"
-              class="plan-card"
-              :class="{ selected: currentPlan?.id === plan.id }"
-              :style="
+              :plan="plan"
+              surface="enterprise"
+              :tone="tab"
+              :selected="currentPlan?.id === plan.id"
+              :highlight="
                 currentPlan?.id === plan.id && tab !== 'org'
-                  ? {
-                      backgroundImage: `url(${
-                        tab === 'svip' ? svipPlanHighlight : planHighlight
-                      })`,
-                    }
-                  : undefined
+                  ? tab === 'svip'
+                    ? svipPlanHighlight
+                    : planHighlight
+                  : ''
               "
-              :aria-pressed="currentPlan?.id === plan.id"
-              @click="selectPlan(plan.id)"
-            >
-              <span v-if="plan.tag" class="plan-tag">{{ plan.tag }}</span>
-              <span class="plan-name">{{ plan.name }}</span>
-              <span class="plan-price">
-                <em>¥</em>{{ plan.price
-                }}<small v-if="tab === 'org'">/人</small>
-                <del v-if="plan.original && tab !== 'org'"
-                  >¥{{ plan.original }}</del
-                >
-              </span>
-              <span v-if="plan.daily" class="plan-daily"
-                >每天仅需{{ plan.daily }}元</span
-              >
-              <span v-if="plan.saved && tab === 'org'" class="plan-saved"
-                >已减{{ plan.saved }}/人</span
-              >
-            </button>
+              :price-suffix="tab === 'org' ? '/人' : ''"
+              :show-original="Boolean(plan.original) && tab !== 'org'"
+              :daily-text="plan.daily ? `每天仅需${plan.daily}元` : ''"
+              :saved-text="
+                plan.saved && tab === 'org' ? `已减${plan.saved}/人` : ''
+              "
+              @select="selectPlan(plan.id)"
+            />
           </div>
 
           <div v-if="tab === 'org' && currentPlan" class="seat-row">
@@ -354,7 +285,10 @@ const changeSeats = (delta: number) => {
             <template v-else>
               <ul class="benefit-list">
                 <li v-for="(item, index) in currentBenefits" :key="item.id">
-                  <img :src="benefitIcon(item.name, index)" :alt="item.name" />
+                  <img
+                    :src="enterpriseBenefitIcon(tab, item.name, index)"
+                    :alt="item.name"
+                  />
                   <span>{{ item.name }}</span>
                 </li>
               </ul>
@@ -574,179 +508,6 @@ const changeSeats = (delta: number) => {
   &.is-svip,
   &.is-org {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.plan-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 168px;
-  padding: 28px 10px 18px;
-  border: 1px solid #ece7df;
-  border-radius: 8px;
-  background: #fff;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.plan-tag {
-  position: absolute;
-  top: -1px;
-  left: 0;
-  padding: 4px 10px;
-  border-radius: 8px 0 8px 0;
-  background: linear-gradient(334deg, #ff3d29 0%, #fd8c3e 100%);
-  color: #fff;
-  font-size: 12px;
-  z-index: 2;
-}
-
-.plan-name {
-  margin-bottom: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2a3546;
-}
-
-.plan-price {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  justify-content: center;
-  color: #1f2a37;
-  font-size: 36px;
-  font-weight: 700;
-  line-height: 1;
-
-  em {
-    margin-right: 2px;
-    font-size: 16px;
-    font-style: normal;
-    font-weight: 600;
-  }
-
-  small,
-  del {
-    margin-left: 4px;
-    font-size: 12px;
-    font-weight: 400;
-    color: #b7bec8;
-  }
-
-  del {
-    text-decoration: line-through;
-  }
-}
-
-.plan-daily,
-.plan-saved {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #8b93a0;
-}
-
-.plan-saved {
-  margin-top: 6px;
-}
-
-.board.is-vip .plan-card.selected {
-  .plan-name,
-  .plan-price {
-    color: #e07a2f;
-  }
-
-  .plan-daily {
-    width: calc(100% + 20px);
-    margin: auto -10px -18px;
-    padding: 8px 10px 10px;
-    background: linear-gradient(90deg, #ff8a3d 0%, #ff4d3a 100%);
-    color: #fff;
-  }
-}
-
-.board.is-svip {
-  .plan-card {
-    border-color: #e4ebf7;
-  }
-
-  .plan-card.selected {
-    .plan-name,
-    .plan-price,
-    .plan-daily {
-      color: #5b6ef5;
-    }
-  }
-}
-
-.board.is-org {
-  .plan-card {
-    // 角标要探出卡片上边框，底部色带自行收圆角
-    overflow: visible;
-    border-color: #f0f0f2;
-    background: #fff;
-
-    .plan-name {
-      margin-bottom: 26px;
-      color: #73534d;
-    }
-
-    .plan-price {
-      color: #333;
-
-      small {
-        color: #b5b5b5;
-      }
-    }
-
-    .plan-daily {
-      color: #c9c9cc;
-    }
-  }
-
-  .plan-tag {
-    top: -10px;
-    left: 0;
-    padding: 2px 10px;
-    border-radius: 4px;
-    line-height: 1.5;
-  }
-
-  .plan-card.selected {
-    border-color: #c2dcfc;
-    background: #fafcff;
-
-    .plan-name {
-      color: #2f6bcd;
-    }
-
-    .plan-price {
-      color: #ff3b4d;
-    }
-
-    .plan-daily {
-      color: #c8cacc;
-    }
-  }
-
-  // 底部「已减」色带：未选中灰底，选中蓝底
-  .plan-saved {
-    width: calc(100% + 20px);
-    margin: auto -10px -18px;
-    padding: 8px 10px 10px;
-    border-radius: 0 0 7px 7px;
-    background: #f5f6fa;
-    color: #9b9b9e;
-    font-size: 13px;
-    text-align: center;
-  }
-
-  .plan-card.selected .plan-saved {
-    background: #ddecff;
-    color: #326dcf;
   }
 }
 

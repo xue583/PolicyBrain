@@ -140,7 +140,7 @@ const routes: RouteRecordRaw[] = [
         path: '',
         name: 'export',
         component: () => import('@/views/dataExport/index.vue'),
-        meta: { title: '数据导出' },
+        meta: { title: '数据导出', requiresAuth: true },
       },
     ],
   },
@@ -180,7 +180,7 @@ const routes: RouteRecordRaw[] = [
     path: '/workspace',
     name: 'workspace',
     component: () => import('@/views/workbench/index.vue'),
-    meta: { title: '工作台', navKey: 'workspace' },
+    meta: { title: '工作台', navKey: 'workspace', requiresAuth: true },
   },
   {
     path: '/membership',

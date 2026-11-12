@@ -5,11 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useCollapsedList } from '@/composables/useCollapsedList'
 import { useServerPage } from '@/composables/useServerPage'
-import {
-  DownOutlined,
-  ClockCircleOutlined,
-  DeleteOutlined,
-} from '@ant-design/icons-vue'
+import { ClockCircleOutlined } from '@ant-design/icons-vue'
 import {
   industries as fallbackIndustries,
   policyLevels,
@@ -17,16 +13,16 @@ import {
   type PolicyItem,
 } from '../../mock/policyNews'
 import { fetchNewsPage } from '@/api/news'
-import {
-  fetchIndustryTree,
-  fetchInfoTypeOptions,
-  type IndustryNode,
-} from '@/api/meta'
+import { fetchIndustryTree, fetchInfoTypeOptions } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import { useRegionStore } from '@/stores/region'
 import { clearRegionSelection } from '@/utils/regionActions'
+import { toIndustryNodes } from '@/utils/industryNodes'
 import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import FilterRow from '@/components/common/FilterRow.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
+import SelectedConditionsBar from '@/components/common/SelectedConditionsBar.vue'
 import emptyNews from '@/assets/home/empty-news.png'
 
 defineOptions({ name: 'PolicyNews' })
@@ -43,10 +39,7 @@ const filters = reactive({
   infoTypes: [] as string[],
 })
 
-const toIndustryNodes = (names: string[]): IndustryNode[] =>
-  names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
-
-const industryTree = ref<IndustryNode[]>(toIndustryNodes(fallbackIndustries))
+const industryTree = ref(toIndustryNodes(fallbackIndustries))
 const infoTypes = ref<Array<{ label: string; value: string }>>(
   fallbackInfoTypes.map((item) => ({ ...item })),
 )
@@ -156,70 +149,36 @@ const openDetail = (item: PolicyItem) => {
         <a-card class="pb-card-lg">
           <RegionCascadeFilter label="省市地区：" :collapsed-count="12" />
 
-          <div class="filter-row">
-            <span class="filter-label">行业分类：</span>
-            <div class="filter-options">
-              <IndustryCascadeFilter
-                v-model="filters.industries"
-                :options="visibleIndustries"
-              />
-              <a
-                class="more-link"
-                @click="showMoreIndustries = !showMoreIndustries"
-              >
-                {{ showMoreIndustries ? '收起' : '更多' }}
-                <DownOutlined :class="{ rotated: showMoreIndustries }" />
-              </a>
-            </div>
-          </div>
+          <FilterRow
+            label="行业分类："
+            v-model:expanded="showMoreIndustries"
+            :collapsible="industryTree.length > 8"
+          >
+            <IndustryCascadeFilter
+              v-model="filters.industries"
+              :options="visibleIndustries"
+            />
+          </FilterRow>
 
-          <div class="filter-row">
-            <span class="filter-label">政策级别：</span>
-            <div class="filter-options">
-              <a-checkbox-group
-                v-model:value="filters.levels"
-                :options="policyLevels"
-              />
-            </div>
-          </div>
+          <FilterRow label="政策级别：">
+            <a-checkbox-group
+              v-model:value="filters.levels"
+              :options="policyLevels"
+            />
+          </FilterRow>
 
-          <div class="filter-row">
-            <span class="filter-label">资讯类型：</span>
-            <div class="filter-options">
-              <a-checkbox-group
-                v-model:value="filters.infoTypes"
-                :options="infoTypes"
-              />
-            </div>
-          </div>
+          <FilterRow label="资讯类型：">
+            <a-checkbox-group
+              v-model:value="filters.infoTypes"
+              :options="infoTypes"
+            />
+          </FilterRow>
 
-          <div class="selected-section">
-            <div class="filter-row selected-row">
-              <span class="filter-label">已选条件：</span>
-              <div class="selected-tags">
-                <template v-if="selectedConditions.length">
-                  <a-tag
-                    v-for="item in selectedConditions"
-                    :key="item.key"
-                    closable
-                    class="condition-tag"
-                    @close="removeCondition(item.key)"
-                  >
-                    {{ item.label }}
-                  </a-tag>
-                </template>
-                <span v-else class="empty-selected">暂无筛选条件</span>
-              </div>
-              <a
-                v-if="selectedConditions.length"
-                class="clear-link"
-                @click="clearConditions"
-              >
-                <DeleteOutlined />
-                删除
-              </a>
-            </div>
-          </div>
+          <SelectedConditionsBar
+            :conditions="selectedConditions"
+            @remove="removeCondition"
+            @clear="clearConditions"
+          />
         </a-card>
       </div>
 
@@ -300,15 +259,14 @@ const openDetail = (item: PolicyItem) => {
             </div>
           </div>
 
-          <div class="pagination-wrap">
-            <a-pagination
-              v-model:current="currentPage"
-              :total="total"
-              :page-size="pageSize"
-              show-quick-jumper
-              :show-total="(t: number) => `共 ${t} 条`"
-            />
-          </div>
+          <PaginationBar
+            v-model:current="currentPage"
+            class="news-pager"
+            :total="total"
+            :page-size="pageSize"
+            quick-jumper
+            total-inline
+          />
         </div>
       </a-spin>
     </div>
@@ -321,13 +279,13 @@ const openDetail = (item: PolicyItem) => {
   padding: 0 0 8px;
   margin-bottom: 12px;
   font-size: 14px;
+
+  :deep(.filter-label) {
+    width: auto;
+  }
 }
 
-.filter-label {
-  width: auto;
-}
-
-.filter-options :global(.ant-checkbox-wrapper) {
+.filter-panel :global(.ant-checkbox-wrapper) {
   font-size: 14px;
 }
 
@@ -489,7 +447,7 @@ const openDetail = (item: PolicyItem) => {
   color: #8c8c8c;
 }
 
-.pagination-wrap {
-  --pagination-padding: 8px 0 4px;
+.news-pager {
+  --pagination-space: 8px 0 4px;
 }
 </style>

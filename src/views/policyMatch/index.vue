@@ -29,6 +29,7 @@ import { loadRegionOptions, type CityOption } from '@/api/meta'
 import type { MatchedEnterprise } from '@/api/mapPortal'
 import type { PolicyDbItem } from '@/mock/policyDb'
 import { cities } from '@/mock/nav'
+import { shouldLoadEnterprises } from './enterpriseReload'
 import buildingIcon from '@/assets/enterpriseDb/match/icon-building.png'
 import exportImg from '@/assets/policyMatch/vip-export@2x.png'
 import emptyNews from '@/assets/home/empty-news.png'
@@ -663,20 +664,20 @@ const openTool = (name: 'workspace' | 'personal-center') => {
   void router.push({ name })
 }
 
-watch(selectedPolicyId, () => {
-  if (currentPage.value !== 1) currentPage.value = 1
-  void loadEnterprises()
-})
+const reloadEnterprises = () => {
+  const page = currentPage.value
+  if (page !== 1) currentPage.value = 1
+  if (shouldLoadEnterprises(page, localMode.value)) void loadEnterprises()
+}
+
+watch(selectedPolicyId, reloadEnterprises)
 
 watch(currentPage, () => {
   if (localMode.value) return
   void loadEnterprises()
 })
 
-watch(localMode, () => {
-  if (currentPage.value !== 1) currentPage.value = 1
-  void loadEnterprises()
-})
+watch(localMode, reloadEnterprises)
 
 watch(deptsExpanded, async (open) => {
   if (!open) {

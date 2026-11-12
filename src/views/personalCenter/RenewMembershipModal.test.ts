@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { PolicyUserType } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+import { resetMembershipCatalog } from '@/views/membership/useMembershipCatalog'
 import RenewMembershipModal from './RenewMembershipModal.vue'
 
 vi.mock('@/api/membership', async () => {
@@ -123,6 +124,7 @@ const mountModal = (
 describe('RenewMembershipModal', () => {
   beforeEach(() => {
     localStorage.clear()
+    resetMembershipCatalog()
     vi.clearAllMocks()
   })
 

@@ -6,6 +6,8 @@ import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useCollapsedList } from '@/composables/useCollapsedList'
 import { useServerPage } from '@/composables/useServerPage'
 import FilterRow from '@/components/common/FilterRow.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
 import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
 import { useRegionStore } from '@/stores/region'
@@ -15,10 +17,11 @@ import {
   type EnterpriseItem,
 } from '../../mock/enterpriseDb'
 import { fetchEnterprisePage } from '@/api/enterprises'
-import { fetchIndustryTree, type IndustryNode } from '@/api/meta'
+import { fetchIndustryTree } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import industryTagIcon from '../../assets/enterpriseDb/industry-tag.png'
 import emptyNews from '@/assets/home/empty-news.png'
+import { toIndustryNodes } from '@/utils/industryNodes'
 
 defineOptions({ name: 'EnterpriseDb' })
 
@@ -33,10 +36,7 @@ const filters = reactive({
   industries: [] as string[],
 })
 
-const toIndustryNodes = (names: string[]): IndustryNode[] =>
-  names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
-
-const industryTree = ref<IndustryNode[]>(toIndustryNodes(enterpriseIndustries))
+const industryTree = ref(toIndustryNodes(enterpriseIndustries))
 
 const { showMore: showMoreIndustries, visibleList: visibleIndustries } =
   useCollapsedList(industryTree, COLLAPSED_INDUSTRY_COUNT)
@@ -125,10 +125,13 @@ const goDetail = (id: number) => {
             <a-button size="small" @click="reload">重试</a-button>
           </template>
         </a-alert>
-        <div v-else-if="!pagedList.length" class="empty-state">
-          <img :src="emptyNews" alt="" class="empty-illustration" />
-          <p>未找到符合条件的企业，请调整筛选后再试</p>
-        </div>
+        <EmptyState
+          v-else-if="!pagedList.length"
+          class="list-empty"
+          :image="emptyNews"
+          :image-width="202"
+          text="未找到符合条件的企业，请调整筛选后再试"
+        />
 
         <div v-else class="enterprise-grid">
           <article
@@ -193,16 +196,13 @@ const goDetail = (id: number) => {
         </div>
       </a-spin>
 
-      <div class="pagination-wrap">
-        <a-pagination
-          v-model:current="currentPage"
-          :total="total"
-          :page-size="pageSize"
-          show-quick-jumper
-          :show-size-changer="false"
-          :show-total="(t: number) => `共 ${t} 条`"
-        />
-      </div>
+      <PaginationBar
+        v-model:current="currentPage"
+        :total="total"
+        :page-size="pageSize"
+        quick-jumper
+        total-inline
+      />
     </a-card>
   </PageState>
 </template>
@@ -218,7 +218,7 @@ const goDetail = (id: number) => {
   --filter-font-size: 14px;
   --filter-label-width: 80px;
   --filter-options-gap: 4px 18px;
-  --pagination-padding: 20px 0 8px;
+  --pagination-space: 20px 0 8px;
 
   :deep(.ant-card-body) {
     padding: 24px 28px 16px;
@@ -298,23 +298,12 @@ const goDetail = (id: number) => {
   min-width: 0;
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 48px 0 32px;
-  color: #8c8c8c;
-  font-size: 14px;
-
-  .empty-illustration {
-    width: 202px;
-    height: auto;
-    margin-bottom: 16px;
-  }
-
-  p {
-    margin: 0;
-  }
+.list-empty {
+  --empty-padding: 48px 0 32px;
+  --empty-gap: 16px;
+  --empty-text-size: 14px;
+  --empty-text-weight: 400;
+  --empty-text-color: #8c8c8c;
 }
 
 .ent-icon {

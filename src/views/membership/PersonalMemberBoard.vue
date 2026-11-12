@@ -4,17 +4,10 @@ import vipGem from '@/assets/membership/vip-gem.png'
 import qrFrame from '@/assets/membership/qr-frame.png'
 import planHighlight from '@/assets/membership/plan-highlight.png'
 import svipPlanHighlight from '@/assets/membership/svip-plan-highlight.png'
-import benefitSearch from '@/assets/membership/benefit-search.png'
-import benefitExport from '@/assets/membership/benefit-export.png'
-import benefitBatch from '@/assets/membership/benefit-batch.png'
-import benefitMatch from '@/assets/membership/benefit-match.png'
-import benefitQuery from '@/assets/membership/benefit-query.png'
-import svipData from '@/assets/membership/svip-data.png'
-import svipMatch from '@/assets/membership/svip-match.png'
-import svipTech from '@/assets/membership/svip-tech.png'
-import svipIndustry from '@/assets/membership/svip-industry.png'
+import { personalBenefitIcon } from './benefitIcons'
 import MemberCrownIcon from './components/MemberCrownIcon.vue'
 import MemberPayPanel from './components/MemberPayPanel.vue'
+import PlanCard from './components/PlanCard.vue'
 import {
   benefitsForPersonalTab,
   type MembershipBenefitCard,
@@ -43,28 +36,6 @@ type Tier = 'vip' | 'svip'
 
 const tier = ref<Tier>('vip')
 const selectedPlan = ref('')
-
-const vipIcons = [
-  benefitSearch,
-  benefitExport,
-  benefitBatch,
-  benefitMatch,
-  benefitQuery,
-]
-const svipIcons = [svipData, svipMatch, svipTech, svipIndustry]
-
-const benefitIcon = (name: string, index: number) => {
-  if (/导出/.test(name)) return benefitExport
-  if (/批量/.test(name)) return benefitBatch
-  if (/匹配/.test(name)) return benefitMatch
-  if (/科技|成果/.test(name)) return svipTech
-  if (/产业|上下游/.test(name)) return svipIndustry
-  if (/申报|材料/.test(name)) return svipMatch
-  if (/数据/.test(name)) return svipData
-  if (/查询|搜索/.test(name)) return benefitSearch
-  const pool = tier.value === 'svip' ? svipIcons : vipIcons
-  return pool[index % pool.length] ?? benefitSearch
-}
 
 const currentPlans = computed(() =>
   personalPlansForTab(props.plans, tier.value),
@@ -116,41 +87,26 @@ const selectTier = (next: Tier) => {
       <div class="board-main">
         <p v-if="!currentPlans.length" class="bind-note">{{ emptyText }}</p>
         <div v-else class="plan-row">
-          <button
+          <PlanCard
             v-for="plan in currentPlans"
             :key="plan.id"
-            type="button"
-            class="plan-card"
-            :class="{ selected: currentPlan?.id === plan.id }"
-            :style="
+            :plan="plan"
+            surface="personal"
+            :tone="tier"
+            :selected="currentPlan?.id === plan.id"
+            :highlight="
               currentPlan?.id === plan.id
-                ? {
-                    backgroundImage: `url(${
-                      tier === 'vip' ? planHighlight : svipPlanHighlight
-                    })`,
-                  }
-                : undefined
+                ? tier === 'vip'
+                  ? planHighlight
+                  : svipPlanHighlight
+                : ''
             "
-            :aria-pressed="currentPlan?.id === plan.id"
-            @click="selectPlan(plan.id)"
-          >
-            <span
-              v-if="plan.tag"
-              class="plan-tag"
-              :class="{ hot: plan.featured }"
-            >
-              {{ plan.tag }}
-            </span>
-            <span class="plan-name">{{ plan.name }}</span>
-            <span class="plan-price">
-              <em>¥</em>{{ plan.price }}
-              <del v-if="plan.original">¥{{ plan.original }}</del>
-            </span>
-            <span v-if="plan.daily" class="plan-daily"
-              >折合每天¥{{ plan.daily }}</span
-            >
-            <span v-if="plan.desc" class="plan-desc">{{ plan.desc }}</span>
-          </button>
+            :hot-tag="plan.featured"
+            :show-original="Boolean(plan.original)"
+            :daily-text="plan.daily ? `折合每天¥${plan.daily}` : ''"
+            :desc="plan.desc"
+            @select="selectPlan(plan.id)"
+          />
         </div>
 
         <p class="bind-note">
@@ -169,7 +125,10 @@ const selectTier = (next: Tier) => {
           <template v-else>
             <ul class="benefit-list">
               <li v-for="(item, index) in currentBenefits" :key="item.id">
-                <img :src="benefitIcon(item.name, index)" :alt="item.name" />
+                <img
+                  :src="personalBenefitIcon(tier, item.name, index)"
+                  :alt="item.name"
+                />
                 <span>{{ item.name }}</span>
               </li>
             </ul>
@@ -188,7 +147,7 @@ const selectTier = (next: Tier) => {
           </p>
           <ul v-else>
             <li v-for="(item, index) in currentBenefits" :key="item.id">
-              <img :src="benefitIcon(item.name, index)" alt="" />
+              <img :src="personalBenefitIcon(tier, item.name, index)" alt="" />
               <div>
                 <strong>{{ item.name }}</strong>
                 <p v-if="item.description">{{ item.description }}</p>
@@ -375,136 +334,7 @@ const selectTier = (next: Tier) => {
   gap: 14px;
 }
 
-.plan-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 168px;
-  padding: 28px 16px 16px;
-  border: 1px solid #ece7df;
-  border-radius: 6px;
-  background: #fff;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-
-  &:hover,
-  &.selected {
-    transform: translateY(-2px);
-  }
-}
-
-.plan-tag {
-  position: absolute;
-  top: -10px;
-  left: 0;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: linear-gradient(334deg, #ff3d29 0%, #fd8c3e 100%);
-  color: white;
-  font-size: 12px;
-  z-index: 2;
-}
-
-.plan-name {
-  margin-bottom: 8px;
-  font-size: 22px;
-  font-weight: 600;
-  color: #2a3546;
-}
-
-.plan-price {
-  display: flex;
-  align-items: baseline;
-  color: #1f2a37;
-  font-size: 46px;
-  font-weight: 700;
-  line-height: 1;
-
-  em {
-    margin-right: 2px;
-    font-size: 16px;
-    font-style: normal;
-    font-weight: 600;
-  }
-
-  small,
-  del {
-    margin-left: 4px;
-    font-size: 12px;
-    font-weight: 400;
-    color: #8b95a4;
-  }
-
-  del {
-    text-decoration: line-through;
-  }
-}
-
-.plan-capacity {
-  margin-top: 8px;
-  font-size: 14px;
-  color: #5b6573;
-}
-
-.plan-daily {
-  margin-top: 10px;
-  font-size: 14px;
-  color: #8b93a0;
-}
-
-.plan-desc {
-  padding-top: 12px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #8b93a0;
-  text-align: center;
-}
-
-.board.is-vip .plan-card.selected {
-  .plan-name,
-  .plan-price,
-  .plan-daily {
-    color: #c48a2e;
-  }
-
-  .plan-price small {
-    color: #d0a45a;
-  }
-}
-
 .board.is-svip {
-  .plan-card {
-    border-color: #e4ebf7;
-    min-height: 188px;
-
-    &:hover,
-    &.selected {
-      box-shadow: 0 10px 24px rgba(61, 124, 255, 0.16);
-    }
-  }
-
-  .plan-card.selected {
-    border-color: #8eb0f0;
-
-    .plan-price,
-    .plan-capacity {
-      color: #3d7cff;
-    }
-
-    .plan-price small {
-      color: #6f94e6;
-    }
-
-    .plan-desc {
-      color: #5b82d6;
-    }
-  }
-
   .svip-benefits {
     background: linear-gradient(
       180deg,

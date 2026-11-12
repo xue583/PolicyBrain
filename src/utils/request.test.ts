@@ -1,6 +1,12 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
+import axios, {
+  AxiosError,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios'
 import CryptoJS from 'crypto-js'
 import { ApiError } from '@/utils/apiError'
+import { clearToken, getToken, setRefreshToken, setToken } from '@/utils/auth'
 
 vi.mock('ant-design-vue', () => ({
   message: {
@@ -10,11 +16,13 @@ vi.mock('ant-design-vue', () => ({
 }))
 
 const {
+  default: service,
   preserveMultipartContentType,
   shouldSkipApiPrefix,
   shouldSkipRefresh,
   unwrapEnvelope,
   resolveResponseData,
+  request,
 } = await import('./request')
 
 const { maskSecret } = await import('./crypto')
@@ -149,6 +157,70 @@ describe('resolveResponseData', () => {
     } catch (err) {
       expect(err).toBeInstanceOf(ApiError)
       expect((err as ApiError).status).toBe(401)
+    }
+  })
+})
+
+describe('refreshAccessToken', () => {
+  afterEach(() => {
+    clearToken()
+  })
+
+  it('decrypts an encrypted refresh body before saving the access token', async () => {
+    stubSecrets()
+    setToken('stale')
+    setRefreshToken('refresh-1')
+    const cipher = encrypt({
+      accessToken: 'fresh',
+      refreshToken: 'refresh-2',
+    })
+    const post = vi.spyOn(axios, 'post').mockResolvedValue({
+      data: { status: 200, data: { encrypted: true, data: cipher } },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as InternalAxiosRequestConfig,
+    })
+    const previousAdapter = service.defaults.adapter
+    service.defaults.adapter = async (config) => {
+      const headers = config.headers
+      const authorization =
+        headers && typeof headers.get === 'function'
+          ? headers.get('Authorization')
+          : undefined
+      const header = typeof authorization === 'string' ? authorization : ''
+      const ok = header.includes('fresh')
+      const response: AxiosResponse = {
+        data: ok
+          ? { status: 200, data: { ok: true } }
+          : { status: 401, message: '未登录' },
+        status: ok ? 200 : 401,
+        statusText: ok ? 'OK' : 'Unauthorized',
+        headers: {},
+        config,
+      }
+      if (!ok) {
+        const error = new AxiosError('unauthorized')
+        error.config = config
+        error.response = response
+        throw error
+      }
+      return response
+    }
+
+    try {
+      await expect(
+        request({ url: '/account/users/me', method: 'get', hideError: true }),
+      ).resolves.toEqual({ ok: true })
+      expect(getToken()).toBe('fresh')
+      expect(post).toHaveBeenCalledWith(
+        '/auth/tokenRefreshes',
+        { token: 'refresh-1' },
+        expect.objectContaining({ withCredentials: true }),
+      )
+    } finally {
+      service.defaults.adapter = previousAdapter
+      post.mockRestore()
     }
   })
 })

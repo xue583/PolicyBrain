@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { resetMembershipCatalog } from './useMembershipCatalog'
 import MembershipPage from './index.vue'
 
 vi.mock('@/api/auth', async () => {
@@ -249,6 +250,7 @@ const mountPage = (identity?: number) => {
 describe('MembershipPage identity boards', () => {
   beforeEach(() => {
     localStorage.clear()
+    resetMembershipCatalog()
     vi.mocked(fetchMembershipPlans).mockClear()
     vi.mocked(fetchMembershipBenefits).mockClear()
   })
