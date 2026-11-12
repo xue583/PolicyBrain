@@ -203,7 +203,8 @@ const refreshAccessToken = async (): Promise<string> => {
     },
   )
 
-  const payload = unwrapEnvelope(data, 200)
+  // 与业务响应同一套解密：裸 axios 不经过拦截器，加密刷新体会解不出令牌并被登出
+  const payload = resolveResponseData(data, 200)
   const tokens = pickTokens(payload)
   if (!tokens.accessToken) {
     throw new ApiError('刷新令牌失败', 401)

@@ -12,12 +12,22 @@ import { ApiError } from '@/utils/request'
 
 const emptyList = (): PolicyUserEnterpriseList => ({ items: [] })
 
+const list = ref<PolicyUserEnterpriseList>(emptyList())
+const loading = ref(false)
+const loaded = ref(false)
+let inflight: Promise<void> | null = null
+
+/** 测试隔离。进行中的请求结束后仍可能写回，调用方需先等它结束 */
+export const resetMyEnterprises = () => {
+  list.value = emptyList()
+  loading.value = false
+  loaded.value = false
+  inflight = null
+}
+
 /** 个人中心与工作台企业管理共用：已绑定企业、是否还能绑定、解绑 */
 export const useMyEnterprises = () => {
   const auth = useAuthStore()
-  const list = ref<PolicyUserEnterpriseList>(emptyList())
-  const loading = ref(false)
-  const loaded = ref(false)
 
   const items = computed(() => list.value.items ?? [])
 
@@ -29,16 +39,23 @@ export const useMyEnterprises = () => {
     return items.value.length < 1
   })
 
-  const load = async () => {
+  const load = () => {
+    if (inflight) return inflight
     loading.value = true
-    try {
-      list.value = await fetchMyEnterprises()
-      loaded.value = true
-    } catch {
-      loaded.value = false
-    } finally {
-      loading.value = false
-    }
+    const task = fetchMyEnterprises()
+      .then((data) => {
+        list.value = data
+        loaded.value = true
+      })
+      .catch(() => {
+        loaded.value = false
+      })
+      .finally(() => {
+        loading.value = false
+        if (inflight === task) inflight = null
+      })
+    inflight = task
+    return task
   }
 
   const unbind = (item: PolicyUserEnterprise) => {

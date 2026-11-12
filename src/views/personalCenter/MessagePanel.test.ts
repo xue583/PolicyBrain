@@ -92,8 +92,8 @@ describe('MessagePanel', () => {
   it('requests unread messages and marks one as read', async () => {
     const wrapper = await mountPanel()
     const unreadTab = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('未读'))
+      .findAll('[role="tab"]')
+      .find((tab) => tab.text().includes('未读'))
     await unreadTab!.trigger('click')
     await flushPromises()
 

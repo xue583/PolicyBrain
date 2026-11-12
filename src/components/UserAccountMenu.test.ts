@@ -44,9 +44,14 @@ const mountMenu = async () => {
   }
 
   const wrapper = mount(UserAccountMenu, {
-    attachTo: document.body,
     global: {
       plugins: [pinia, router],
+      stubs: {
+        ADropdown: {
+          template:
+            '<div><slot /><div class="dropdown-overlay"><slot name="overlay" /></div></div>',
+        },
+      },
     },
   })
 
@@ -75,6 +80,7 @@ describe('UserAccountMenu', () => {
   it('opens personal center from the first menu item', async () => {
     const { wrapper, router } = await mountMenu()
     await wrapper.get('[role="menuitem"]').trigger('click')
+    await flushPromises()
     expect(router.currentRoute.value.name).toBe('personal-center')
     wrapper.unmount()
   })

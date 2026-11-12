@@ -6,7 +6,7 @@ import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'
 import { useServerPage } from '@/composables/useServerPage'
 import { useCollapsedList } from '@/composables/useCollapsedList'
-import { BankOutlined, DownOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import { BankOutlined, EyeOutlined } from '@ant-design/icons-vue'
 import FilterRow from '@/components/common/FilterRow.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import ResultCountBar from '@/components/common/ResultCountBar.vue'
@@ -22,11 +22,12 @@ import {
   fetchPolicyPage,
   type IssuingAuthorityOption,
 } from '@/api/policies'
-import { fetchIndustryTree, type IndustryNode } from '@/api/meta'
+import { fetchIndustryTree } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 import { useRegionStore } from '@/stores/region'
 import { clearRegionSelection } from '@/utils/regionActions'
+import { toIndustryNodes } from '@/utils/industryNodes'
 
 defineOptions({ name: 'PolicyDb' })
 
@@ -36,10 +37,7 @@ const keyword = useRouteKeyword()
 const region = useRegionStore()
 const { selectedLabel: regionLabel } = storeToRefs(region)
 
-const toIndustryNodes = (names: string[]): IndustryNode[] =>
-  names.map((name, index) => ({ id: -(index + 1), name, children: [] }))
-
-const industryTree = ref<IndustryNode[]>(toIndustryNodes(fallbackIndustries))
+const industryTree = ref(toIndustryNodes(fallbackIndustries))
 
 const filters = reactive({
   departmentId: '',
@@ -313,15 +311,12 @@ const columns = [
         <a-card class="pb-card-lg">
           <RegionCascadeFilter label="省市地区：" :collapsed-count="12" />
 
-          <div class="filter-row">
-            <span class="filter-label">政策等级：</span>
-            <div class="filter-options">
-              <a-checkbox-group
-                v-model:value="filters.levels"
-                :options="policyLevels"
-              />
-            </div>
-          </div>
+          <FilterRow label="政策等级：">
+            <a-checkbox-group
+              v-model:value="filters.levels"
+              :options="policyLevels"
+            />
+          </FilterRow>
 
           <FilterRow
             label="发布单位："
@@ -342,32 +337,23 @@ const columns = [
             </a>
           </FilterRow>
 
-          <div class="filter-row">
-            <span class="filter-label">产业标签：</span>
-            <div class="filter-options">
-              <IndustryCascadeFilter
-                v-model="filters.industryTags"
-                :options="visibleIndustries"
-              />
-              <a
-                class="more-link"
-                @click="showMoreIndustries = !showMoreIndustries"
-              >
-                {{ showMoreIndustries ? '收起' : '更多' }}
-                <DownOutlined :class="{ rotated: showMoreIndustries }" />
-              </a>
-            </div>
-          </div>
+          <FilterRow
+            label="产业标签："
+            v-model:expanded="showMoreIndustries"
+            :collapsible="industryTree.length > 8"
+          >
+            <IndustryCascadeFilter
+              v-model="filters.industryTags"
+              :options="visibleIndustries"
+            />
+          </FilterRow>
 
-          <div class="filter-row">
-            <span class="filter-label">资讯类型：</span>
-            <div class="filter-options">
-              <a-checkbox-group
-                v-model:value="filters.infoTypes"
-                :options="infoTypes"
-              />
-            </div>
-          </div>
+          <FilterRow label="资讯类型：">
+            <a-checkbox-group
+              v-model:value="filters.infoTypes"
+              :options="infoTypes"
+            />
+          </FilterRow>
 
           <SelectedConditionsBar
             :conditions="selectedConditions"

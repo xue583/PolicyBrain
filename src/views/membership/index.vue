@@ -1,24 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { PolicyUserType } from '@/api/auth'
-import { fetchMembershipBenefits, fetchMembershipPlans } from '@/api/membership'
 import { useAuthStore } from '@/stores/auth'
 import EnterpriseMemberBoard from './EnterpriseMemberBoard.vue'
 import PersonalMemberBoard from './PersonalMemberBoard.vue'
-import {
-  asMembershipBenefits,
-  toBenefitCards,
-  type MembershipBenefitCard,
-} from './membershipBenefits'
-import {
-  MEMBERSHIP_PLAN_LEVELS,
-  asMembershipPlans,
-  plansForIdentity,
-  toPlanCards,
-  type MembershipPlanCard,
-} from './membershipPlans'
+import { plansForIdentity } from './membershipPlans'
+import { useMembershipCatalog } from './useMembershipCatalog'
 import bgImg from '@/assets/membership/bg.png'
 import heroPush from '@/assets/membership/hero-push.png'
 import heroReport from '@/assets/membership/hero-report.png'
@@ -40,11 +29,14 @@ const isEnterpriseView = computed(
   () => Number(user.value?.identity) === PolicyUserType.EnterpriseService,
 )
 
-const allPlans = ref<MembershipPlanCard[]>([])
-const allBenefits = ref<MembershipBenefitCard[]>([])
-const catalogLoading = ref(false)
-const plansFailed = ref(false)
-const benefitsFailed = ref(false)
+const {
+  plans: allPlans,
+  benefits: allBenefits,
+  loading: catalogLoading,
+  plansFailed,
+  benefitsFailed,
+  loadCatalog,
+} = useMembershipCatalog()
 
 const visiblePlans = computed(() =>
   plansForIdentity(allPlans.value, user.value?.identity),
@@ -63,61 +55,6 @@ const benefitEmptyText = computed(() => {
   if (benefitsFailed.value) return '权益加载失败，请稍后重试'
   return '暂无会员权益'
 })
-
-const loadLevelGroups = async <T,>(
-  load: (level: (typeof MEMBERSHIP_PLAN_LEVELS)[number]) => Promise<T[]>,
-) => {
-  return Promise.all(
-    MEMBERSHIP_PLAN_LEVELS.map(async (level) => {
-      try {
-        return await load(level)
-      } catch {
-        return null
-      }
-    }),
-  )
-}
-
-const loadCatalog = async () => {
-  if (!auth.isLoggedIn) {
-    allPlans.value = []
-    allBenefits.value = []
-    catalogLoading.value = false
-    plansFailed.value = false
-    benefitsFailed.value = false
-    return
-  }
-
-  catalogLoading.value = true
-  plansFailed.value = false
-  benefitsFailed.value = false
-  try {
-    const [planGroups, benefitGroups] = await Promise.all([
-      loadLevelGroups(async (level) =>
-        asMembershipPlans(await fetchMembershipPlans(level)),
-      ),
-      loadLevelGroups(async (level) =>
-        asMembershipBenefits(await fetchMembershipBenefits(level)),
-      ),
-    ])
-    if (planGroups.every((group) => group == null)) {
-      allPlans.value = []
-      plansFailed.value = true
-    } else {
-      allPlans.value = toPlanCards(planGroups.flatMap((group) => group ?? []))
-    }
-    if (benefitGroups.every((group) => group == null)) {
-      allBenefits.value = []
-      benefitsFailed.value = true
-    } else {
-      allBenefits.value = toBenefitCards(
-        benefitGroups.flatMap((group) => group ?? []),
-      )
-    }
-  } finally {
-    catalogLoading.value = false
-  }
-}
 
 watch(
   () => auth.isLoggedIn,

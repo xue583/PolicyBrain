@@ -1,34 +1,28 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { PolicyUserType } from '@/api/auth'
-import {
-  fetchMembershipBenefits,
-  fetchMembershipPlans,
-  MembershipLevel,
-  type AccountMembership,
-} from '@/api/membership'
+import { MembershipLevel, type AccountMembership } from '@/api/membership'
 import { useAuthStore } from '@/stores/auth'
 import { formatMembershipPeriod } from '@/utils/userDisplay'
 import MemberCrownIcon from '@/views/membership/components/MemberCrownIcon.vue'
 import MemberPayPanel from '@/views/membership/components/MemberPayPanel.vue'
+import PlanCard from '@/views/membership/components/PlanCard.vue'
 import {
-  asMembershipBenefits,
+  enterpriseBenefitIcon,
+  personalBenefitIcon,
+} from '@/views/membership/benefitIcons'
+import {
   benefitsForEnterpriseTab,
   benefitsForPersonalTab,
-  toBenefitCards,
-  type MembershipBenefitCard,
 } from '@/views/membership/membershipBenefits'
 import {
-  MEMBERSHIP_PLAN_LEVELS,
-  asMembershipPlans,
   personalPlans,
   personalPlansForTab,
   plansByLevel,
   plansForIdentity,
-  toPlanCards,
-  type MembershipPlanCard,
 } from '@/views/membership/membershipPlans'
+import { useMembershipCatalog } from '@/views/membership/useMembershipCatalog'
 import { usePlanSelection } from '@/views/membership/usePlanSelection'
 import vipGem from '@/assets/membership/vip-gem.png'
 import qrFrame from '@/assets/membership/qr-frame.png'
@@ -37,27 +31,6 @@ import planHighlight from '@/assets/membership/plan-highlight.png'
 import svipPlanHighlight from '@/assets/membership/svip-plan-highlight.png'
 import entPlanHighlight from '@/assets/membership/enterprise/plan-highlight.png'
 import entSvipPlanHighlight from '@/assets/membership/enterprise/svip-plan-highlight.png'
-import benefitSearch from '@/assets/membership/benefit-search.png'
-import benefitExport from '@/assets/membership/benefit-export.png'
-import benefitBatch from '@/assets/membership/benefit-batch.png'
-import benefitMatch from '@/assets/membership/benefit-match.png'
-import benefitQuery from '@/assets/membership/benefit-query.png'
-import svipData from '@/assets/membership/svip-data.png'
-import svipMatch from '@/assets/membership/svip-match.png'
-import svipTech from '@/assets/membership/svip-tech.png'
-import svipIndustry from '@/assets/membership/svip-industry.png'
-import entBenefitSearch from '@/assets/membership/enterprise/benefit-search.png'
-import entBenefitDeclare from '@/assets/membership/enterprise/benefit-declare.png'
-import entBenefitBatch from '@/assets/membership/enterprise/benefit-batch.png'
-import entBenefitMatch from '@/assets/membership/enterprise/benefit-match.png'
-import entBenefitNurture from '@/assets/membership/enterprise/benefit-nurture.png'
-import entBenefitRecommend from '@/assets/membership/enterprise/benefit-recommend.png'
-import entSvipBenefitSearch from '@/assets/membership/enterprise/svip-benefit-search.png'
-import entSvipBenefitDeclare from '@/assets/membership/enterprise/svip-benefit-declare.png'
-import entSvipBenefitBatch from '@/assets/membership/enterprise/svip-benefit-batch.png'
-import entSvipBenefitMatch from '@/assets/membership/enterprise/svip-benefit-match.png'
-import entSvipBenefitNurture from '@/assets/membership/enterprise/svip-benefit-nurture.png'
-import entSvipBenefitRecommend from '@/assets/membership/enterprise/svip-benefit-recommend.png'
 
 defineOptions({ name: 'RenewMembershipModal' })
 
@@ -86,40 +59,14 @@ const usesPersonalBoard = computed(
 
 const tier = ref<Tier>('vip')
 const selectedPlan = ref('')
-const allPlans = ref<MembershipPlanCard[]>([])
-const allBenefits = ref<MembershipBenefitCard[]>([])
-const catalogLoading = ref(false)
-const catalogReady = ref(false)
-const plansFailed = ref(false)
-
-let loadGeneration = 0
-
-const personalVipIcons = [
-  benefitSearch,
-  benefitExport,
-  benefitBatch,
-  benefitMatch,
-  benefitQuery,
-]
-const personalSvipIcons = [svipData, svipMatch, svipTech, svipIndustry]
-const enterpriseIcons = {
-  vip: [
-    entBenefitSearch,
-    entBenefitDeclare,
-    entBenefitBatch,
-    entBenefitMatch,
-    entBenefitNurture,
-    entBenefitRecommend,
-  ],
-  svip: [
-    entSvipBenefitSearch,
-    entSvipBenefitDeclare,
-    entSvipBenefitBatch,
-    entSvipBenefitMatch,
-    entSvipBenefitNurture,
-    entSvipBenefitRecommend,
-  ],
-}
+const {
+  plans: allPlans,
+  benefits: allBenefits,
+  loading: catalogLoading,
+  plansFailed,
+  ready: catalogReady,
+  loadCatalog,
+} = useMembershipCatalog()
 
 const period = computed(() => formatMembershipPeriod(props.membership))
 
@@ -235,46 +182,10 @@ const dailyText = (daily: string) => {
   return usesPersonalBoard.value ? `折合每天¥${daily}` : `每天仅需${daily}元`
 }
 
-const personalBenefitIcon = (name: string, index: number) => {
-  if (/导出/.test(name)) return benefitExport
-  if (/批量/.test(name)) return benefitBatch
-  if (/匹配/.test(name)) return benefitMatch
-  if (/科技|成果/.test(name)) return svipTech
-  if (/产业|上下游/.test(name)) return svipIndustry
-  if (/申报|材料/.test(name)) return svipMatch
-  if (/数据/.test(name)) return svipData
-  if (/查询|搜索/.test(name)) return benefitSearch
-  const pool = tier.value === 'svip' ? personalSvipIcons : personalVipIcons
-  return pool[index % pool.length] ?? benefitSearch
-}
-
-const enterpriseBenefitIcon = (name: string, index: number) => {
-  const pool = enterpriseIcons[tier.value]
-  if (/申报/.test(name)) {
-    return tier.value === 'svip' ? entSvipBenefitDeclare : entBenefitDeclare
-  }
-  if (/批量/.test(name)) {
-    return tier.value === 'svip' ? entSvipBenefitBatch : entBenefitBatch
-  }
-  if (/匹配/.test(name)) {
-    return tier.value === 'svip' ? entSvipBenefitMatch : entBenefitMatch
-  }
-  if (/培育/.test(name)) {
-    return tier.value === 'svip' ? entSvipBenefitNurture : entBenefitNurture
-  }
-  if (/推荐/.test(name)) {
-    return tier.value === 'svip' ? entSvipBenefitRecommend : entBenefitRecommend
-  }
-  if (/搜索|查询/.test(name)) {
-    return tier.value === 'svip' ? entSvipBenefitSearch : entBenefitSearch
-  }
-  return pool[index % pool.length] ?? entBenefitSearch
-}
-
 const benefitIcon = (name: string, index: number) =>
   usesPersonalBoard.value
-    ? personalBenefitIcon(name, index)
-    : enterpriseBenefitIcon(name, index)
+    ? personalBenefitIcon(tier.value, name, index)
+    : enterpriseBenefitIcon(tier.value, name, index)
 
 const close = () => {
   open.value = false
@@ -284,57 +195,6 @@ const selectTier = (next: Tier) => {
   if (tier.value === next) return
   tier.value = next
   selectedPlan.value = ''
-}
-
-const loadLevelGroups = async <T,>(
-  load: (level: (typeof MEMBERSHIP_PLAN_LEVELS)[number]) => Promise<T[]>,
-) =>
-  Promise.all(
-    MEMBERSHIP_PLAN_LEVELS.map(async (level) => {
-      try {
-        return await load(level)
-      } catch {
-        return null
-      }
-    }),
-  )
-
-const loadCatalog = async () => {
-  const generation = ++loadGeneration
-  if (!auth.isLoggedIn) {
-    allPlans.value = []
-    allBenefits.value = []
-    catalogLoading.value = false
-    plansFailed.value = false
-    catalogReady.value = true
-    return
-  }
-
-  catalogLoading.value = true
-  plansFailed.value = false
-  try {
-    const [planGroups, benefitGroups] = await Promise.all([
-      loadLevelGroups(async (level) =>
-        asMembershipPlans(await fetchMembershipPlans(level)),
-      ),
-      loadLevelGroups(async (level) =>
-        asMembershipBenefits(await fetchMembershipBenefits(level)),
-      ),
-    ])
-    if (generation !== loadGeneration) return
-    if (planGroups.every((group) => group == null)) {
-      allPlans.value = []
-      plansFailed.value = true
-    } else {
-      allPlans.value = toPlanCards(planGroups.flatMap((group) => group ?? []))
-    }
-    allBenefits.value = benefitGroups.every((group) => group == null)
-      ? []
-      : toBenefitCards(benefitGroups.flatMap((group) => group ?? []))
-    catalogReady.value = true
-  } finally {
-    if (generation === loadGeneration) catalogLoading.value = false
-  }
 }
 
 const onPaid = () => {
@@ -352,10 +212,6 @@ watch(
   },
   { immediate: true },
 )
-
-onUnmounted(() => {
-  loadGeneration += 1
-})
 </script>
 
 <template>
@@ -448,33 +304,19 @@ onUnmounted(() => {
             {{ planEmptyText }}
           </p>
           <div v-else class="plan-row" :class="`is-${tier}`">
-            <button
+            <PlanCard
               v-for="plan in currentPlans"
               :key="plan.id"
-              type="button"
-              class="plan-card"
-              :class="{ selected: currentPlan?.id === plan.id }"
-              :style="
-                currentPlan?.id === plan.id
-                  ? { backgroundImage: `url(${highlightImage})` }
-                  : undefined
-              "
-              :aria-pressed="currentPlan?.id === plan.id"
-              @click="selectPlan(plan.id)"
-            >
-              <span v-if="plan.tag" class="plan-tag">{{ plan.tag }}</span>
-              <span class="plan-name">{{ plan.name }}</span>
-              <span class="plan-price">
-                <em>¥</em>{{ plan.price }}
-                <del v-if="plan.original">¥{{ plan.original }}</del>
-              </span>
-              <span v-if="plan.daily" class="plan-daily">{{
-                dailyText(plan.daily)
-              }}</span>
-              <span v-if="plan.desc && usesPersonalBoard" class="plan-desc">{{
-                plan.desc
-              }}</span>
-            </button>
+              :plan="plan"
+              surface="renew"
+              :tone="tier"
+              :selected="currentPlan?.id === plan.id"
+              :highlight="currentPlan?.id === plan.id ? highlightImage : ''"
+              :show-original="Boolean(plan.original)"
+              :daily-text="dailyText(plan.daily)"
+              :desc="plan.desc && usesPersonalBoard ? plan.desc : ''"
+              @select="selectPlan(plan.id)"
+            />
           </div>
 
           <p v-if="currentPlans.length" class="scene-note">{{ sceneNote }}</p>
@@ -643,105 +485,6 @@ onUnmounted(() => {
 
 .renew.is-personal .plan-row {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.plan-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 148px;
-  padding: 26px 10px 14px;
-  border: 1px solid #ece7df;
-  border-radius: 6px;
-  background: #fff;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  cursor: pointer;
-
-  transition: transform 0.2s ease;
-
-  &:hover,
-  &.selected {
-    transform: translateY(-2px);
-  }
-}
-
-.plan-tag {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 3px 8px;
-  border-radius: 6px 0 6px 0;
-  background: linear-gradient(334deg, #ff3d29 0%, #fd8c3e 100%);
-  color: #fff;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.plan-name {
-  margin-bottom: 6px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #2a3546;
-  text-align: center;
-}
-
-.plan-price {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  justify-content: center;
-  color: #1f2a37;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-
-  em {
-    margin-right: 2px;
-    font-size: 14px;
-    font-style: normal;
-    font-weight: 600;
-  }
-
-  del {
-    margin-left: 4px;
-    color: #8b95a4;
-    font-size: 12px;
-    font-weight: 400;
-    text-decoration: line-through;
-  }
-}
-
-.plan-daily,
-.plan-desc {
-  margin-top: 8px;
-  color: #8b93a0;
-  font-size: 12px;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.renew.is-vip .plan-card.selected {
-  .plan-name,
-  .plan-price,
-  .plan-daily {
-    color: #c48a2e;
-  }
-}
-
-.renew.is-svip .plan-card {
-  border-color: #e4ebf7;
-}
-
-.renew.is-svip .plan-card.selected {
-  border-color: #8eb0f0;
-
-  .plan-name,
-  .plan-price,
-  .plan-daily {
-    color: #3d7cff;
-  }
 }
 
 .empty-note,

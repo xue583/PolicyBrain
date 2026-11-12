@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
-import { applyAuthGuard } from './index'
+import { applyAuthGuard, router } from './index'
 import { clearToken, onNeedLogin, setToken } from '@/utils/auth'
 
 const authRoute = {
@@ -28,5 +28,21 @@ describe('applyAuthGuard', () => {
   it('allows the route when a session exists', () => {
     setToken('access')
     expect(applyAuthGuard(authRoute)).toBe(true)
+  })
+
+  it('sends guests away from the workspace and data export', () => {
+    for (const name of ['workspace', 'export'] as const) {
+      const to = router.resolve({ name })
+      expect(to.meta.requiresAuth).toBe(true)
+      expect(applyAuthGuard(to as unknown as RouteLocationNormalized)).toEqual({
+        name: 'home',
+      })
+    }
+  })
+
+  it('keeps the membership page open for guests', () => {
+    const to = router.resolve({ name: 'membership' })
+    expect(to.meta.requiresAuth).toBeUndefined()
+    expect(applyAuthGuard(to as unknown as RouteLocationNormalized)).toBe(true)
   })
 })
