@@ -1,71 +1,74 @@
 # 政策大脑 POLICY BRAIN
 
-全国政策数据 · AI 辅助申报平台前端。面向企业与服务机构，提供政策检索、资讯追踪、企业/政策双向匹配等能力。当前为 Vue 3 单页原型，页面数据来自本地 Mock，尚未对接后端接口。
+全国政策数据 · AI 辅助申报平台门户前端，面向企业与服务机构提供政策、资讯、企业和匹配等页面入口。
 
-## 功能概览
+## 模块入口
 
-| 模块 | 状态 | 说明 |
-| --- | --- | --- |
-| 首页 | 已实现 | 搜政策 / 搜企业、热门关键词、功能入口、行业标签、资讯列表 |
-| 政策资讯 | 已实现 | 关键词搜索、地区 / 行业 / 级别 / 类型筛选、分页列表 |
-| 政策数据库 | 开发中 | 顶栏可进入，展示占位页 |
-| 企业数据库 | 开发中 | 同上 |
-| 投资项目库 | 开发中 | 同上 |
-| 数据导出 | 开发中 | 同上 |
-| API 接口 | 开发中 | 同上 |
-| 登录 / 注册 | UI 已实现 | 手机验证码 / 二维码登录；注册含账户验证、身份选择、身份认证三步 |
+页面通过 Vue Router 组织，主要路由如下：
 
-首页功能入口：企业匹配政策、政策匹配企业、AI 问政、工作台。
+| 模块         | 路由               |
+| ------------ | ------------------ |
+| 首页         | `/`                |
+| 政策资讯     | `/news`            |
+| 政策数据库   | `/policy-db`       |
+| 企业数据库   | `/enterprise-db`   |
+| 政策匹配企业 | `/policy-match`    |
+| 投资项目库   | `/invest-db`       |
+| 数据导出     | `/export`          |
+| API 接口目录 | `/api`             |
+| 个人中心     | `/personal-center` |
+| 工作台       | `/workspace`       |
 
 ## 技术栈
 
 - Vue 3（`<script setup>` + TypeScript）
+- Vue Router
+- Pinia
 - Vite 8
 - Ant Design Vue 4
 - Sass
-- dayjs（中文 locale）
+- Axios
+- Vitest
 
-页面切换由 `App.vue` 中的 `activeNav` 控制，未接入 Vue Router。
+## 数据来源
+
+页面同时存在真实 API 与本地 mock 数据：接口定义集中在 `src/api/`，请求封装位于 `src/utils/request.ts`，本地数据位于 `src/mock/`。具体数据来源以各页面的实际调用为准。
 
 ## 目录结构
 
-```
+```text
 src/
-├── App.vue                 # 根布局：顶栏 + 页面切换
-├── main.ts                 # 入口，注册 Ant Design Vue
-├── style.css               # 全局样式
-├── assets/                 # 图片、图标
-├── components/
-│   ├── AppHeader.vue       # 顶栏：城市、导航、登录
-│   └── LoginModal.vue      # 登录 / 注册弹窗
-├── mock/
-│   ├── home.ts             # 首页 Mock
-│   └── policyNews.ts       # 资讯页 Mock（导航、筛选项、列表）
-└── views/
-    ├── home/index.vue      # 首页
-    └── policyNews/index.vue
+├── api/           # API 参数、响应 DTO 与数据映射
+├── assets/        # 图片、图标和全局样式资源
+├── components/    # 通用组件与布局
+├── composables/   # 跨页面复用的组合式逻辑
+├── mock/          # 本地 mock 数据
+├── router/        # Vue Router 路由与访问控制
+├── stores/        # Pinia 状态
+├── utils/         # 请求、认证及通用工具
+├── views/         # 各路由页面
+├── App.vue        # 根组件
+└── main.ts        # 应用入口
 ```
 
 路径别名：`@` → `src/`（见 `vite.config.ts`）。
 
 ## 快速开始
 
-要求：Node.js 18+，建议使用 npm。
-
 ```bash
 npm install
 npm run dev
 ```
 
-浏览器打开终端提示的本地地址（默认 `http://localhost:5173`）。
+开发服务默认端口为 `8001`，即 `http://localhost:8001`；可通过 `VITE_CLI_PORT` 配置修改。
+
+## 常用脚本
 
 ```bash
-npm run build      # 类型检查 + 生产构建
-npm run preview    # 预览构建产物
+npm run dev         # 启动开发服务
+npm run typecheck   # TypeScript / Vue 类型检查
+npm run test        # 运行 Vitest 测试
+npm run lint        # ESLint 检查
+npm run build       # 类型检查并构建生产产物
+npm run preview     # 预览构建产物
 ```
-
-## 说明
-
-- 列表、筛选项、热门词等均来自 `src/mock/`，检索、申报、登录提交等操作为前端占位。
-- 顶栏城市默认「郑州市」，可切换河南省内若干城市。
-- 界面文案与 Ant Design 组件均为中文。

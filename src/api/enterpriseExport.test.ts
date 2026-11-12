@@ -36,7 +36,7 @@ describe('mapExportEnterprise', () => {
         policySupportCount: 3,
       }),
     ).toEqual({
-      id: 12,
+      id: '12',
       name: '河南示例科技有限公司',
       address: '河南省郑州市',
       industry: '软件和信息技术服务业',
@@ -53,7 +53,7 @@ describe('mapExportEnterprise', () => {
         industry: '金属制品业',
         policyCount: 8,
       }),
-    ).toMatchObject({ id: 4, policyCount: 8, industry: '金属制品业' })
+    ).toMatchObject({ id: '4', policyCount: 8, industry: '金属制品业' })
   })
 })
 
