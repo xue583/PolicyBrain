@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { mapEnterpriseBindOption } from '@/api/enterprises'
+import { describe, expect, it, vi } from 'vitest'
+import { fetchEnterpriseRaw, mapEnterpriseBindOption } from '@/api/enterprises'
+import { request } from '@/utils/request'
+
+vi.mock('@/utils/request', () => ({ request: vi.fn() }))
 
 describe('mapEnterpriseBindOption', () => {
   it('keeps the id, name, and credit code used to fill the bind form', () => {
@@ -29,6 +32,19 @@ describe('mapEnterpriseBindOption', () => {
       id: '18',
       name: '甲公司',
       creditCode: '91410100MA9G00018X',
+    })
+  })
+
+  it('requests enterprise detail with the original 19-digit id', async () => {
+    const id = '1987654321012345678'
+    vi.mocked(request).mockResolvedValue({})
+
+    await fetchEnterpriseRaw(id)
+
+    expect(request).toHaveBeenCalledWith({
+      url: `/enterprises/${id}`,
+      method: 'get',
+      hideError: true,
     })
   })
 })
