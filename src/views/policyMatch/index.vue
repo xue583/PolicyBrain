@@ -108,7 +108,7 @@ const grade = ref('')
 const departmentId = ref('')
 const departments = ref<IssuingAuthorityOption[]>([])
 const gradeCities = ref<CityOption[]>([])
-const selectedPolicyId = ref<number | null>(null)
+const selectedPolicyId = ref<string | null>(null)
 const score = ref<number | null>(null)
 const currentPage = ref(1)
 
@@ -359,7 +359,7 @@ const applyHot = (word: string) => {
   void applySearch()
 }
 
-const selectPolicy = (id: number) => {
+const selectPolicy = (id: string) => {
   selectedPolicyId.value = id
   namesExpanded.value = false
 }
@@ -606,7 +606,7 @@ const initRegions = async () => {
   }
 }
 
-const goEnterpriseMatch = (id: number) => {
+const goEnterpriseMatch = (id: string) => {
   void router.push({
     name: 'enterprise-db-match',
     params: { id: String(id) },

@@ -275,9 +275,9 @@ const applyHot = (word: string) => {
   onSearch()
 }
 
-const goNews = (id?: number) => {
+const goNews = (id?: string) => {
   if (id) {
-    void router.push({ name: 'news-detail', params: { id: String(id) } })
+    void router.push({ name: 'news-detail', params: { id } })
   } else {
     void router.push({ name: 'news' })
   }

@@ -170,7 +170,7 @@ const buildSupportMeasures = (item: PolicyDbItem): PolicyDbSupportMeasure[] => {
 
   return seeds.map((seed, index) => ({
     ...seed,
-    id: item.id * 100 + index + 1,
+    id: `${item.id}${String(index + 1).padStart(2, '0')}`,
   }))
 }
 

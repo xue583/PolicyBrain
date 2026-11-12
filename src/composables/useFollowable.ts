@@ -26,7 +26,7 @@ const PAGE_SIZE = 200
 const MAX_PAGES = 20
 
 type Bucket = {
-  ids: Ref<number[] | null>
+  ids: Ref<string[] | null>
   promise: Promise<void> | null
   revision: number
 }
@@ -53,19 +53,19 @@ export const resetFollowCache = () => {
   }
 }
 
-export const rememberFollow = (type: FollowTargetType, id: number) => {
+export const rememberFollow = (type: FollowTargetType, id: string) => {
   const current = buckets[type].ids.value
   if (!current || current.includes(id)) return
   buckets[type].ids.value = [...current, id]
 }
 
-export const forgetFollow = (type: FollowTargetType, id: number) => {
+export const forgetFollow = (type: FollowTargetType, id: string) => {
   const current = buckets[type].ids.value
   if (!current || !current.includes(id)) return
   buckets[type].ids.value = current.filter((item) => item !== id)
 }
 
-const includesId = (type: FollowTargetType, id: number) =>
+const includesId = (type: FollowTargetType, id: string) =>
   (buckets[type].ids.value ?? []).includes(id)
 
 const loadFollowIds = (type: FollowTargetType): Promise<void> => {
@@ -75,7 +75,7 @@ const loadFollowIds = (type: FollowTargetType): Promise<void> => {
 
   const seen = bucket.revision
   const task = (async () => {
-    const ids: number[] = []
+    const ids: string[] = []
     let pageIndex = 1
     let total = Number.POSITIVE_INFINITY
     while ((pageIndex - 1) * PAGE_SIZE < total && pageIndex <= MAX_PAGES) {
@@ -86,8 +86,8 @@ const loadFollowIds = (type: FollowTargetType): Promise<void> => {
       })
       total = page.totalElements
       for (const item of page.items) {
-        const id = Number(item.targetId)
-        if (Number.isFinite(id) && id > 0) ids.push(id)
+        const id = item.targetId?.trim()
+        if (id && /^\d+$/.test(id)) ids.push(id)
       }
       if (!page.items.length) break
       pageIndex += 1
@@ -116,7 +116,7 @@ const bindAuthReset = () => {
 
 const pendingKeys = ref<string[]>([])
 
-const toggleTarget = async (type: FollowTargetType, id: number) => {
+const toggleTarget = async (type: FollowTargetType, id: string) => {
   const auth = useAuthStore()
   if (!auth.isLoggedIn) {
     triggerNeedLogin()
@@ -164,15 +164,15 @@ export function useFollowSet(targetType: FollowTargetType) {
 
   watch(isLoggedIn, () => void refresh(), { immediate: true })
 
-  const isFollowed = (id: number) => includesId(targetType, id)
-  const toggleFollow = (id: number) => toggleTarget(targetType, id)
+  const isFollowed = (id: string) => includesId(targetType, id)
+  const toggleFollow = (id: string) => toggleTarget(targetType, id)
 
   return { isFollowed, toggleFollow, refresh }
 }
 
 export function useFollowable(
   targetType: FollowTargetType,
-  id: MaybeRefOrGetter<number>,
+  id: MaybeRefOrGetter<string>,
 ): UseFollowableReturn {
   bindAuthReset()
   const auth = useAuthStore()

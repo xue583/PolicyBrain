@@ -31,7 +31,7 @@ const POLICY_LEVEL: Record<number, string> = {
 const router = useRouter()
 const activeTab = ref<'company' | 'policy'>('company')
 const initialized = ref(false)
-const removingId = ref<number | null>(null)
+const removingId = ref<string | null>(null)
 
 const targetType = computed<FollowTargetType>(() =>
   activeTab.value === 'company' ? FOLLOW_ENTERPRISE : FOLLOW_POLICY,
@@ -95,7 +95,7 @@ const openTarget = (item: AccountFollow) => {
 }
 
 const removeFollow = async (item: AccountFollow) => {
-  const id = Number(item.targetId)
+  const id = item.targetId?.trim() ?? ''
   const type = item.targetType || targetType.value
   if (!id || removingId.value != null) return
   removingId.value = id

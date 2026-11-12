@@ -26,7 +26,7 @@ import type {
 import type { PolicyItem } from '@/mock/policyNews'
 
 const item = (overrides: Partial<PolicyItem>): PolicyItem => ({
-  id: 1,
+  id: '1',
   title: '郑州市人工智能政策',
   status: 'normal',
   tags: [],
@@ -47,9 +47,9 @@ const item = (overrides: Partial<PolicyItem>): PolicyItem => ({
 
 describe('filterPolicyNews', () => {
   const list = [
-    item({ id: 1 }),
+    item({ id: '1' }),
     item({
-      id: 2,
+      id: '2',
       title: '北京市制造业政策',
       description: '支持先进制造业发展',
       region: '北京市',
@@ -69,7 +69,7 @@ describe('filterPolicyNews', () => {
       infoTypes: [],
     })
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe(1)
+    expect(result[0].id).toBe('1')
   })
 
   it('returns both normal and expired items when status is omitted', () => {
@@ -80,7 +80,7 @@ describe('filterPolicyNews', () => {
       levels: [],
       infoTypes: [],
     })
-    expect(result.map((i) => i.id)).toEqual([1, 2])
+    expect(result.map((i) => i.id)).toEqual(['1', '2'])
   })
 
   it('applies region, industry, level and info type', () => {
@@ -91,13 +91,13 @@ describe('filterPolicyNews', () => {
       levels: ['provincial'],
       infoTypes: ['applying'],
     })
-    expect(result.map((i) => i.id)).toEqual([2])
+    expect(result.map((i) => i.id)).toEqual(['2'])
   })
 })
 
 describe('filterPolicyDb', () => {
   const item = (overrides: Partial<PolicyDbItem>): PolicyDbItem => ({
-    id: 1,
+    id: '1',
     name: '郑州市科技型企业',
     support: '一次性奖励',
     city: '郑州市',
@@ -112,9 +112,9 @@ describe('filterPolicyDb', () => {
   })
 
   const list = [
-    item({ id: 1 }),
+    item({ id: '1' }),
     item({
-      id: 2,
+      id: '2',
       name: '国家创新基金',
       department: '工业和信息化局',
       level: 'national',
@@ -133,7 +133,7 @@ describe('filterPolicyDb', () => {
       infoTypes: [],
       levels: [],
     })
-    expect(result.map((i) => i.id)).toEqual([1])
+    expect(result.map((i) => i.id)).toEqual(['1'])
   })
 
   it('applies info type and policy level together', () => {
@@ -145,13 +145,13 @@ describe('filterPolicyDb', () => {
       infoTypes: ['new'],
       levels: ['national'],
     })
-    expect(result.map((i) => i.id)).toEqual([2])
+    expect(result.map((i) => i.id)).toEqual(['2'])
   })
 })
 
 describe('filterPolicyDbUpdates', () => {
   const item = (overrides: Partial<PolicyDbUpdate>): PolicyDbUpdate => ({
-    id: 1,
+    id: '1',
     title: '关于组织申报郑州市工程研究中心的通知',
     grade: '郑州市',
     department: '科学技术局',
@@ -161,14 +161,14 @@ describe('filterPolicyDbUpdates', () => {
     daysRemaining: 10,
     expired: false,
     phone: '0371-67180000',
-    newsId: 1,
+    newsId: '1',
     ...overrides,
   })
 
   const list = [
-    item({ id: 1 }),
+    item({ id: '1' }),
     item({
-      id: 2,
+      id: '2',
       title: '中央引导地方科技发展专项（河南省补贴）',
       grade: '河南省',
       department: '科学技术厅',
@@ -192,12 +192,13 @@ describe('filterPolicyDbUpdates', () => {
       statuses: ['expired'],
       keyword: '中央引导',
     })
-    expect(result.map((i) => i.id)).toEqual([2])
+    expect(result.map((i) => i.id)).toEqual(['2'])
   })
 
   it('returns all items when filters are empty', () => {
     expect(filterPolicyDbUpdates(list, emptyFilters).map((i) => i.id)).toEqual([
-      1, 2,
+      '1',
+      '2',
     ])
   })
 
@@ -206,13 +207,13 @@ describe('filterPolicyDbUpdates', () => {
       ...emptyFilters,
       statuses: ['active'],
     })
-    expect(result.map((i) => i.id)).toEqual([1])
+    expect(result.map((i) => i.id)).toEqual(['1'])
   })
 })
 
 describe('filterPolicyDbPublicity', () => {
   const item = (overrides: Partial<PolicyDbPublicity>): PolicyDbPublicity => ({
-    id: 1,
+    id: '1',
     name: '河南中科千里细胞基因工程有限公司',
     district: '航空港区',
     region: '河南省 郑州市 郑州航空港经济综合实验区',
@@ -225,9 +226,9 @@ describe('filterPolicyDbPublicity', () => {
   })
 
   const list = [
-    item({ id: 1 }),
+    item({ id: '1' }),
     item({
-      id: 2,
+      id: '2',
       name: '郑州高新材料研究院有限公司',
       district: '金水区',
       region: '河南省 郑州市 金水区',
@@ -254,7 +255,7 @@ describe('filterPolicyDbPublicity', () => {
       obtainedPolicy: '高新技术企业（拟认定）',
       keyword: '高新材料',
     })
-    expect(result.map((i) => i.id)).toEqual([2])
+    expect(result.map((i) => i.id)).toEqual(['2'])
   })
 
   it('treats 郑州市 as city-level and does not narrow districts', () => {
@@ -262,7 +263,7 @@ describe('filterPolicyDbPublicity', () => {
       ...emptyFilters,
       district: '郑州市',
     })
-    expect(result.map((i) => i.id)).toEqual([1, 2])
+    expect(result.map((i) => i.id)).toEqual(['1', '2'])
   })
 })
 
@@ -270,7 +271,7 @@ describe('filterPolicyDbSupport', () => {
   const item = (
     overrides: Partial<PolicyDbSupportMeasure>,
   ): PolicyDbSupportMeasure => ({
-    id: 1,
+    id: '1',
     grade: '河南省',
     condition: '先进制造业企业',
     amount: '减按15%的税率征收企业所得税',
@@ -280,15 +281,15 @@ describe('filterPolicyDbSupport', () => {
   })
 
   const list = [
-    item({ id: 1 }),
+    item({ id: '1' }),
     item({
-      id: 2,
+      id: '2',
       grade: '郑州市',
       condition: '新认定工程研究中心',
       amount: '最高200万元建设补助',
     }),
     item({
-      id: 3,
+      id: '3',
       grade: '河南省',
       condition: '科技型中小企业',
       amount: '给予一次性10万元',
@@ -296,12 +297,17 @@ describe('filterPolicyDbSupport', () => {
   ]
 
   it('returns all items when grade is empty', () => {
-    expect(filterPolicyDbSupport(list, '').map((i) => i.id)).toEqual([1, 2, 3])
+    expect(filterPolicyDbSupport(list, '').map((i) => i.id)).toEqual([
+      '1',
+      '2',
+      '3',
+    ])
   })
 
   it('keeps items of the selected grade', () => {
     expect(filterPolicyDbSupport(list, '河南省').map((i) => i.id)).toEqual([
-      1, 3,
+      '1',
+      '3',
     ])
   })
 })
@@ -310,7 +316,7 @@ describe('attachGradeRowSpan', () => {
   it('merges consecutive rows of the same grade', () => {
     const rows = attachGradeRowSpan([
       {
-        id: 1,
+        id: '1',
         grade: '河南省',
         condition: 'a',
         amount: '1',
@@ -318,7 +324,7 @@ describe('attachGradeRowSpan', () => {
         documentUrl: '#',
       },
       {
-        id: 2,
+        id: '2',
         grade: '河南省',
         condition: 'b',
         amount: '2',
@@ -326,7 +332,7 @@ describe('attachGradeRowSpan', () => {
         documentUrl: '#',
       },
       {
-        id: 3,
+        id: '3',
         grade: '郑州市',
         condition: 'c',
         amount: '3',
@@ -340,7 +346,7 @@ describe('attachGradeRowSpan', () => {
 
 describe('filterEnterprises', () => {
   const item = (overrides: Partial<EnterpriseItem>): EnterpriseItem => ({
-    id: 1,
+    id: '1',
     name: '郑州源创基因科技有限公司',
     status: 'active',
     province: '河南省',
@@ -354,9 +360,9 @@ describe('filterEnterprises', () => {
   })
 
   const list = [
-    item({ id: 1 }),
+    item({ id: '1' }),
     item({
-      id: 2,
+      id: '2',
       name: '北京智算科技有限公司',
       province: '北京市',
       city: '北京市',
@@ -377,7 +383,7 @@ describe('filterEnterprises', () => {
       province: '北京市',
       industries: ['制造业'],
     })
-    expect(result.map((row) => row.id)).toEqual([2])
+    expect(result.map((row) => row.id)).toEqual(['2'])
   })
 
   it('matches address when name does not contain the keyword', () => {
@@ -385,12 +391,13 @@ describe('filterEnterprises', () => {
       ...emptyFilters,
       keyword: '航空港',
     })
-    expect(result.map((row) => row.id)).toEqual([1])
+    expect(result.map((row) => row.id)).toEqual(['1'])
   })
 
   it('returns all items when filters are empty', () => {
     expect(filterEnterprises(list, emptyFilters).map((row) => row.id)).toEqual([
-      1, 2,
+      '1',
+      '2',
     ])
   })
 })
@@ -399,7 +406,7 @@ describe('filterEnterpriseQualifications', () => {
   const cert = (
     overrides: Partial<EnterpriseQualification>,
   ): EnterpriseQualification => ({
-    id: 1,
+    id: '1',
     category: '管理体系认证/质量管理体系认证 (ISO9001)',
     name: '证书名称文案',
     certNo: '05324Q32813R0S',
@@ -410,9 +417,9 @@ describe('filterEnterpriseQualifications', () => {
   })
 
   const list = [
-    cert({ id: 1 }),
+    cert({ id: '1' }),
     cert({
-      id: 2,
+      id: '2',
       category: '食药资质/国产医疗器械产品（备案）',
       certNo: '豫港械备20240546',
       year: 2023,
@@ -424,7 +431,7 @@ describe('filterEnterpriseQualifications', () => {
       year: 2024,
       keyword: 'ISO9001',
     })
-    expect(result.map((row) => row.id)).toEqual([1])
+    expect(result.map((row) => row.id)).toEqual(['1'])
   })
 
   it('returns all items when year and keyword are empty', () => {
@@ -432,7 +439,7 @@ describe('filterEnterpriseQualifications', () => {
       filterEnterpriseQualifications(list, { year: null, keyword: '  ' }).map(
         (row) => row.id,
       ),
-    ).toEqual([1, 2])
+    ).toEqual(['1', '2'])
   })
 })
 
@@ -440,7 +447,7 @@ describe('filterEnterpriseQualPersonnel', () => {
   const person = (
     overrides: Partial<EnterpriseQualPersonnel>,
   ): EnterpriseQualPersonnel => ({
-    id: 1,
+    id: '1',
     name: '张三丰',
     certNo: '豫港械备20240546',
     issueDate: '2024-10-15',
@@ -451,14 +458,17 @@ describe('filterEnterpriseQualPersonnel', () => {
     ...overrides,
   })
 
-  const list = [person({ id: 1 }), person({ id: 2, name: '赵燕', year: 2025 })]
+  const list = [
+    person({ id: '1' }),
+    person({ id: '2', name: '赵燕', year: 2025 }),
+  ]
 
   it('filters personnel by name keyword', () => {
     const result = filterEnterpriseQualPersonnel(list, {
       year: null,
       keyword: '赵燕',
     })
-    expect(result.map((row) => row.id)).toEqual([2])
+    expect(result.map((row) => row.id)).toEqual(['2'])
   })
 })
 
@@ -466,7 +476,7 @@ describe('filterEnterpriseQualReviews', () => {
   const review = (
     overrides: Partial<EnterpriseQualReview>,
   ): EnterpriseQualReview => ({
-    id: 1,
+    id: '1',
     matter: '质量管理体系认证申请',
     decision: '准予许可',
     reason: '申请材料齐全，符合法定条件',
@@ -476,7 +486,7 @@ describe('filterEnterpriseQualReviews', () => {
   })
 
   it('returns empty when year does not match', () => {
-    const result = filterEnterpriseQualReviews([review({ id: 1 })], {
+    const result = filterEnterpriseQualReviews([review({ id: '1' })], {
       year: 2026,
       keyword: '',
     })

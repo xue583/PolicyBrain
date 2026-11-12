@@ -4,7 +4,7 @@ export interface HomeNewsTag {
 }
 
 export interface HomeNewsItem {
-  id: number
+  id: string
   title: string
   tags: HomeNewsTag[]
   time: string
@@ -76,7 +76,7 @@ export const industryTags = [
 
 export const homeNewsList: HomeNewsItem[] = [
   {
-    id: 1,
+    id: '1',
     title: '关于组织开展2026年度高新技术企业认定工作的通知',
     tags: [
       { text: '河南省省级', tone: 'blue' },
@@ -90,7 +90,7 @@ export const homeNewsList: HomeNewsItem[] = [
     statusText: '正在申报',
   },
   {
-    id: 2,
+    id: '2',
     title: '郑州市推进制造业数字化转型专项资金申报指南',
     tags: [
       { text: '河南省郑州市', tone: 'blue' },
@@ -103,7 +103,7 @@ export const homeNewsList: HomeNewsItem[] = [
     statusText: '仅剩29天',
   },
   {
-    id: 3,
+    id: '3',
     title: '关于印发河南省专精特新中小企业培育实施方案的通知',
     tags: [
       { text: '河南省省级', tone: 'blue' },
@@ -116,7 +116,7 @@ export const homeNewsList: HomeNewsItem[] = [
     statusText: '正在申报',
   },
   {
-    id: 4,
+    id: '4',
     title: '郑州市人工智能创新发展若干措施申报工作安排',
     tags: [
       { text: '河南省郑州市', tone: 'blue' },
@@ -129,7 +129,7 @@ export const homeNewsList: HomeNewsItem[] = [
     statusText: '仅剩15天',
   },
   {
-    id: 5,
+    id: '5',
     title: '关于公开征集2026年重点领域科技攻关需求的通知',
     tags: [
       { text: '河南省郑州市', tone: 'blue' },
@@ -142,7 +142,7 @@ export const homeNewsList: HomeNewsItem[] = [
     statusText: '已截止',
   },
   {
-    id: 6,
+    id: '6',
     title: '河南省科技型中小企业技术创新基金申报通知',
     tags: [
       { text: '河南省省级', tone: 'blue' },
@@ -158,7 +158,7 @@ export const homeNewsList: HomeNewsItem[] = [
 
 export const homeFollowList: HomeNewsItem[] = [
   {
-    id: 101,
+    id: '101',
     title: '您关注的「高新技术企业认定」有新的申报通知',
     tags: [
       { text: '关注动态', tone: 'blue' },
@@ -170,7 +170,7 @@ export const homeFollowList: HomeNewsItem[] = [
     statusText: '正在申报',
   },
   {
-    id: 102,
+    id: '102',
     title: '关注政策「专精特新培育」即将截止，请尽快完成材料准备',
     tags: [
       { text: '关注动态', tone: 'orange' },

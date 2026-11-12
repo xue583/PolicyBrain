@@ -268,7 +268,7 @@ describe('PersonalCenter membership period', () => {
     vi.mocked(fetchMyEnterprises).mockResolvedValue({
       items: [
         {
-          enterpriseId: 8,
+          enterpriseId: '8',
           name: '郑州源创基因科技有限公司',
           creditCode: '91410100MA9G00018X',
           isCurrent: true,
@@ -277,7 +277,7 @@ describe('PersonalCenter membership period', () => {
       canBindMore: false,
       maxBindings: 1,
       identity: 1,
-      currentEnterpriseId: 8,
+      currentEnterpriseId: '8',
     })
     const boundWrapper = await mountPage()
     expect(boundWrapper.text()).toContain('郑州源创基因科技有限公司')
@@ -304,7 +304,7 @@ describe('PersonalCenter membership period', () => {
     vi.mocked(fetchMyEnterprises).mockResolvedValue({
       items: [
         {
-          enterpriseId: 8,
+          enterpriseId: '8',
           name: '郑州源创基因科技有限公司',
           creditCode: '91410100MA9G00018X',
           provinceName: '河南省',
@@ -314,7 +314,7 @@ describe('PersonalCenter membership period', () => {
           isCurrent: true,
         },
         {
-          enterpriseId: 9,
+          enterpriseId: '9',
           name: '唐河县大华机械设备有限公司',
           creditCode: '91411328698705730A',
           provinceName: '河南省',
@@ -327,7 +327,7 @@ describe('PersonalCenter membership period', () => {
       canBindMore: true,
       maxBindings: 0,
       identity: 2,
-      currentEnterpriseId: 8,
+      currentEnterpriseId: '8',
     })
 
     const wrapper = await mountPage(undefined, 2)

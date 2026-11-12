@@ -72,7 +72,7 @@ describe('BindEnterpriseModal', () => {
 
   it('binds with the credit code', async () => {
     vi.mocked(bindMyEnterprise).mockResolvedValue({
-      enterpriseId: 18,
+      enterpriseId: '18',
       name: '郑州源创基因科技有限公司',
     })
 
@@ -90,13 +90,13 @@ describe('BindEnterpriseModal', () => {
       creditCode: '91410100MA9G00018X',
     })
     expect(message.success).toHaveBeenCalledWith('绑定成功')
-    expect(wrapper.emitted('bound')?.[0]).toEqual([18])
+    expect(wrapper.emitted('bound')?.[0]).toEqual(['18'])
     wrapper.unmount()
   })
 
   it('fills the credit code from the selected enterprise', async () => {
     vi.mocked(bindMyEnterprise).mockResolvedValue({
-      enterpriseId: 367740240010885,
+      enterpriseId: '367740240010885',
       name: '郑州西亚斯学院',
       creditCode: '52410000415806671E',
     })
@@ -124,7 +124,7 @@ describe('BindEnterpriseModal', () => {
 
   it('submits the enterprise id for service staff', async () => {
     vi.mocked(bindMyEnterprise).mockResolvedValue({
-      enterpriseId: 367740240010885,
+      enterpriseId: '367740240010885',
       name: '郑州西亚斯学院',
     })
 
@@ -137,7 +137,7 @@ describe('BindEnterpriseModal', () => {
     await flushPromises()
 
     expect(bindMyEnterprise).toHaveBeenCalledWith({
-      enterpriseId: 367740240010885,
+      enterpriseId: '367740240010885',
     })
     wrapper.unmount()
   })

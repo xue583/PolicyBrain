@@ -11,7 +11,7 @@ describe('mapEnterpriseDetail 工商字段', () => {
   it('顶层空值不覆盖行业里的注册资本和企业类型', () => {
     const detail = mapEnterpriseDetail({
       enterprise: {
-        id: 1,
+        id: '1987654321012345678',
         name: '测试事业单位',
         registeredCapital: null,
         companyType: null,
@@ -27,6 +27,7 @@ describe('mapEnterpriseDetail 工商字段', () => {
       },
     })
 
+    expect(detail.id).toBe('1987654321012345678')
     expect(detail.registeredCapital).toBe('138456.65万元人民币')
     expect(detail.enterpriseType).toBe('事业单位')
     expect(detail.industry).toBe('教育')

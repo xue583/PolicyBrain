@@ -56,7 +56,7 @@ const filteredReviews = computed(() =>
   filterEnterpriseQualReviews(props.reviews, tabFilters.value),
 )
 
-const currentList = computed<{ id: number }[]>(() => {
+const currentList = computed<{ id: string }[]>(() => {
   if (subTab.value === 'personnel') return filteredPersonnel.value
   if (subTab.value === 'reviews') return filteredReviews.value
   return filteredCerts.value
@@ -295,7 +295,7 @@ const exportList = () => {
       :page-size="pageSize"
       :columns="columns"
       :data-source="pagedList"
-      :row-key="(row: { id: number }) => row.id"
+      :row-key="(row: { id: string }) => row.id"
     >
       <template #emptyText>
         <EmptyState class="qual-empty" :image="emptyNews" :image-width="202" />

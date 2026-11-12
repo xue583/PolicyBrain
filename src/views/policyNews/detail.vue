@@ -17,7 +17,10 @@ defineOptions({ name: 'PolicyNewsDetail' })
 
 const route = useRoute()
 
-const policyId = computed(() => Number(route.params.id))
+const policyId = computed(() => {
+  const id = String(route.params.id ?? '')
+  return /^\d+$/.test(id) ? id : ''
+})
 const policy = ref<PolicyItem | null>(null)
 const loading = ref(false)
 const error = ref('')

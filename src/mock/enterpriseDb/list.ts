@@ -172,9 +172,9 @@ const seeds: Array<Omit<EnterpriseItem, 'id'>> = [
 ]
 
 export const mockEnterprises: EnterpriseItem[] = seeds.map((item, index) => ({
-  id: index + 1,
+  id: String(index + 1),
   ...item,
 }))
 
-export const getEnterpriseById = (id: number): EnterpriseItem | undefined =>
+export const getEnterpriseById = (id: string): EnterpriseItem | undefined =>
   mockEnterprises.find((item) => item.id === id)

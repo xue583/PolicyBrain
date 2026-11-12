@@ -9,15 +9,15 @@ const CONTACT_ROLES = [
 ]
 
 const buildContacts = (item: EnterpriseItem): EnterpriseContact[] => {
-  const legal = LEGAL_REPS[(item.id - 1) % LEGAL_REPS.length] ?? '李某某'
-  const phone =
-    item.id === 1 ? '13566668888' : `135${String(60000000 + item.id)}`
+  const seedId = Number(item.id)
+  const legal = LEGAL_REPS[(seedId - 1) % LEGAL_REPS.length] ?? '李某某'
+  const phone = seedId === 1 ? '13566668888' : `135${String(60000000 + seedId)}`
   return CONTACT_ROLES.map((role, index) => ({
-    id: index + 1,
-    name: item.id === 1 ? role.name : index === 0 ? legal : role.name,
+    id: String(index + 1),
+    name: seedId === 1 ? role.name : index === 0 ? legal : role.name,
     title: role.title,
     phone,
-    email: `contact${item.id}@example.com`,
+    email: `contact${seedId}@example.com`,
   }))
 }
 

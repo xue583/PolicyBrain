@@ -5,12 +5,12 @@ describe('mapEnterpriseBindOption', () => {
   it('keeps the id, name, and credit code used to fill the bind form', () => {
     expect(
       mapEnterpriseBindOption({
-        id: 367740240010885,
+        id: '1987654321012345678',
         name: '郑州西亚斯学院',
         creditCode: '52410000415806671e',
       }),
     ).toEqual({
-      id: 367740240010885,
+      id: '1987654321012345678',
       name: '郑州西亚斯学院',
       creditCode: '52410000415806671E',
     })
@@ -26,7 +26,7 @@ describe('mapEnterpriseBindOption', () => {
         },
       }),
     ).toEqual({
-      id: 18,
+      id: '18',
       name: '甲公司',
       creditCode: '91410100MA9G00018X',
     })

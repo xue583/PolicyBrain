@@ -76,8 +76,10 @@ const buildProductIndustry = (item: EnterpriseItem) => {
     }),
   )
   // 根据企业 ID 确定性地选择可信度和产品依据
-  const credibility = CREDIBILITY_LEVELS[item.id % CREDIBILITY_LEVELS.length]
-  const basis = PRODUCT_BASIS_OPTIONS[item.id % PRODUCT_BASIS_OPTIONS.length]
+  const credibility =
+    CREDIBILITY_LEVELS[Number(item.id) % CREDIBILITY_LEVELS.length]
+  const basis =
+    PRODUCT_BASIS_OPTIONS[Number(item.id) % PRODUCT_BASIS_OPTIONS.length]
   return {
     products,
     industryChains,

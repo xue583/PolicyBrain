@@ -19,12 +19,12 @@ defineOptions({ name: 'BindEnterpriseModal' })
 const open = defineModel<boolean>('open', { default: false })
 
 const emit = defineEmits<{
-  bound: [enterpriseId?: number]
+  bound: [enterpriseId?: string]
 }>()
 
 const auth = useAuthStore()
 const creditCode = ref('')
-const enterpriseId = ref<number | undefined>(undefined)
+const enterpriseId = ref<string | undefined>(undefined)
 const selected = ref<{ value: string; label: string } | undefined>(undefined)
 const filledCode = ref('')
 const searchKeyword = ref('')
@@ -111,14 +111,9 @@ const readSelectId = (value: unknown) => {
     value && typeof value === 'object' && 'value' in value
       ? (value as { value: unknown }).value
       : value
-  if (typeof raw === 'number' && Number.isSafeInteger(raw) && raw > 0) {
-    return raw
-  }
-  if (typeof raw === 'string' && /^\d+$/.test(raw)) {
-    const id = Number(raw)
-    if (Number.isSafeInteger(id) && id > 0) return id
-  }
-  return undefined
+  if (typeof raw !== 'string') return undefined
+  const id = raw.trim()
+  return /^[1-9]\d*$/.test(id) ? id : undefined
 }
 
 const optionText = (option: unknown, key: string) => {

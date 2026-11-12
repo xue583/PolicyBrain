@@ -38,10 +38,11 @@ const buildTags = (item: PolicyDbItem): PolicyDbTag[] => {
   return tags
 }
 
-const dateFor = (id: number): string => {
-  if (id === 1) return '2026-07-28'
-  const month = String(((id - 1) % 8) + 1).padStart(2, '0')
-  const day = String((id % 27) + 1).padStart(2, '0')
+const dateFor = (id: string): string => {
+  const seed = Number(id)
+  if (seed === 1) return '2026-07-28'
+  const month = String(((seed - 1) % 8) + 1).padStart(2, '0')
+  const day = String((seed % 27) + 1).padStart(2, '0')
   return `2026-${month}-${day}`
 }
 
@@ -51,7 +52,9 @@ const DEFAULT_FIELDS =
 const buildApplyInfo = (item: PolicyDbItem): PolicyDbApplyInfo => {
   const methodName = `《${item.name}管理办法》`
   const docNo =
-    item.id === 1 ? '郑发改高技〔2016〕559号' : `郑科〔2024〕${100 + item.id}号`
+    item.id === '1'
+      ? '郑发改高技〔2016〕559号'
+      : `郑科〔2024〕${100 + Number(item.id)}号`
 
   return {
     fields:

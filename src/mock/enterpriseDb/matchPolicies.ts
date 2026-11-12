@@ -8,7 +8,7 @@ export interface MatchPolicyBadge {
 }
 
 export interface MatchPolicy {
-  id: number
+  id: string
   name: string
   badge?: MatchPolicyBadge
   grade: string
@@ -225,7 +225,7 @@ const localize = (text: string, enterprise: EnterpriseDetail) =>
 const localizePolicy = (
   item: Omit<MatchPolicy, 'id'>,
   enterprise: EnterpriseDetail,
-  id: number,
+  id: string,
 ): MatchPolicy => ({
   ...item,
   id,
@@ -248,6 +248,10 @@ export const buildMatchPolicies = (
     cursor += 1
   }
   return source.map((item, index) =>
-    localizePolicy(item, enterprise, enterprise.id * 1000 + index + 1),
+    localizePolicy(
+      item,
+      enterprise,
+      `${enterprise.id}${String(index + 1).padStart(3, '0')}`,
+    ),
   )
 }

@@ -42,14 +42,14 @@ const generateDate = (index: number, baseYear: number): string => {
 const buildQualifications = (
   item: EnterpriseItem,
 ): EnterpriseQualification[] => {
-  const count = item.id === 1 ? 31 : Math.min(8, item.tags.length + 3)
+  const count = Number(item.id) === 1 ? 31 : Math.min(8, item.tags.length + 3)
   return Array.from({ length: count }, (_, index) => {
     const seed =
       QUAL_CERT_SEEDS[index % QUAL_CERT_SEEDS.length] ?? QUAL_CERT_SEEDS[0]!
     const issueDate = generateDate(index, 2023)
     const validUntil = generateDate(index, 2026)
     return {
-      id: item.id * 100 + index + 1,
+      id: String(Number(item.id) * 100 + index + 1),
       category: seed.category,
       name: seed.name,
       certNo: seed.certNo,
@@ -63,14 +63,15 @@ const buildQualifications = (
 const buildQualPersonnel = (
   item: EnterpriseItem,
 ): EnterpriseQualPersonnel[] => {
-  const count = item.id === 1 ? 208 : Math.min(6, Math.max(2, item.policyCount))
+  const count =
+    Number(item.id) === 1 ? 208 : Math.min(6, Math.max(2, item.policyCount))
   return Array.from({ length: count }, (_, index) => {
     const seed =
       QUAL_CERT_SEEDS[index % QUAL_CERT_SEEDS.length] ?? QUAL_CERT_SEEDS[0]!
     const issueDate = generateDate(index, 2022)
     const expireDate = generateDate(index, 2025)
     return {
-      id: item.id * 500 + index + 1,
+      id: String(Number(item.id) * 500 + index + 1),
       name: QUAL_PERSON_NAMES[index % QUAL_PERSON_NAMES.length] ?? '张三丰',
       personType:
         QUAL_PERSON_TYPES[index % QUAL_PERSON_TYPES.length] ?? '注册建造师',
@@ -85,10 +86,10 @@ const buildQualPersonnel = (
 }
 
 const buildQualReviews = (item: EnterpriseItem): EnterpriseQualReview[] => {
-  if (item.id === 1) return []
+  if (Number(item.id) === 1) return []
   return [
     {
-      id: item.id * 600 + 1,
+      id: String(Number(item.id) * 600 + 1),
       matter: '质量管理体系认证申请',
       decision: '准予许可',
       reason: '申请材料齐全，符合法定条件',

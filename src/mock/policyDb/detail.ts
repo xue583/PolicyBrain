@@ -5,7 +5,7 @@ import { buildSupportMeasures } from './support'
 import type { PolicyDbDetail } from './types'
 import { buildUpdates } from './updates'
 
-export const getPolicyDbDetail = (id: number): PolicyDbDetail | undefined => {
+export const getPolicyDbDetail = (id: string): PolicyDbDetail | undefined => {
   const item = getPolicyDbById(id)
   if (!item) return undefined
   return {

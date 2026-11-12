@@ -67,12 +67,12 @@ const buildPatents = (
 ): EnterprisePatent[] =>
   Array.from({ length: count }, (_, index) => {
     const year = 2024 - (index % 4)
-    const seq = String(100000 + item.id * 137 + index).slice(-6)
+    const seq = String(100000 + Number(item.id) * 137 + index).slice(-6)
     const seed =
       PATENT_NAME_SEEDS[index % PATENT_NAME_SEEDS.length] ??
       PATENT_NAME_SEEDS[0]!
     return {
-      id: item.id * 10000 + index + 1,
+      id: String(Number(item.id) * 10000 + index + 1),
       name: index < PATENT_NAME_SEEDS.length ? seed : `${seed}（${index + 1}）`,
       applyDate: padDate(year, (index % 12) + 1, (index % 27) + 1),
       applyNo: `CN${year}${seq}.${(index % 9) + 1}`,
@@ -93,11 +93,11 @@ const buildTrademarks = (
       TRADEMARK_SEEDS[index % TRADEMARK_SEEDS.length] ?? TRADEMARK_SEEDS[0]!
     const year = 2023 - (index % 5)
     return {
-      id: item.id * 20000 + index + 1,
+      id: String(Number(item.id) * 20000 + index + 1),
       mark: seed.mark,
       name: seed.name,
       applyDate: padDate(year, (index % 12) + 1, ((index * 3) % 27) + 1),
-      registerNo: String(40_000_000 + item.id * 1000 + index),
+      registerNo: String(40_000_000 + Number(item.id) * 1000 + index),
       intlClass: seed.intlClass,
       status:
         TRADEMARK_STATUSES[index % TRADEMARK_STATUSES.length] ?? '注册公告',
@@ -112,9 +112,9 @@ const buildSoftwareCopyrights = (
     const seed =
       SOFTWARE_SEEDS[index % SOFTWARE_SEEDS.length] ?? SOFTWARE_SEEDS[0]!
     const year = 2024 - (index % 3)
-    const seq = String(1000000 + item.id * 80 + index).slice(-7)
+    const seq = String(1000000 + Number(item.id) * 80 + index).slice(-7)
     return {
-      id: item.id * 30000 + index + 1,
+      id: String(Number(item.id) * 30000 + index + 1),
       fullName:
         index < SOFTWARE_SEEDS.length
           ? seed.fullName
@@ -137,9 +137,9 @@ const buildWorkCopyrights = (
     const seed = WORK_SEEDS[index % WORK_SEEDS.length] ?? WORK_SEEDS[0]!
     const year = 2022 + (index % 3)
     return {
-      id: item.id * 40000 + index + 1,
+      id: String(Number(item.id) * 40000 + index + 1),
       fullName: seed.fullName,
-      registerNo: `国作登字-202${year % 10}-F-${String(10000000 + item.id * 10 + index).slice(-8)}`,
+      registerNo: `国作登字-202${year % 10}-F-${String(10000000 + Number(item.id) * 10 + index).slice(-8)}`,
       category: seed.category,
       completeDate: padDate(year, (index % 12) + 1, 8),
       registerDate: padDate(year, ((index + 3) % 12) + 1, 20),

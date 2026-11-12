@@ -80,7 +80,7 @@ onMounted(() => {
 
 const locationText = (item: EnterpriseItem) => `${item.province}/${item.city}`
 
-const goDetail = (id: number) => {
+const goDetail = (id: string) => {
   void router.push({ name: 'enterprise-db-detail', params: { id: String(id) } })
 }
 </script>

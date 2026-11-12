@@ -30,7 +30,10 @@ const route = useRoute()
 const regionStore = useRegionStore()
 const { provinceId, cityId, districtId } = storeToRefs(regionStore)
 
-const policyId = computed(() => Number(route.params.id))
+const policyId = computed(() => {
+  const id = String(route.params.id ?? '')
+  return /^\d+$/.test(id) ? id : ''
+})
 const policy = ref<PolicyDbDetail | null>(null)
 const loading = ref(false)
 const error = ref('')

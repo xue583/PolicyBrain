@@ -38,7 +38,7 @@ export const fetchNewsPage = async (query: NewsQuery) => {
   return { ...page, items: page.items.map(mapNewsItem) }
 }
 
-export const fetchNewsDetail = async (id: number) => {
+export const fetchNewsDetail = async (id: string) => {
   const data = await request({
     url: `/news/${id}`,
     method: 'get',

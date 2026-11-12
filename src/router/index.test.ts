@@ -45,4 +45,18 @@ describe('applyAuthGuard', () => {
     expect(to.meta.requiresAuth).toBeUndefined()
     expect(applyAuthGuard(to as unknown as RouteLocationNormalized)).toBe(true)
   })
+
+  it('preserves 19-digit detail route params as strings', () => {
+    const id = '1987654321012345678'
+    for (const name of [
+      'news-detail',
+      'policy-db-detail',
+      'enterprise-db-detail',
+      'enterprise-db-match',
+    ] as const) {
+      const route = router.resolve({ name, params: { id } })
+      expect(route.params.id).toBe(id)
+      expect(route.path).toContain(id)
+    }
+  })
 })

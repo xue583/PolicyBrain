@@ -68,21 +68,22 @@ const companyName = (seed: number): string => {
 }
 
 const buildPublicity = (item: PolicyDbItem): PolicyDbPublicity[] => {
+  const seedId = Number(item.id)
   const result: PolicyDbPublicity[] = []
   let seq = 0
   for (const [category, count] of categoryCounts) {
     for (let i = 0; i < count; i += 1) {
       seq += 1
-      const isHero = item.id === 1 && category === 'approved' && i === 0
+      const isHero = item.id === '1' && category === 'approved' && i === 0
       const district = isHero
         ? '航空港区'
-        : (PUBLICITY_DISTRICTS[(seq + item.id) % PUBLICITY_DISTRICTS.length] ??
+        : (PUBLICITY_DISTRICTS[(seq + seedId) % PUBLICITY_DISTRICTS.length] ??
           '金水区')
       result.push({
-        id: item.id * 1000 + seq,
+        id: `${item.id}${String(seq).padStart(3, '0')}`,
         name: isHero
           ? '河南中科千里细胞基因工程有限公司'
-          : companyName(seq + item.id * 17),
+          : companyName(seq + seedId * 17),
         district,
         region: regionOf(district),
         industry:

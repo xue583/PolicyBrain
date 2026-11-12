@@ -79,7 +79,7 @@ const listLocale = {
   Pagination: { ...zhCN.Pagination, jump_to: '前往' },
 }
 
-const detailTo = (id: number, tab: string): RouteLocationRaw => ({
+const detailTo = (id: string, tab: string): RouteLocationRaw => ({
   name: 'policy-db-detail',
   params: { id: String(id) },
   query: { tab },

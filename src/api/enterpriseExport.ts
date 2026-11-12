@@ -9,7 +9,7 @@ import { asRecord, pickNumber, pickString } from '@/api/record'
 
 /** 导出列表行。高级筛选与按政策返回企业字段，批量查询返回 index/name/address/industry/policyCount。 */
 export type ExportEnterpriseRow = {
-  id: number
+  id: string
   name: string
   address: string
   industry: string
@@ -34,7 +34,7 @@ export type EnterpriseAdvancedQuery = {
 }
 
 export type EnterprisePolicyQuery = {
-  policyId?: number
+  policyId?: string
   policyName?: string
   yearStart?: number
   yearEnd?: number
@@ -123,7 +123,7 @@ export const mapExportEnterprise = (
   const record = asRecord(raw)
   const address = pickString(record, ['address'])
   return {
-    id: pickNumber(record, ['id', 'index'], index + 1),
+    id: pickString(record, ['id', 'index'], String(index + 1)),
     name: pickString(record, ['name']),
     address: address || regionText(record) || '-',
     industry: pickString(record, ['industry', 'companyIndustry'], '-') || '-',

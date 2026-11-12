@@ -16,7 +16,7 @@ export interface PolicyAttachment {
 }
 
 export interface PolicyItem {
-  id: number
+  id: string
   title: string
   status: 'normal' | 'expired'
   tags: PolicyTag[]
@@ -132,10 +132,11 @@ export const getSubPageHero = (pageKey: string) => {
   }
 }
 
-const policySeeds: Omit<
-  PolicyItem,
-  'content' | 'attachments' | 'originalUrl'
->[] = [
+const policySeeds: Array<
+  Omit<PolicyItem, 'id' | 'content' | 'attachments' | 'originalUrl'> & {
+    id: number
+  }
+> = [
   {
     id: 1,
     title: '关于印发郑州市推进人工智能创新发展若干措施的通知',
@@ -327,6 +328,7 @@ export const mockPolicies: PolicyItem[] = policySeeds.map((item) => {
 
   return {
     ...item,
+    id: String(item.id),
     daysRemaining,
     content: buildContent(item.title, item.department),
     attachments: defaultAttachments,
@@ -334,6 +336,6 @@ export const mockPolicies: PolicyItem[] = policySeeds.map((item) => {
   }
 })
 
-export const getPolicyById = (id: number): PolicyItem | undefined => {
+export const getPolicyById = (id: string): PolicyItem | undefined => {
   return mockPolicies.find((item) => item.id === id)
 }

@@ -52,7 +52,7 @@ describe('useFollowable', () => {
   })
 
   it('asks for login when the user is anonymous', async () => {
-    const { toggleFollow, followed } = useFollowable(FOLLOW_POLICY, 1)
+    const { toggleFollow, followed } = useFollowable(FOLLOW_POLICY, '1')
     await toggleFollow()
     expect(triggerNeedLogin).toHaveBeenCalledOnce()
     expect(followed.value).toBe(false)
@@ -60,11 +60,11 @@ describe('useFollowable', () => {
     expect(unfollowTarget).not.toHaveBeenCalled()
   })
 
-  it('follows and unfollows through the account API', async () => {
+  it('follows and unfollows a 19-digit id through the account API', async () => {
     const auth = useAuthStore()
     auth.token = 'token'
 
-    const id = ref(8)
+    const id = ref('1987654321012345678')
     const { followed, toggleFollow, syncFollowed } = useFollowable(
       FOLLOW_POLICY,
       id,
@@ -78,12 +78,18 @@ describe('useFollowable', () => {
     })
 
     await toggleFollow()
-    expect(followTarget).toHaveBeenCalledWith(FOLLOW_POLICY, 8)
+    expect(followTarget).toHaveBeenCalledWith(
+      FOLLOW_POLICY,
+      '1987654321012345678',
+    )
     expect(followed.value).toBe(true)
     expect(message.success).toHaveBeenCalledWith('关注成功')
 
     await toggleFollow()
-    expect(unfollowTarget).toHaveBeenCalledWith(FOLLOW_POLICY, 8)
+    expect(unfollowTarget).toHaveBeenCalledWith(
+      FOLLOW_POLICY,
+      '1987654321012345678',
+    )
     expect(followed.value).toBe(false)
     expect(message.success).toHaveBeenCalledWith('已取消关注')
   })
@@ -92,17 +98,17 @@ describe('useFollowable', () => {
     const auth = useAuthStore()
     auth.token = 'token'
     vi.mocked(fetchAccountFollows).mockResolvedValue({
-      items: [{ targetId: 2, followId: 9, targetType: FOLLOW_ENTERPRISE }],
+      items: [{ targetId: '2', followId: '9', targetType: FOLLOW_ENTERPRISE }],
       pageIndex: 1,
       pageSize: 200,
       totalElements: 1,
     })
 
-    const id = ref(1)
+    const id = ref('1')
     const { followed, syncFollowed } = useFollowable(FOLLOW_ENTERPRISE, id)
     await syncFollowed()
     expect(followed.value).toBe(false)
-    id.value = 2
+    id.value = '2'
     expect(followed.value).toBe(true)
   })
 
@@ -113,7 +119,7 @@ describe('useFollowable', () => {
       if (query?.pageIndex === 2) {
         return {
           items: [
-            { targetId: 999, followId: 3, targetType: FOLLOW_ENTERPRISE },
+            { targetId: '999', followId: '3', targetType: FOLLOW_ENTERPRISE },
           ],
           pageIndex: 2,
           pageSize: 200,
@@ -122,8 +128,8 @@ describe('useFollowable', () => {
       }
       return {
         items: Array.from({ length: 200 }, (_, index) => ({
-          targetId: index + 1,
-          followId: index + 1,
+          targetId: String(index + 1),
+          followId: String(index + 1),
           targetType: FOLLOW_ENTERPRISE,
         })),
         pageIndex: 1,
@@ -132,7 +138,7 @@ describe('useFollowable', () => {
       }
     })
 
-    const { followed, syncFollowed } = useFollowable(FOLLOW_ENTERPRISE, 999)
+    const { followed, syncFollowed } = useFollowable(FOLLOW_ENTERPRISE, '999')
     await syncFollowed()
     expect(followed.value).toBe(true)
     expect(fetchAccountFollows).toHaveBeenCalledTimes(2)

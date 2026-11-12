@@ -14,7 +14,7 @@ export type UserContextPayload = {
 
 /** GET /account/service-contacts 当前客服联系方式 */
 export type ServiceContact = {
-  id?: number
+  id?: string
   phone?: string | null
   wechatAccount?: string | null
   wechatQrKey?: string | null
@@ -73,7 +73,7 @@ export type AccountShare = {
 
 /** GET /account/messages 用户消息。messageType：1 待办、2 抄送、3 结果 */
 export type UserNotification = {
-  id: number
+  id: string
   title?: string | null
   summary?: string | null
   isRead?: boolean
@@ -168,7 +168,7 @@ export const fetchAccountMessages = async (query: AccountMessageQuery = {}) => {
 }
 
 /** POST /account/messages/{id}/read 标记单条已读 */
-export const markMessageRead = (id: number | string) => {
+export const markMessageRead = (id: string) => {
   return request({
     url: `/account/messages/${id}/read`,
     method: 'post',
@@ -232,9 +232,9 @@ export type FollowTargetType = typeof FOLLOW_ENTERPRISE | typeof FOLLOW_POLICY
 
 /** GET /account/follows 列表行。企业、政策的摘要字段按 targetType 取舍 */
 export type AccountFollow = {
-  followId?: number
+  followId?: string
   targetType?: FollowTargetType
-  targetId?: number
+  targetId?: string
   name?: string | null
   followTime?: string | null
   provinceName?: string | null
@@ -269,7 +269,7 @@ export const fetchAccountFollows = async (query: AccountFollowQuery = {}) => {
 /** POST /account/follows 关注企业或政策。重复关注时后端返回原记录 */
 export const followTarget = (
   targetType: FollowTargetType,
-  targetId: number,
+  targetId: string,
 ) => {
   return request({
     url: '/account/follows',
@@ -282,7 +282,7 @@ export const followTarget = (
 /** DELETE /account/follows 取消关注。未关注时后端视为已取消 */
 export const unfollowTarget = (
   targetType: FollowTargetType,
-  targetId: number,
+  targetId: string,
 ) => {
   return request({
     url: '/account/follows',
@@ -294,7 +294,7 @@ export const unfollowTarget = (
 
 /** GET /account/users/me/enterprises 已绑定企业 */
 export type PolicyUserEnterprise = {
-  enterpriseId: number
+  enterpriseId: string
   name?: string | null
   creditCode?: string | null
   provinceName?: string | null
@@ -308,7 +308,7 @@ export type PolicyUserEnterprise = {
 export type PolicyUserEnterpriseList = {
   items: PolicyUserEnterprise[]
   identity?: number | null
-  currentEnterpriseId?: number | null
+  currentEnterpriseId?: string | null
   canBindMore?: boolean
   maxBindings?: number
 }
@@ -316,7 +316,7 @@ export type PolicyUserEnterpriseList = {
 /** POST /account/users/me/enterprises。信用代码与企业 Id 二选一，同时传时以企业 Id 为准 */
 export type BindPolicyEnterprisePayload = {
   creditCode?: string
-  enterpriseId?: number
+  enterpriseId?: string
 }
 
 const asEnterpriseRecord = (value: unknown): Record<string, unknown> => {
@@ -325,13 +325,13 @@ const asEnterpriseRecord = (value: unknown): Record<string, unknown> => {
     : {}
 }
 
-const readEnterpriseId = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string' && value.trim() !== '') {
-    const id = Number(value)
-    if (Number.isFinite(id)) return id
+const readEnterpriseId = (value: unknown): string | null => {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) && value > 0 ? String(value) : null
   }
-  return null
+  if (typeof value !== 'string') return null
+  const id = value.trim()
+  return /^[1-9]\d*$/.test(id) ? id : null
 }
 
 const readEnterpriseText = (value: unknown) => {
@@ -376,12 +376,14 @@ export const normalizeUserEnterpriseList = (
       : []
   const maxRaw = body.maxBindings ?? body.MaxBindings
   const maxBindings = typeof maxRaw === 'number' ? maxRaw : Number(maxRaw)
+  const identityRaw = body.identity ?? body.Identity
+  const identity = identityRaw == null ? Number.NaN : Number(identityRaw)
   const canBindMore = body.canBindMore ?? body.CanBindMore
   return {
     items: rawItems
       .map(mapUserEnterprise)
       .filter((item): item is PolicyUserEnterprise => item != null),
-    identity: readEnterpriseId(body.identity ?? body.Identity),
+    identity: Number.isFinite(identity) ? identity : null,
     currentEnterpriseId: readEnterpriseId(
       body.currentEnterpriseId ?? body.CurrentEnterpriseId,
     ),
@@ -401,10 +403,10 @@ export const readBoundEnterpriseId = (data: unknown) => {
  */
 export const buildBindEnterprisePayload = (input: {
   creditCode?: string | null
-  enterpriseId?: number | null
+  enterpriseId?: string | null
 }): BindPolicyEnterprisePayload | null => {
   const enterpriseId = readEnterpriseId(input.enterpriseId)
-  if (enterpriseId != null && enterpriseId > 0) return { enterpriseId }
+  if (enterpriseId != null) return { enterpriseId }
   const creditCode = (input.creditCode || '').replace(/\s+/g, '').toUpperCase()
   if (!creditCode) return null
   return { creditCode }
@@ -431,7 +433,7 @@ export const bindMyEnterprise = (data: BindPolicyEnterprisePayload) => {
 }
 
 /** DELETE /account/users/me/enterprises/{enterpriseId} 解绑。未绑定时视为已解绑 */
-export const unbindMyEnterprise = async (enterpriseId: number) => {
+export const unbindMyEnterprise = async (enterpriseId: string) => {
   const data = await request({
     url: `/account/users/me/enterprises/${enterpriseId}`,
     method: 'delete',
@@ -441,7 +443,7 @@ export const unbindMyEnterprise = async (enterpriseId: number) => {
 }
 
 /** PUT /account/users/me/enterprises/current 切换当前企业，须为已绑定企业 */
-export const setCurrentEnterprise = async (enterpriseId: number) => {
+export const setCurrentEnterprise = async (enterpriseId: string) => {
   const data = await request({
     url: '/account/users/me/enterprises/current',
     method: 'put',

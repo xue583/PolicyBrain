@@ -23,14 +23,14 @@ const shortNameOf = (name: string) => {
 }
 
 const districtOf = (item: EnterpriseItem) => {
-  if (item.id === 1) return '郑州航空港经济综合实验区'
+  if (item.id === '1') return '郑州航空港经济综合实验区'
   if (item.city === '郑州市') return '高新技术产业开发区'
   if (item.city === item.province) return item.city
   return `${item.city}市辖区`.replace('市市', '市')
 }
 
 const honorTagsOf = (item: EnterpriseItem): EnterpriseHonorTag[] => {
-  if (item.id === 1) {
+  if (item.id === '1') {
     return [
       { text: '国家级科技型中小企业', tone: 'blue' },
       { text: '高新技术企业', tone: 'orange' },
@@ -43,7 +43,7 @@ const honorTagsOf = (item: EnterpriseItem): EnterpriseHonorTag[] => {
 }
 
 const ipCountsOf = (item: EnterpriseItem) => {
-  if (item.id === 1) {
+  if (item.id === '1') {
     return { patent: 44, trademark: 60, software: 27, work: 3 }
   }
   return {

@@ -12,7 +12,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
 
-const openId = ref<number | null>(null)
+const openId = ref<string | null>(null)
 const hoveredChild = ref(-1)
 
 const checked = (name: string) => props.modelValue.includes(name)
@@ -36,7 +36,7 @@ const selectedDescendants = (node: IndustryNode) => {
   return names
 }
 
-const onOpenChange = (id: number, open: boolean) => {
+const onOpenChange = (id: string, open: boolean) => {
   if (open) {
     openId.value = id
     hoveredChild.value = -1
@@ -48,7 +48,7 @@ const onOpenChange = (id: number, open: boolean) => {
   }
 }
 
-const pinOpen = (id: number) => {
+const pinOpen = (id: string) => {
   openId.value = id
 }
 

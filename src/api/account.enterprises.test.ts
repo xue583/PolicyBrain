@@ -22,14 +22,14 @@ describe('user enterprise binding', () => {
           },
         ],
         identity: 2,
-        currentEnterpriseId: 18,
+        currentEnterpriseId: '18',
         canBindMore: true,
         maxBindings: 0,
       }),
     ).toEqual({
       items: [
         {
-          enterpriseId: 18,
+          enterpriseId: '18',
           name: '郑州源创基因科技有限公司',
           creditCode: '91410100MA9G00018X',
           provinceName: '河南省',
@@ -40,7 +40,7 @@ describe('user enterprise binding', () => {
         },
       ],
       identity: 2,
-      currentEnterpriseId: 18,
+      currentEnterpriseId: '18',
       canBindMore: true,
       maxBindings: 0,
     })
@@ -48,11 +48,11 @@ describe('user enterprise binding', () => {
 
   it('accepts a bare enterprise array', () => {
     expect(
-      normalizeUserEnterpriseList([{ enterpriseId: 3, name: '甲公司' }]),
+      normalizeUserEnterpriseList([{ enterpriseId: '3', name: '甲公司' }]),
     ).toEqual({
       items: [
         {
-          enterpriseId: 3,
+          enterpriseId: '3',
           name: '甲公司',
           creditCode: null,
           provinceName: null,
@@ -69,9 +69,9 @@ describe('user enterprise binding', () => {
     expect(
       buildBindEnterprisePayload({
         creditCode: ' 91410100ma9g00018x ',
-        enterpriseId: 18,
+        enterpriseId: '18',
       }),
-    ).toEqual({ enterpriseId: 18 })
+    ).toEqual({ enterpriseId: '18' })
     expect(
       buildBindEnterprisePayload({ creditCode: '91410100ma9g00018x' }),
     ).toEqual({ creditCode: '91410100MA9G00018X' })
@@ -79,7 +79,24 @@ describe('user enterprise binding', () => {
   })
 
   it('reads the id returned by bind', () => {
-    expect(readBoundEnterpriseId({ enterpriseId: 18, name: '甲公司' })).toBe(18)
+    expect(readBoundEnterpriseId({ enterpriseId: '18', name: '甲公司' })).toBe(
+      '18',
+    )
     expect(readBoundEnterpriseId({})).toBeNull()
+  })
+
+  it('preserves a 19-digit enterprise id without numeric conversion', () => {
+    const id = '1987654321012345678'
+    const result = normalizeUserEnterpriseList({
+      items: [{ enterpriseId: id, name: '甲公司' }],
+      currentEnterpriseId: id,
+    })
+
+    expect(result.items[0]?.enterpriseId).toBe(id)
+    expect(result.currentEnterpriseId).toBe(id)
+    expect(readBoundEnterpriseId({ enterpriseId: id })).toBe(id)
+    expect(buildBindEnterprisePayload({ enterpriseId: id })).toEqual({
+      enterpriseId: id,
+    })
   })
 })

@@ -24,7 +24,7 @@ const activeTab = ref<string>('基本信息')
 /** 企服左侧企业面板，卡头 ☰ 图标可收起/展开 */
 const panelOpen = ref(true)
 const bindOpen = ref(false)
-const companyId = ref<number | undefined>(undefined)
+const companyId = ref<string | undefined>(undefined)
 const enterprise = ref<EnterpriseDetail | null>(null)
 const detailLoading = ref(false)
 
@@ -135,7 +135,7 @@ const contactRight: TextField[] = [
   { label: '传真', value: '--' },
 ]
 
-const loadDetail = async (id?: number) => {
+const loadDetail = async (id?: string) => {
   if (!id) {
     enterprise.value = null
     return
@@ -150,7 +150,7 @@ const loadDetail = async (id?: number) => {
   }
 }
 
-const selectCompany = (id?: number, syncCurrent = false) => {
+const selectCompany = (id?: string, syncCurrent = false) => {
   if (!id) {
     companyId.value = undefined
     enterprise.value = null
@@ -171,7 +171,7 @@ const selectCompany = (id?: number, syncCurrent = false) => {
   }
 }
 
-const pickInitialCompany = (preferId?: number) => {
+const pickInitialCompany = (preferId?: string) => {
   const bound = items.value
   const prefer =
     preferId && bound.some((item) => item.enterpriseId === preferId)
@@ -190,8 +190,8 @@ const onCompanyChange = (value: unknown) => {
     value && typeof value === 'object' && 'value' in value
       ? (value as { value: unknown }).value
       : value
-  const id = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isSafeInteger(id) || id <= 0) return
+  const id = typeof raw === 'string' ? raw.trim() : ''
+  if (!/^[1-9]\d*$/.test(id)) return
   selectCompany(id, true)
 }
 
@@ -199,7 +199,7 @@ const unbindCurrent = () => {
   if (currentBound.value) unbind(currentBound.value)
 }
 
-const onBound = (enterpriseId?: number) => {
+const onBound = (enterpriseId?: string) => {
   void load().then(() => {
     pickInitialCompany(enterpriseId)
   })

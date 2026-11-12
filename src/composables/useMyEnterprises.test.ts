@@ -24,7 +24,7 @@ const { resetMyEnterprises, useMyEnterprises } =
   await import('./useMyEnterprises')
 
 const bound = {
-  items: [{ enterpriseId: 7, name: '甲公司' }],
+  items: [{ enterpriseId: '7', name: '甲公司' }],
   canBindMore: false,
   maxBindings: 1,
 }
@@ -76,7 +76,7 @@ describe('useMyEnterprises', () => {
     personal.unbind(bound.items[0])
     await flushPromises()
 
-    expect(unbindMyEnterprise).toHaveBeenCalledWith(7)
+    expect(unbindMyEnterprise).toHaveBeenCalledWith('7')
     expect(workbench.items.value).toEqual([])
     expect(personal.items.value).toEqual([])
   })

@@ -117,7 +117,7 @@ export const fetchPolicyPage = async (query: PolicyQuery) => {
   return { ...page, items: page.items.map(mapPolicyCard) }
 }
 
-export const fetchPolicyDetail = async (id: number) => {
+export const fetchPolicyDetail = async (id: string) => {
   const data = await request({
     url: `/policies/${id}`,
     method: 'get',
@@ -126,7 +126,7 @@ export const fetchPolicyDetail = async (id: number) => {
   return mapPolicyCard(data)
 }
 
-export const fetchPolicyApplyInfo = async (id: number) => {
+export const fetchPolicyApplyInfo = async (id: string) => {
   const data = await request({
     url: `/policies/${id}/apply-info`,
     method: 'get',
@@ -155,7 +155,7 @@ const fetchSubPage = async (
 }
 
 export const fetchPolicySupports = async (
-  id: number,
+  id: string,
   region: RegionIdQuery = {},
 ) => {
   const page = await fetchSubPage(`/policies/${id}/support-measures`, {
@@ -166,12 +166,12 @@ export const fetchPolicySupports = async (
   return page.items.map(mapSupportMeasure)
 }
 
-export const fetchPolicyPublicities = async (id: number) => {
+export const fetchPolicyPublicities = async (id: string) => {
   const page = await fetchSubPage(`/policies/${id}/publicities`)
   return page.items.map(mapPublicity)
 }
 
-export const fetchPolicyUpdates = async (id: number) => {
+export const fetchPolicyUpdates = async (id: string) => {
   const page = await fetchSubPage(`/policies/${id}/updates`)
   return page.items.map(mapPolicyUpdate)
 }

@@ -1,6 +1,6 @@
 import type { PolicyDbItem } from './types'
 
-export const mockPolicyDb: PolicyDbItem[] = [
+const policySeeds: Array<Omit<PolicyDbItem, 'id'> & { id: number }> = [
   {
     id: 1,
     name: '郑州市工程研究中心',
@@ -237,6 +237,11 @@ export const mockPolicyDb: PolicyDbItem[] = [
   },
 ]
 
-export const getPolicyDbById = (id: number): PolicyDbItem | undefined => {
+export const mockPolicyDb: PolicyDbItem[] = policySeeds.map((item) => ({
+  ...item,
+  id: String(item.id),
+}))
+
+export const getPolicyDbById = (id: string): PolicyDbItem | undefined => {
   return mockPolicyDb.find((item) => item.id === id)
 }

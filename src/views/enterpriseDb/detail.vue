@@ -27,7 +27,10 @@ const router = useRouter()
 const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 
-const enterpriseId = computed(() => Number(route.params.id))
+const enterpriseId = computed(() => {
+  const id = String(route.params.id ?? '')
+  return /^\d+$/.test(id) ? id : ''
+})
 const enterprise = ref<EnterpriseDetail | null>(null)
 const loading = ref(false)
 const error = ref('')

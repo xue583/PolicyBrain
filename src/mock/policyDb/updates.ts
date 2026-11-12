@@ -106,9 +106,9 @@ const updateTemplates: UpdateTemplate[] = [
 
 const buildUpdates = (item: PolicyDbItem): PolicyDbUpdate[] =>
   updateTemplates.map((tpl, index) => ({
-    id: item.id * 100 + index + 1,
+    id: `${item.id}${String(index + 1).padStart(2, '0')}`,
     title:
-      item.id === 1 && index === 0
+      item.id === '1' && index === 0
         ? '中央引导地方科技发展专项（河南省补贴）'
         : tpl.title(item.name),
     grade: tpl.grade,
@@ -119,7 +119,7 @@ const buildUpdates = (item: PolicyDbItem): PolicyDbUpdate[] =>
     daysRemaining: tpl.daysRemaining,
     expired: tpl.expired,
     phone: tpl.phone,
-    newsId: (index % 9) + 1,
+    newsId: String((index % 9) + 1),
   }))
 
 export { buildUpdates }

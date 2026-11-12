@@ -4,7 +4,7 @@ export type PolicyDbLevel = 'national' | 'provincial' | 'municipal' | 'district'
 export type PolicyDbStatus = 'idle' | 'expired'
 
 export interface PolicyDbItem {
-  id: number
+  id: string
   name: string
   support: string
   city: string
@@ -25,7 +25,7 @@ export interface PolicyDbTag {
 }
 
 export interface PolicyDbUpdate {
-  id: number
+  id: string
   title: string
   grade: string
   department: string
@@ -35,14 +35,14 @@ export interface PolicyDbUpdate {
   daysRemaining: number
   expired: boolean
   phone: string
-  newsId: number
+  newsId: string
 }
 
 export type PolicyDbPublicityCategory =
   'approved' | 'subsidy' | 'proposed' | 'evaluation' | 'acceptance' | 'revoked'
 
 export interface PolicyDbPublicity {
-  id: number
+  id: string
   name: string
   district: string
   region: string
@@ -54,7 +54,7 @@ export interface PolicyDbPublicity {
 }
 
 export interface PolicyDbSupportMeasure {
-  id: number
+  id: string
   grade: string
   condition: string
   amount: string

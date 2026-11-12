@@ -21,7 +21,7 @@ export interface InvestTypeTab {
 }
 
 export interface InvestProject {
-  id: number
+  id: string
   code: string
   name: string
   approvalUnit: string
@@ -309,7 +309,7 @@ const seeds: Array<
 ]
 
 export const mockInvestProjects: InvestProject[] = seeds.map((item, index) => ({
-  id: index + 1,
+  id: String(index + 1),
   code: `2608-${areaCode[item.region]}-04-01-${String(100000000000 + item.seq).slice(-12)}`,
   name: item.name,
   approvalUnit: item.approvalUnit,

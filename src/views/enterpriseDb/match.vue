@@ -57,8 +57,8 @@ const auth = useAuthStore()
 const { isLoggedIn } = storeToRefs(auth)
 
 const enterpriseId = computed(() => {
-  const id = Number(route.params.id)
-  return Number.isFinite(id) && id > 0 ? id : 0
+  const id = String(route.params.id ?? '')
+  return /^\d+$/.test(id) ? id : ''
 })
 const enterprise = ref<EnterpriseDetail | null>(null)
 const policies = ref<MatchPolicy[]>([])
@@ -95,7 +95,7 @@ void loadCoverage()
 
 let loadSeq = 0
 
-const loadEnterprise = async (id: number) => {
+const loadEnterprise = async (id: string) => {
   const raw = await fetchEnterpriseRaw(id)
   ipCounts.value = {
     ...readIpCounts(raw),
@@ -106,7 +106,7 @@ const loadEnterprise = async (id: number) => {
   })
 }
 
-const loadPolicies = async (id: number) => {
+const loadPolicies = async (id: string) => {
   if (!isLoggedIn.value) {
     policies.value = []
     total.value = 0

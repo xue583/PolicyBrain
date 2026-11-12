@@ -6,7 +6,7 @@ import {
   type PageQuery,
   type RegionIdQuery,
 } from '@/api/paging'
-import { asRecord, pickNumber, pickString } from '@/api/record'
+import { asRecord, pickString } from '@/api/record'
 import {
   mapCertPerson,
   mapCertReview,
@@ -53,7 +53,7 @@ export const fetchEnterprisePage = async (query: EnterpriseQuery) => {
 
 /** 绑定企业下拉项。搜索结果带 creditCode，选中后回填到表单。 */
 export type EnterpriseBindOption = {
-  id: number
+  id: string
   name: string
   creditCode: string
 }
@@ -64,7 +64,7 @@ export const mapEnterpriseBindOption = (
   const record = asRecord(raw)
   const nested = asRecord(record.enterprise)
   const source = { ...record, ...nested }
-  const id = pickNumber(source, ['id', 'enterpriseId'])
+  const id = pickString(source, ['id', 'enterpriseId']).trim()
   const name = pickString(source, ['name', 'enterpriseName']).trim()
   const creditCode = pickString(source, [
     'creditCode',
@@ -72,7 +72,7 @@ export const mapEnterpriseBindOption = (
   ])
     .replace(/\s+/g, '')
     .toUpperCase()
-  if (!Number.isSafeInteger(id) || id <= 0 || !name) return null
+  if (!/^[1-9]\d*$/.test(id) || !name) return null
   return { id, name, creditCode }
 }
 
@@ -96,7 +96,7 @@ export const searchEnterpriseBindOptions = async (keyword: string) => {
 }
 
 /** GET /enterprises/{id} 企业详情画像。隐藏或不存在时 404。 */
-export const fetchEnterpriseRaw = (id: number) => {
+export const fetchEnterpriseRaw = (id: string) => {
   return request({
     url: `/enterprises/${id}`,
     method: 'get',
@@ -125,7 +125,7 @@ const safePage = async (url: string, params: Record<string, unknown>) => {
   }
 }
 
-export const fetchEnterpriseDetail = async (id: number) => {
+export const fetchEnterpriseDetail = async (id: string) => {
   const raw = await fetchEnterpriseRaw(id)
   const [
     supports,

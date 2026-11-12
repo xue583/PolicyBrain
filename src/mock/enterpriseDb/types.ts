@@ -1,7 +1,7 @@
 export type EnterpriseStatus = 'active' | 'revoked' | 'cancelled'
 
 export interface EnterpriseItem {
-  id: number
+  id: string
   name: string
   status: EnterpriseStatus
   province: string
@@ -21,8 +21,8 @@ export interface EnterpriseHonorTag {
 }
 
 export interface EnterprisePolicyRecord {
-  id: number
-  policyId: number
+  id: string
+  policyId: string
   name: string
   grade: string
   amount: string
@@ -32,7 +32,7 @@ export interface EnterprisePolicyRecord {
 }
 
 export interface EnterprisePatent {
-  id: number
+  id: string
   name: string
   applyDate: string
   applyNo: string
@@ -43,7 +43,7 @@ export interface EnterprisePatent {
 }
 
 export interface EnterpriseTrademark {
-  id: number
+  id: string
   mark: string
   name: string
   applyDate: string
@@ -53,7 +53,7 @@ export interface EnterpriseTrademark {
 }
 
 export interface EnterpriseSoftwareCopyright {
-  id: number
+  id: string
   fullName: string
   shortName: string
   approveDate: string
@@ -64,7 +64,7 @@ export interface EnterpriseSoftwareCopyright {
 }
 
 export interface EnterpriseWorkCopyright {
-  id: number
+  id: string
   fullName: string
   registerNo: string
   category: string
@@ -74,7 +74,7 @@ export interface EnterpriseWorkCopyright {
 }
 
 export interface EnterpriseQualification {
-  id: number
+  id: string
   category: string
   name: string
   certNo: string
@@ -84,7 +84,7 @@ export interface EnterpriseQualification {
 }
 
 export interface EnterpriseQualPersonnel {
-  id: number
+  id: string
   name: string
   personType?: string
   certNo: string
@@ -96,7 +96,7 @@ export interface EnterpriseQualPersonnel {
 }
 
 export interface EnterpriseShareholder {
-  id: number
+  id: string
   name: string
   shareholderType: string
   shareholdingRatio: string
@@ -106,7 +106,7 @@ export interface EnterpriseShareholder {
 }
 
 export interface EnterpriseQualReview {
-  id: number
+  id: string
   matter: string
   decision: string
   reason: string
@@ -117,7 +117,7 @@ export interface EnterpriseQualReview {
 export const enterpriseQualYears = [2026, 2025, 2024, 2023, 2022, 2021]
 
 export interface EnterpriseContact {
-  id: number
+  id: string
   name: string
   title: string
   phone: string

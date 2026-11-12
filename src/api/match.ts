@@ -9,7 +9,7 @@ import { mapMatchPolicy, mapMatchedEnterprise } from '@/api/mapPortal'
  * 200 响应体未在文档中声明，分页信封与政策库列表一致：items、pageIndex、pageSize、totalElements。
  */
 export const fetchEntToPolicy = async (
-  enterpriseId: number,
+  enterpriseId: string,
   query: PageQuery = {},
 ) => {
   const data = await request({
@@ -37,7 +37,7 @@ export const fetchEntToPolicy = async (
 
 /** 政→企有效匹配。Swagger GET /match/policy-to-ent。 */
 export const fetchPolicyToEnt = async (
-  policyId: number,
+  policyId: string,
   query: PageQuery = {},
 ) => {
   const data = await request({

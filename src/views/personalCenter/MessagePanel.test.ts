@@ -40,7 +40,7 @@ const {
 const messagePage = {
   items: [
     {
-      id: 11,
+      id: '11',
       title: '申报审核通过',
       summary: '您提交的申报已通过初审',
       isRead: false,
@@ -106,7 +106,7 @@ describe('MessagePanel', () => {
     await wrapper.get('.msg-link').trigger('click')
     await flushPromises()
 
-    expect(markMessageRead).toHaveBeenCalledWith(11)
+    expect(markMessageRead).toHaveBeenCalledWith('11')
     expect(document.body.textContent).toContain('结果')
     expect(document.body.textContent).toContain('您提交的申报已通过初审')
     wrapper.unmount()
