@@ -34,13 +34,15 @@ describe('applyAuthGuard', () => {
     for (const name of ['workspace', 'export'] as const) {
       const to = router.resolve({ name })
       expect(to.meta.requiresAuth).toBe(true)
-      expect(applyAuthGuard(to)).toEqual({ name: 'home' })
+      expect(applyAuthGuard(to as unknown as RouteLocationNormalized)).toEqual({
+        name: 'home',
+      })
     }
   })
 
   it('keeps the membership page open for guests', () => {
     const to = router.resolve({ name: 'membership' })
     expect(to.meta.requiresAuth).toBeUndefined()
-    expect(applyAuthGuard(to)).toBe(true)
+    expect(applyAuthGuard(to as unknown as RouteLocationNormalized)).toBe(true)
   })
 })

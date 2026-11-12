@@ -111,11 +111,12 @@ export const useMembershipCatalog = () => {
         ready.value = true
       } finally {
         loading.value = false
-        if (inflight === task) inflight = null
       }
     })()
     inflight = task
-    return task
+    return task.finally(() => {
+      if (inflight === task) inflight = null
+    })
   }
 
   return {
