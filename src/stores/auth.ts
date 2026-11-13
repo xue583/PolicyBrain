@@ -1,16 +1,18 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
-  clearToken,
+  clearSession,
   getStoredUser,
-  getToken,
+  hasSession,
   onAuthChange,
   clearInviteCode,
-  pickTokens,
-  saveSessionTokens,
   setStoredUser,
   type AuthUser,
 } from '@/utils/auth'
+import { ApiError } from '@/utils/apiError'
+import { ensureSessionKey, resetSessionKey } from '@/utils/crypto'
+import { resetCsrfToken } from '@/utils/csrf'
+import type { RequestConfig } from '@/utils/request'
 import {
   createSession,
   fetchCurrentUser,
@@ -24,40 +26,15 @@ import {
 } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(getToken())
   const user = ref<AuthUser | null>(getStoredUser())
-
-  const isLoggedIn = computed(() => Boolean(token.value))
+  const isLoggedIn = computed(() => user.value != null)
 
   onAuthChange(() => {
-    token.value = getToken()
     user.value = getStoredUser()
   })
 
-  const applySession = (payload: unknown) => {
-    const tokens = pickTokens(payload)
-    if (tokens.accessToken || tokens.refreshToken) {
-      saveSessionTokens(tokens)
-    }
-    if (tokens.accessToken) {
-      token.value = tokens.accessToken
-    }
-
-    if (payload && typeof payload === 'object') {
-      const data = payload as Record<string, unknown>
-      const userLike =
-        (data.user as AuthUser | undefined) ||
-        (data.profile as AuthUser | undefined) ||
-        null
-      if (userLike) {
-        user.value = userLike
-        setStoredUser(userLike)
-      }
-    }
-  }
-
-  const loadCurrentUser = async () => {
-    const me = await fetchCurrentUser()
+  const loadCurrentUser = async (config?: RequestConfig) => {
+    const me = await fetchCurrentUser(config)
     if (me && typeof me === 'object') {
       user.value = me as AuthUser
       setStoredUser(user.value)
@@ -79,12 +56,15 @@ export const useAuthStore = defineStore('auth', () => {
       code,
       ...(inviteCode ? { inviteCode } : {}),
     })
-    applySession(result)
+
+    // Cookie 已由后端写入；空资料仅作为本地登录态提示，随后由当前用户接口补全。
+    user.value = {}
+    setStoredUser(user.value)
     clearInviteCode()
     try {
       await loadCurrentUser()
     } catch {
-      // 登录成功但拉用户失败时，仍保留会话
+      // 登录成功但拉用户失败时，仍保留 HttpOnly Cookie 会话
     }
     return result
   }
@@ -126,30 +106,39 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     try {
-      if (token.value) {
-        await logoutSession()
-      }
+      await logoutSession()
     } catch {
-      // 忽略登出接口失败，本地仍清理
+      // 忽略登出接口失败，本地仍清理；后端在令牌过期时也会清除 Cookie
     } finally {
-      clearToken()
-      token.value = ''
+      clearSession()
+      resetSessionKey()
+      resetCsrfToken()
       user.value = null
     }
   }
 
+  /** 页面加载时通过 Cookie 恢复会话；匿名后台探测不弹登录框。 */
   const hydrateUser = async () => {
-    if (!token.value) return null
+    // 无任何本地登录痕迹时跳过探测，避免匿名访客每次加载空跑认证请求。
+    // Cookie 存在而 pb_user 缺失的窗口（手动清 storage）由用户重新登录覆盖。
+    if (!hasSession()) return null
+
     try {
-      return await loadCurrentUser()
-    } catch {
-      // 401 已由请求层清理会话；网络等其它失败时保留本地缓存资料
+      await ensureSessionKey()
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 401))
+        return user.value
+    }
+
+    try {
+      return await loadCurrentUser({ suppressAuthPrompt: true })
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) clearSession()
       return user.value
     }
   }
 
   return {
-    token,
     user,
     isLoggedIn,
     requestSmsCode,

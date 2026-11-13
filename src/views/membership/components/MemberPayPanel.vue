@@ -26,7 +26,7 @@ const emit = defineEmits<{
 
 const props = withDefaults(
   defineProps<{
-    price: number
+    price: string
     /** 在售档位编码，创建支付意向时提交 */
     planCode: string
     /**
@@ -66,7 +66,7 @@ const cashierOpen = ref(false)
 const cashierHtml = ref('')
 const cashierUrl = ref('')
 
-const isFree = computed(() => props.price <= 0)
+const isFree = computed(() => props.price === '0')
 
 const actionLabel = computed(() => {
   if (phase.value === 'submitting') return '正在打开'

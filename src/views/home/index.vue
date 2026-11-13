@@ -23,6 +23,7 @@ import { fetchIndustryNames } from '@/api/meta'
 import type { PolicyItem } from '../../mock/policyNews'
 import { useRegionStore } from '@/stores/region'
 import { orderNewsForCity } from '@/utils/homeNews'
+import { softFail } from '@/utils/softFail'
 import { Divider, message } from 'ant-design-vue'
 import { fetchEnterprisePage } from '@/api/enterprises'
 import { useAuthStore } from '@/stores/auth'
@@ -241,12 +242,12 @@ onMounted(() => {
     .then((groups) => {
       hotKeywordGroups.value = groups
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '首页热词'))
   void fetchIndustryNames()
     .then((names) => {
       if (names.length) industryTagList.value = names
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '首页行业标签'))
   if (sidebarRef.value && typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(() => syncNewsLimit())
     resizeObserver.observe(sidebarRef.value)

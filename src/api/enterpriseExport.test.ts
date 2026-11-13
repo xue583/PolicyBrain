@@ -25,7 +25,7 @@ const filters = (
 })
 
 describe('mapExportEnterprise', () => {
-  it('读取高级筛选行，地址缺失时用省市区拼接', () => {
+  it('读取高级筛选行，地址缺失时用省市区拼接；原始字段全保留', () => {
     expect(
       mapExportEnterprise({
         id: 12,
@@ -38,6 +38,10 @@ describe('mapExportEnterprise', () => {
     ).toEqual({
       id: '12',
       name: '河南示例科技有限公司',
+      provinceName: '河南省',
+      cityName: '郑州市',
+      companyIndustry: '软件和信息技术服务业',
+      policySupportCount: 3,
       address: '河南省郑州市',
       industry: '软件和信息技术服务业',
       policyCount: 3,

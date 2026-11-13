@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { fetchUnreadMessageCount } from '@/api/account'
-import { getToken } from '@/utils/auth'
+import { hasSession } from '@/utils/auth'
 
 /** 顶栏与消息面板共用，避免已读后角标还停在旧数字 */
 const unreadCount = ref(0)
@@ -12,7 +12,7 @@ export const resetMessageUnread = () => {
 }
 
 export const refreshMessageUnread = async () => {
-  if (!getToken()) {
+  if (!hasSession()) {
     resetMessageUnread()
     return
   }

@@ -94,7 +94,7 @@ const membership = {
 const mountModal = (
   identity: PolicyUserType = PolicyUserType.EnterpriseSpecialist,
 ) => {
-  localStorage.setItem('pb_access_token', 'access')
+  localStorage.setItem('pb_user', '{}')
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()

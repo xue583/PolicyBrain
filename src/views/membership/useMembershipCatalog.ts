@@ -20,7 +20,7 @@ const plansFailed = ref(false)
 const benefitsFailed = ref(false)
 const ready = ref(false)
 let inflight: Promise<void> | null = null
-let loadedToken = ''
+let loadedUser: object | null = null
 
 /** 测试隔离，也用于登录态切换后丢掉上一份目录 */
 export const resetMembershipCatalog = () => {
@@ -31,7 +31,7 @@ export const resetMembershipCatalog = () => {
   benefitsFailed.value = false
   ready.value = false
   inflight = null
-  loadedToken = ''
+  loadedUser = null
 }
 
 const loadLevelGroups = async <T>(
@@ -54,7 +54,7 @@ const clearCatalog = () => {
   plansFailed.value = false
   benefitsFailed.value = false
   ready.value = true
-  loadedToken = ''
+  loadedUser = null
 }
 
 /**
@@ -64,8 +64,8 @@ const clearCatalog = () => {
 export const useMembershipCatalog = () => {
   const loadCatalog = () => {
     const auth = useAuthStore()
-    const token = auth.token
-    if (!auth.isLoggedIn || !token) {
+    const sessionUser = auth.user
+    if (!auth.isLoggedIn || !sessionUser) {
       clearCatalog()
       return Promise.resolve()
     }
@@ -73,7 +73,7 @@ export const useMembershipCatalog = () => {
       ready.value &&
       !plansFailed.value &&
       !benefitsFailed.value &&
-      loadedToken === token
+      loadedUser === sessionUser
     ) {
       return Promise.resolve()
     }
@@ -92,7 +92,7 @@ export const useMembershipCatalog = () => {
             asMembershipBenefits(await fetchMembershipBenefits(level)),
           ),
         ])
-        if (useAuthStore().token !== token) return
+        if (useAuthStore().user !== sessionUser) return
         if (planGroups.every((group) => group == null)) {
           plans.value = []
           plansFailed.value = true
@@ -107,7 +107,7 @@ export const useMembershipCatalog = () => {
             benefitGroups.flatMap((group) => group ?? []),
           )
         }
-        loadedToken = token
+        loadedUser = sessionUser
         ready.value = true
       } finally {
         loading.value = false

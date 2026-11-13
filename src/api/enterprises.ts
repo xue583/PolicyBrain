@@ -23,6 +23,7 @@ import {
   mapWork,
   type EnterpriseExtras,
 } from '@/api/mapPortal'
+import { softFail } from '@/utils/softFail'
 
 export type EnterpriseQuery = PageQuery &
   RegionIdQuery & {
@@ -185,7 +186,7 @@ export const fetchEnterpriseDetail = async (id: string) => {
       url: `/enterprises/${id}/products`,
       method: 'get',
       hideError: true,
-    }).catch(() => ({})),
+    }).catch(softFail({}, '企业产品信息')),
   ])
   const extras: EnterpriseExtras = {
     policyRecords: supports.items.map(mapPolicyRecord),

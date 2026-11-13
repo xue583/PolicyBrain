@@ -9,6 +9,7 @@ import {
 } from '@/api/invoices'
 import { useAuthStore } from '@/stores/auth'
 import { toErrorMessage } from '@/utils/apiError'
+import { compareFen, normalizeFen } from '@/utils/money'
 
 defineOptions({ name: 'InvoiceApplyModal' })
 
@@ -16,7 +17,7 @@ const open = defineModel<boolean>('open', { default: false })
 
 const props = defineProps<{
   /** 订单实付金额，单位分。提交时原样上送，不超过实付 */
-  amountFen: number
+  amountFen: string
   /** 会员订单号。填写后由后端校验订单归属、已支付与实付金额 */
   orderNo: string
 }>()
@@ -135,13 +136,13 @@ const validate = () => {
 
 const submit = async () => {
   if (submitting.value || !validate()) return
-  const amount = Math.round(Number(props.amountFen))
+  const amount = normalizeFen(props.amountFen)
   const orderNo = props.orderNo.trim()
   if (!orderNo) {
     submitError.value = '缺少订单号，无法申请开票'
     return
   }
-  if (!Number.isFinite(amount) || amount < 0) {
+  if (amount == null || compareFen(amount, '0') < 0) {
     submitError.value = '发票金额无效'
     return
   }

@@ -16,6 +16,7 @@ import {
   type InvoiceApplication,
 } from '@/api/invoices'
 import { useServerPage } from '@/composables/useServerPage'
+import { compareFen, normalizeFen } from '@/utils/money'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import PanelTabs from '@/components/common/PanelTabs.vue'
@@ -84,7 +85,7 @@ const {
 
 const activeTab = ref<'consum' | 'invoice'>('invoice')
 const applyOpen = ref(false)
-const applyAmountFen = ref(0)
+const applyAmountFen = ref('0')
 const applyOrderNo = ref('')
 /** 刚提交、列表尚未刷新到的订单号，避免同一订单重复申请 */
 const submittedOrderNos = ref<string[]>([])
@@ -113,8 +114,8 @@ const isApplied = (order: MembershipOrder) => {
 
 const openApply = (order: MembershipOrder) => {
   if (!isPaidOrder(order) || isApplied(order)) return
-  const fen = Math.round(Number(order.amount))
-  if (!Number.isFinite(fen) || fen < 0) return
+  const fen = normalizeFen(order.amount)
+  if (fen == null || compareFen(fen, '0') < 0) return
   applyOrderNo.value = orderNoOf(order)
   applyAmountFen.value = fen
   applyOpen.value = true
@@ -130,15 +131,15 @@ const onInvoiceSubmitted = () => {
   else void reloadInvoices()
 }
 
-const selectedId = ref(0)
+const selectedId = ref('')
 const detailOpen = ref(false)
-const detailId = ref<number | null>(null)
+const detailId = ref<string | null>(null)
 
 const switchTab = (tab: 'consum' | 'invoice') => {
   activeTab.value = tab
 }
 
-const openDetail = (id?: number) => {
+const openDetail = (id?: string) => {
   if (id == null) return
   selectedId.value = id
   detailId.value = id

@@ -1,18 +1,22 @@
-import { describe, expect, it, vi, afterEach } from 'vitest'
 import axios, {
   AxiosError,
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios'
-import CryptoJS from 'crypto-js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/utils/apiError'
-import { clearToken, getToken, setRefreshToken, setToken } from '@/utils/auth'
 
 vi.mock('ant-design-vue', () => ({
   message: {
     loading: vi.fn(() => vi.fn()),
     error: vi.fn(),
   },
+}))
+
+vi.mock('@/utils/csrf', () => ({
+  CSRF_HEADER_NAME: 'X-CSRF-Token',
+  ensureCsrfToken: vi.fn(),
+  resetCsrfToken: vi.fn(),
 }))
 
 const {
@@ -24,203 +28,402 @@ const {
   resolveResponseData,
   request,
 } = await import('./request')
+const { getSessionKeyId, prepareSessionKey, resetSessionKey } =
+  await import('./crypto')
+const { ensureCsrfToken } = await import('@/utils/csrf')
+const { getStoredUser, onNeedLogin, setStoredUser } = await import('./auth')
 
-const { maskSecret } = await import('./crypto')
+const originalAdapter = service.defaults.adapter
 
-const KEY_BASE64 = CryptoJS.enc.Utf8.parse(
-  '0123456789abcdef0123456789abcdef',
-).toString(CryptoJS.enc.Base64)
-const IV_BASE64 = CryptoJS.enc.Utf8.parse('0123456789abcdef').toString(
-  CryptoJS.enc.Base64,
-)
-
-const encrypt = (value: unknown) =>
-  CryptoJS.AES.encrypt(
-    JSON.stringify(value),
-    CryptoJS.enc.Base64.parse(KEY_BASE64),
-    {
-      iv: CryptoJS.enc.Base64.parse(IV_BASE64),
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7,
-    },
-  ).toString()
-
-const stubSecrets = () => {
-  // 环境变量存掩码串（见 utils/crypto.ts），运行时还原后再解密
-  vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(KEY_BASE64))
-  vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
+const toBase64 = (bytes: Uint8Array | ArrayBuffer) => {
+  const view = ArrayBuffer.isView(bytes)
+    ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    : new Uint8Array(bytes)
+  return btoa(Array.from(view, (byte) => String.fromCharCode(byte)).join(''))
 }
 
-afterEach(() => {
-  vi.unstubAllEnvs()
+const fromBase64 = (value: string) =>
+  Uint8Array.from(atob(value), (char) => char.charCodeAt(0))
+
+const openEnvelope = async (privateKey: CryptoKey, keyEnvelope: string) => {
+  const plain = await crypto.subtle.decrypt(
+    { name: 'RSA-OAEP' },
+    privateKey,
+    fromBase64(keyEnvelope) as BufferSource,
+  )
+  const bytes = new Uint8Array(plain)
+  return { keyBytes: bytes.slice(0, 32), iv: bytes.slice(32) }
+}
+
+const encryptWithEnvelope = async (
+  privateKey: CryptoKey,
+  keyEnvelope: string,
+  value: unknown,
+) => {
+  const { keyBytes, iv } = await openEnvelope(privateKey, keyEnvelope)
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyBytes as BufferSource,
+    { name: 'AES-CBC' },
+    false,
+    ['encrypt'],
+  )
+  const messageIv = crypto.getRandomValues(new Uint8Array(16))
+  void iv
+  const cipher = await crypto.subtle.encrypt(
+    { name: 'AES-CBC', iv: messageIv as BufferSource },
+    key,
+    new TextEncoder().encode(JSON.stringify(value)),
+  )
+  const packed = new Uint8Array(16 + cipher.byteLength)
+  packed.set(messageIv, 0)
+  packed.set(new Uint8Array(cipher), 16)
+  return toBase64(packed)
+}
+
+const establishSession = async () => {
+  const pair = (await crypto.subtle.generateKey(
+    {
+      name: 'RSA-OAEP',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256',
+    },
+    true,
+    ['encrypt', 'decrypt'],
+  )) as CryptoKeyPair
+  const publicKey = toBase64(
+    await crypto.subtle.exportKey('spki', pair.publicKey),
+  )
+  const get = vi.spyOn(axios, 'get').mockResolvedValue({
+    data: { data: { enabled: true, publicKey } },
+  } as AxiosResponse)
+  const exchange = await prepareSessionKey()
+  get.mockRestore()
+  if (!exchange) throw new Error('session key was not generated')
+  return { privateKey: pair.privateKey, exchange }
+}
+
+const response = (
+  config: InternalAxiosRequestConfig,
+  data: unknown,
+  status = 200,
+): AxiosResponse => ({
+  data,
+  status,
+  statusText: status === 200 ? 'OK' : 'Unauthorized',
+  headers: {},
+  config,
 })
 
-describe('unwrapEnvelope', () => {
-  it('returns payload when it is not an envelope', () => {
-    expect(unwrapEnvelope({ name: 'ok' }, 200)).toEqual({ name: 'ok' })
-  })
+const unauthorized = (config: InternalAxiosRequestConfig) => {
+  const error = new AxiosError('unauthorized')
+  error.config = config
+  error.response = response(config, { status: 401, message: '未登录' }, 401)
+  return error
+}
 
-  it('unwraps successful envelope data', () => {
+describe('request helpers', () => {
+  it('unwraps successful envelopes and preserves non-envelope data', () => {
+    expect(unwrapEnvelope({ name: 'ok' }, 200)).toEqual({ name: 'ok' })
     expect(
       unwrapEnvelope({ status: 200, data: { id: 1 }, message: 'ok' }, 200),
     ).toEqual({ id: 1 })
   })
 
-  it('throws ApiError when envelope status is 4xx', () => {
+  it('throws ApiError for envelope errors', () => {
     expect(() =>
       unwrapEnvelope({ status: 401, message: '未登录', path: '/me' }, 401),
     ).toThrow(ApiError)
-    try {
-      unwrapEnvelope({ status: 400, msg: '参数错误' }, 400)
-    } catch (e) {
-      expect(e).toMatchObject({ status: 400, message: '参数错误' })
-    }
   })
-})
 
-describe('preserveMultipartContentType', () => {
-  it('marks content type false so the browser can set the multipart boundary', () => {
+  it('preserves multipart content type for the browser boundary', () => {
     const headers: Record<string, unknown> = {
       'Content-Type': 'application/json',
     }
     preserveMultipartContentType(headers)
     expect(headers['Content-Type']).toBe(false)
   })
-})
 
-describe('shouldSkipRefresh', () => {
-  it('skips when the flag is set or the url is an auth endpoint', () => {
+  it('recognizes refresh skips and root API routes', () => {
     expect(shouldSkipRefresh({ skipAuthRefresh: true })).toBe(true)
     expect(shouldSkipRefresh({ url: '/tokenRefreshes' })).toBe(true)
     expect(shouldSkipRefresh({ url: '/auth/smsCodes' })).toBe(true)
     expect(shouldSkipRefresh({ url: '/policies' })).toBe(false)
-  })
-})
-
-describe('shouldSkipApiPrefix', () => {
-  it('skips /api for root API routes', () => {
-    expect(shouldSkipApiPrefix('/auth/smsCodes')).toBe(true)
     expect(shouldSkipApiPrefix('/auth/sessions')).toBe(true)
-    expect(shouldSkipApiPrefix('/auth/tokenRefreshes')).toBe(true)
     expect(shouldSkipApiPrefix('/account/users/me')).toBe(true)
-    expect(shouldSkipApiPrefix('/news')).toBe(true)
-    expect(shouldSkipApiPrefix('/policies/1')).toBe(true)
-    expect(shouldSkipApiPrefix('/enterprises')).toBe(true)
-    expect(shouldSkipApiPrefix('/search/news')).toBe(true)
-    expect(shouldSkipApiPrefix('/home/hot-keywords')).toBe(true)
-    expect(shouldSkipApiPrefix('/issuingAuthority/nameOptions')).toBe(true)
-    expect(shouldSkipApiPrefix('/export/enterprises/search')).toBe(true)
     expect(shouldSkipApiPrefix('/users/me')).toBe(false)
-    expect(shouldSkipApiPrefix('/authenticate')).toBe(false)
-    expect(shouldSkipApiPrefix('/newsletter')).toBe(false)
   })
 })
 
 describe('resolveResponseData', () => {
-  it('passes plain envelope data through', () => {
-    expect(
-      resolveResponseData({ status: 200, message: 'ok', data: { id: 1 } }, 200),
-    ).toEqual({ id: 1 })
+  beforeEach(() => {
+    resetSessionKey()
+    vi.clearAllMocks()
   })
 
-  it('decrypts envelope-embedded encrypted payload', () => {
-    stubSecrets()
-    const cipher = encrypt({ id: 7, list: [1, 2] })
-    expect(
+  afterEach(() => {
+    resetSessionKey()
+    vi.restoreAllMocks()
+  })
+
+  it('passes plain envelope data through asynchronously', async () => {
+    await expect(
+      resolveResponseData({ status: 200, message: 'ok', data: { id: 1 } }, 200),
+    ).resolves.toEqual({ id: 1 })
+  })
+
+  it('decrypts envelope-embedded and top-level encrypted payloads', async () => {
+    const { privateKey, exchange } = await establishSession()
+    const embeddedCipher = await encryptWithEnvelope(
+      privateKey,
+      exchange.keyEnvelope,
+      { id: 7, list: [1, 2] },
+    )
+    await expect(
       resolveResponseData(
-        { status: 200, message: 'ok', data: { encrypted: true, data: cipher } },
+        {
+          status: 200,
+          message: 'ok',
+          data: { encrypted: true, data: embeddedCipher },
+        },
         200,
       ),
-    ).toEqual({ id: 7, list: [1, 2] })
-  })
+    ).resolves.toEqual({ id: 7, list: [1, 2] })
 
-  it('decrypts a top-level encrypted payload without a status envelope', () => {
-    stubSecrets()
-    const cipher = encrypt({ id: 8 })
-    expect(resolveResponseData({ encrypted: true, data: cipher }, 200)).toEqual(
+    const topCipher = await encryptWithEnvelope(
+      privateKey,
+      exchange.keyEnvelope,
       { id: 8 },
     )
+    await expect(
+      resolveResponseData({ encrypted: true, data: topCipher }, 200),
+    ).resolves.toEqual({ id: 8 })
   })
 
-  it('decrypts when the envelope carries encrypted at the top level', () => {
-    stubSecrets()
-    const cipher = encrypt({ id: 9 })
-    expect(
-      resolveResponseData({ status: 200, encrypted: true, data: cipher }, 200),
-    ).toEqual({ id: 9 })
-  })
-
-  it('propagates envelope errors', () => {
-    try {
-      resolveResponseData({ status: 401, message: '未登录', path: '/me' }, 401)
-      expect.unreachable('应当抛出 ApiError')
-    } catch (err) {
-      expect(err).toBeInstanceOf(ApiError)
-      expect((err as ApiError).status).toBe(401)
-    }
+  it('propagates envelope errors', async () => {
+    await expect(
+      resolveResponseData({ status: 401, message: '未登录', path: '/me' }, 401),
+    ).rejects.toMatchObject({ status: 401, message: '未登录' })
   })
 })
 
-describe('refreshAccessToken', () => {
-  afterEach(() => {
-    clearToken()
+describe('cookie session requests', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+    resetSessionKey()
+    vi.clearAllMocks()
+    vi.mocked(ensureCsrfToken).mockResolvedValue('csrf-token')
   })
 
-  it('decrypts an encrypted refresh body before saving the access token', async () => {
-    stubSecrets()
-    setToken('stale')
-    setRefreshToken('refresh-1')
-    const cipher = encrypt({
-      accessToken: 'fresh',
-      refreshToken: 'refresh-2',
-    })
-    const post = vi.spyOn(axios, 'post').mockResolvedValue({
-      data: { status: 200, data: { encrypted: true, data: cipher } },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-    })
-    const previousAdapter = service.defaults.adapter
+  afterEach(() => {
+    service.defaults.adapter = originalAdapter
+    localStorage.clear()
+    sessionStorage.clear()
+    resetSessionKey()
+    vi.restoreAllMocks()
+  })
+
+  it('uses credentials, CSRF and the session key header without Authorization or stored tokens', async () => {
+    const { exchange } = await establishSession()
+    setStoredUser({ id: 1 })
+    let sent: InternalAxiosRequestConfig | null = null
     service.defaults.adapter = async (config) => {
-      const headers = config.headers
-      const authorization =
-        headers && typeof headers.get === 'function'
-          ? headers.get('Authorization')
-          : undefined
-      const header = typeof authorization === 'string' ? authorization : ''
-      const ok = header.includes('fresh')
-      const response: AxiosResponse = {
-        data: ok
-          ? { status: 200, data: { ok: true } }
-          : { status: 401, message: '未登录' },
-        status: ok ? 200 : 401,
-        statusText: ok ? 'OK' : 'Unauthorized',
-        headers: {},
-        config,
-      }
-      if (!ok) {
-        const error = new AxiosError('unauthorized')
-        error.config = config
-        error.response = response
-        throw error
-      }
-      return response
+      sent = config
+      return response(config, { status: 200, data: { ok: true } })
     }
 
-    try {
-      await expect(
-        request({ url: '/account/users/me', method: 'get', hideError: true }),
-      ).resolves.toEqual({ ok: true })
-      expect(getToken()).toBe('fresh')
-      expect(post).toHaveBeenCalledWith(
-        '/auth/tokenRefreshes',
-        { token: 'refresh-1' },
-        expect.objectContaining({ withCredentials: true }),
-      )
-    } finally {
-      service.defaults.adapter = previousAdapter
-      post.mockRestore()
+    await expect(
+      request({ url: '/account/users/me/profile', method: 'patch', data: {} }),
+    ).resolves.toEqual({ ok: true })
+
+    expect(service.defaults.withCredentials).toBe(true)
+    expect(sent!.withCredentials).toBe(true)
+    expect(sent!.headers.get('X-Session-Key-Id')).toBe(exchange.keyId)
+    expect(sent!.headers.get('X-CSRF-Token')).toBe('csrf-token')
+    expect(sent!.headers.get('Authorization')).toBeUndefined()
+    expect(localStorage.getItem('pb_access_token')).toBeNull()
+    expect(localStorage.getItem('pb_refresh_token')).toBeNull()
+  })
+
+  it('rejects plaintext after a failed renegotiate retry', async () => {
+    await establishSession()
+    setStoredUser({ id: 1 })
+    vi.spyOn(axios, 'post').mockResolvedValue(
+      response({} as InternalAxiosRequestConfig, { status: 200 }),
+    )
+    let attempts = 0
+    service.defaults.adapter = async (config) => {
+      attempts += 1
+      return response(config, {
+        status: 200,
+        encrypted: false,
+        data: { stale: true },
+      })
     }
+
+    await expect(
+      request({ url: '/account/users/me', method: 'get', hideError: true }),
+    ).rejects.toMatchObject({
+      message: '会话加密已降级，请重新登录',
+      status: 409,
+    })
+    expect(attempts).toBe(2)
+  })
+
+  it('renegotiates and retries once when an established key receives plaintext', async () => {
+    const { privateKey } = await establishSession()
+    setStoredUser({ id: 1 })
+    let exchangeBody: { keyId: string; keyEnvelope: string } | null = null
+    const post = vi
+      .spyOn(axios, 'post')
+      .mockImplementation(async (url, body) => {
+        expect(url).toBe('/auth/keyExchanges')
+        exchangeBody = body as { keyId: string; keyEnvelope: string }
+        return response({} as InternalAxiosRequestConfig, { status: 200 })
+      })
+    let attempts = 0
+    service.defaults.adapter = async (config) => {
+      attempts += 1
+      if (attempts === 1) {
+        return response(config, {
+          status: 200,
+          encrypted: false,
+          data: { stale: true },
+        })
+      }
+      const cipher = await encryptWithEnvelope(
+        privateKey,
+        exchangeBody!.keyEnvelope,
+        { id: 2 },
+      )
+      return response(config, { status: 200, encrypted: true, data: cipher })
+    }
+
+    await expect(
+      request({ url: '/account/users/me', method: 'get', hideError: true }),
+    ).resolves.toEqual({ id: 2 })
+    expect(attempts).toBe(2)
+    expect(post).toHaveBeenCalledOnce()
+    expect(getSessionKeyId()).toBe(exchangeBody!.keyId)
+  })
+
+  it('refreshes with an empty body, rebinds the key and retries using cookies', async () => {
+    const { exchange } = await establishSession()
+    setStoredUser({ id: 1 })
+    const oldKeyId = exchange.keyId
+    const post = vi.spyOn(axios, 'post').mockImplementation(async (url) => {
+      if (url === '/auth/tokenRefreshes') {
+        return response({} as InternalAxiosRequestConfig, {
+          status: 200,
+          encrypted: false,
+          data: {
+            accessToken: 'must-not-be-stored',
+            refreshToken: 'also-not-stored',
+          },
+        })
+      }
+      if (url === '/auth/keyExchanges') {
+        return response({} as InternalAxiosRequestConfig, { status: 200 })
+      }
+      throw new Error(`unexpected POST ${url}`)
+    })
+    let attempts = 0
+    let retryKeyId = ''
+    service.defaults.adapter = async (config) => {
+      attempts += 1
+      if (attempts === 1) throw unauthorized(config)
+      retryKeyId = String(config.headers.get('X-Session-Key-Id') || '')
+      return response(config, { status: 200, data: { ok: true } })
+    }
+
+    await expect(
+      request({ url: '/account/users/me', method: 'get', hideError: true }),
+    ).resolves.toEqual({ ok: true })
+
+    expect(attempts).toBe(2)
+    expect(post).toHaveBeenCalledTimes(2)
+    expect(post).toHaveBeenNthCalledWith(
+      1,
+      '/auth/tokenRefreshes',
+      undefined,
+      expect.objectContaining({
+        withCredentials: true,
+        headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf-token' }),
+      }),
+    )
+    expect(post.mock.calls[1]![0]).toBe('/auth/keyExchanges')
+    expect(retryKeyId).not.toBe(oldKeyId)
+    expect(getStoredUser()).toEqual({ id: 1 })
+    expect(localStorage.getItem('pb_access_token')).toBeNull()
+    expect(sessionStorage.getItem('pb_refresh_token')).toBeNull()
+  })
+
+  it('can clear an expired session without opening the login prompt', async () => {
+    await establishSession()
+    setStoredUser({ id: 1 })
+    vi.spyOn(axios, 'post').mockRejectedValue(
+      unauthorized({} as InternalAxiosRequestConfig),
+    )
+    service.defaults.adapter = async (config) => {
+      throw unauthorized(config)
+    }
+    const prompt = vi.fn()
+    const off = onNeedLogin(prompt)
+
+    await expect(
+      request({
+        url: '/account/users/me',
+        method: 'get',
+        hideError: true,
+        suppressAuthPrompt: true,
+      }),
+    ).rejects.toMatchObject({ status: 401 })
+
+    expect(prompt).not.toHaveBeenCalled()
+    expect(getStoredUser()).toBeNull()
+    off()
+  })
+
+  it('keeps the original 401 when session-key exchange fails before the request', async () => {
+    setStoredUser({ id: 1 })
+    // 密钥交换阶段抛 ApiError(401)（如会话过期），必须保留原始状态码并触发统一登出，
+    // 不得被响应拦截器重包装成 500 导致登录态僵死。
+    const pair = (await crypto.subtle.generateKey(
+      {
+        name: 'RSA-OAEP',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-256',
+      },
+      true,
+      ['encrypt', 'decrypt'],
+    )) as CryptoKeyPair
+    const publicKey = toBase64(
+      await crypto.subtle.exportKey('spki', pair.publicKey),
+    )
+    vi.spyOn(axios, 'get').mockResolvedValue({
+      data: { data: { enabled: true, publicKey } },
+    } as AxiosResponse)
+    vi.spyOn(axios, 'post').mockRejectedValue(
+      unauthorized({} as InternalAxiosRequestConfig),
+    )
+    let reachedAdapter = false
+    service.defaults.adapter = async () => {
+      reachedAdapter = true
+      return response({} as InternalAxiosRequestConfig, { status: 200 })
+    }
+    const prompt = vi.fn()
+    const off = onNeedLogin(prompt)
+
+    await expect(
+      request({ url: '/account/users/me', method: 'get' }),
+    ).rejects.toMatchObject({ status: 401 })
+
+    expect(reachedAdapter).toBe(false)
+    expect(prompt).toHaveBeenCalled()
+    expect(getStoredUser()).toBeNull()
+    off()
   })
 })

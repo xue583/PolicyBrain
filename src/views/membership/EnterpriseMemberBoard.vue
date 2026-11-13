@@ -27,6 +27,7 @@ import {
   type MembershipPlanCard,
 } from './membershipPlans'
 import { usePlanSelection } from './usePlanSelection'
+import { formatFen, multiplyFen } from '@/utils/money'
 
 defineOptions({ name: 'EnterpriseMemberBoard' })
 
@@ -130,8 +131,8 @@ const payTone = computed<'gold' | 'blue' | 'red'>(() => {
   return 'gold'
 })
 
-const payableTotal = computed(
-  () => (currentPlan.value?.price ?? 0) * seats.value,
+const payableTotal = computed(() =>
+  formatFen(multiplyFen(currentPlan.value?.priceFen ?? '0', seats.value)),
 )
 
 const packLabel = computed(() => {

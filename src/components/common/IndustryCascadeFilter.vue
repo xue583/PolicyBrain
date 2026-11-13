@@ -15,25 +15,25 @@ const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
 const openId = ref<string | null>(null)
 const hoveredChild = ref(-1)
 
-const checked = (name: string) => props.modelValue.includes(name)
+const checked = (id: string) => props.modelValue.includes(id)
 
-const toggle = (name: string) => {
-  const next = checked(name)
-    ? props.modelValue.filter((item) => item !== name)
-    : [...props.modelValue, name]
+const toggle = (id: string) => {
+  const next = checked(id)
+    ? props.modelValue.filter((item) => item !== id)
+    : [...props.modelValue, id]
   emit('update:modelValue', next)
 }
 
 const selectedDescendants = (node: IndustryNode) => {
-  const names: string[] = []
+  const selected: IndustryNode[] = []
   const walk = (items: IndustryNode[]) => {
     for (const item of items) {
-      if (checked(item.name)) names.push(item.name)
+      if (checked(item.id)) selected.push(item)
       if (item.children.length) walk(item.children)
     }
   }
   walk(node.children)
-  return names
+  return selected
 }
 
 const onOpenChange = (id: string, open: boolean) => {
@@ -70,9 +70,9 @@ const getPopupContainer = () => document.body
     >
       <span class="industry-trigger">
         <a-checkbox
-          :checked="checked(node.name)"
+          :checked="checked(node.id)"
           @click.stop="pinOpen(node.id)"
-          @change="toggle(node.name)"
+          @change="toggle(node.id)"
         >
           {{ node.name }}
         </a-checkbox>
@@ -88,9 +88,9 @@ const getPopupContainer = () => document.body
               @mouseenter="hoveredChild = index"
             >
               <a-checkbox
-                :checked="checked(child.name)"
+                :checked="checked(child.id)"
                 @click.stop
-                @change="toggle(child.name)"
+                @change="toggle(child.id)"
               >
                 {{ child.name }}
               </a-checkbox>
@@ -107,9 +107,9 @@ const getPopupContainer = () => document.body
               class="cascader-item"
             >
               <a-checkbox
-                :checked="checked(sub.name)"
+                :checked="checked(sub.id)"
                 @click.stop
-                @change="toggle(sub.name)"
+                @change="toggle(sub.id)"
               >
                 {{ sub.name }}
               </a-checkbox>
@@ -118,20 +118,16 @@ const getPopupContainer = () => document.body
         </div>
       </template>
     </a-dropdown>
-    <a-checkbox
-      v-else
-      :checked="checked(node.name)"
-      @change="toggle(node.name)"
-    >
+    <a-checkbox v-else :checked="checked(node.id)" @change="toggle(node.id)">
       {{ node.name }}
     </a-checkbox>
     <a-checkbox
-      v-for="name in selectedDescendants(node)"
-      :key="`${node.id}-${name}`"
+      v-for="child in selectedDescendants(node)"
+      :key="`${node.id}-${child.id}`"
       :checked="true"
-      @change="toggle(name)"
+      @change="toggle(child.id)"
     >
-      {{ name }}
+      {{ child.name }}
     </a-checkbox>
   </template>
 </template>

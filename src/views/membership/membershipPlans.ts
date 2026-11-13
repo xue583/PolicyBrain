@@ -1,4 +1,11 @@
 import { MembershipLevel, type MembershipPlan } from '@/api/membership'
+import {
+  compareFen,
+  divideFenRounded,
+  formatFen,
+  normalizeFen,
+  subtractFen,
+} from '@/utils/money'
 
 export { MembershipLevel }
 
@@ -13,10 +20,12 @@ export type MembershipPlanCard = {
   id: string
   level: number
   name: string
-  /** 实付价，单位元 */
-  price: number
+  /** 实付价，单位元；由整数分精确格式化 */
+  price: string
+  /** 实付价原始整数分，用于人数总价等精确计算 */
+  priceFen: string
   /** 划线价，单位元；不展示时为空 */
-  original?: number
+  original?: string
   /** 折合每天的金额，不含文案 */
   daily: string
   tag?: string
@@ -33,16 +42,6 @@ export type MembershipPlanCard = {
 const num = (value: unknown) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
-}
-
-export const fenToYuan = (fen: number) => Math.round(fen) / 100
-
-export const formatYuanAmount = (yuan: number) => {
-  if (!Number.isFinite(yuan)) return '0'
-  return yuan
-    .toFixed(2)
-    .replace(/\.00$/, '')
-    .replace(/(\.\d)0$/, '$1')
 }
 
 const periodLabel = (days: number, name: string) => {
@@ -68,12 +67,12 @@ export const asMembershipPlans = (raw: unknown): MembershipPlan[] => {
 const toCard = (plan: MembershipPlan, index: number): MembershipPlanCard => {
   const level = num(plan.level)
   // 售价取 price（标准售价，单位分）；接口未返回该字段时才回退 currentPrice
-  const payFen = plan.price ?? plan.currentPrice ?? 0
-  // 划线价取 originalPrice，为 0 表示不展示
-  const listFen =
-    plan.originalPrice && plan.originalPrice > 0 ? plan.originalPrice : 0
-  const price = fenToYuan(num(payFen))
-  const original = listFen > payFen ? fenToYuan(num(listFen)) : undefined
+  const payFen = normalizeFen(plan.price ?? plan.currentPrice) ?? '0'
+  // 划线价取 originalPrice；使用整数比较，避免字符串字典序和 Number 精度问题
+  const listFen = normalizeFen(plan.originalPrice) ?? '0'
+  const hasOriginal = compareFen(listFen, payFen) > 0
+  const price = formatFen(payFen)
+  const original = hasOriginal ? formatFen(listFen) : undefined
   const durationDays = Math.max(0, num(plan.durationDays))
   const description = (plan.description ?? '').trim()
   const name = (plan.name ?? '').trim() || '会员套餐'
@@ -101,17 +100,16 @@ const toCard = (plan: MembershipPlan, index: number): MembershipPlanCard => {
     level,
     name,
     price,
+    priceFen: payFen,
     original,
-    daily: durationDays > 0 ? formatYuanAmount(price / durationDays) : '',
+    daily:
+      durationDays > 0 ? formatFen(divideFenRounded(payFen, durationDays)) : '',
     tag,
     desc,
     featured: false,
     durationDays,
     periodLabel: periodLabel(durationDays, name),
-    saved:
-      original != null && original > price
-        ? formatYuanAmount(original - price)
-        : undefined,
+    saved: hasOriginal ? formatFen(subtractFen(listFen, payFen)) : undefined,
     applicableIdentity:
       plan.applicableIdentity == null
         ? undefined

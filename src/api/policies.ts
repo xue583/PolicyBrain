@@ -13,11 +13,12 @@ import {
   mapPublicity,
   mapSupportMeasure,
 } from '@/api/mapPortal'
+import type { PolicyLevelCode } from '@/mock/filters'
 
 export type PolicyQuery = PageQuery &
   RegionIdQuery & {
     keyword?: string
-    levels?: string[]
+    levels?: PolicyLevelCode[]
     grade?: string
     department?: string
     /** 发布单位 Id，对应 /policies 的 IssuingAuthorityId */

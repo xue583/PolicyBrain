@@ -234,7 +234,6 @@ const mountPage = (identity?: number) => {
   setActivePinia(pinia)
   const auth = useAuthStore()
   if (identity != null) {
-    auth.token = 'access'
     auth.user = { identity }
   }
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
 import { applyAuthGuard, router } from './index'
-import { clearToken, onNeedLogin, setToken } from '@/utils/auth'
+import { clearSession, onNeedLogin, setStoredUser } from '@/utils/auth'
 
 const authRoute = {
   name: 'personal-center',
@@ -12,7 +12,7 @@ const authRoute = {
 describe('applyAuthGuard', () => {
   beforeEach(() => {
     localStorage.clear()
-    clearToken()
+    clearSession()
   })
 
   it('opens login and sends guests home', () => {
@@ -26,7 +26,7 @@ describe('applyAuthGuard', () => {
   })
 
   it('allows the route when a session exists', () => {
-    setToken('access')
+    setStoredUser({})
     expect(applyAuthGuard(authRoute)).toBe(true)
   })
 

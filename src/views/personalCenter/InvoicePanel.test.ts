@@ -134,7 +134,7 @@ const clickButton = async (label: string) => {
 }
 
 const pendingInvoice = {
-  id: 3,
+  id: '1987654321012345678',
   applyNo: 'FP20261105001',
   orderNo: 'NO1',
   applyDate: '2026-11-04T00:00:00',
@@ -145,7 +145,7 @@ const pendingInvoice = {
   bankAccount: '12345678999974',
   address: '郑州市金水区',
   email: 'finance@example.com',
-  amount: 1234,
+  amount: '1234',
   status: 1,
   invoiceFileUrl: 'https://example.com/invoice.pdf',
   createTime: '2026-11-04T08:00:00',
@@ -159,7 +159,7 @@ describe('InvoicePanel orders', () => {
     vi.mocked(fetchInvoiceApplication).mockResolvedValue(pendingInvoice)
     vi.mocked(createInvoiceApplication).mockResolvedValue({
       ...pendingInvoice,
-      id: 9,
+      id: '9',
     })
     vi.mocked(cancelInvoiceApplication).mockResolvedValue({
       ...pendingInvoice,
@@ -168,11 +168,11 @@ describe('InvoicePanel orders', () => {
     vi.mocked(fetchMembershipOrders).mockResolvedValue({
       items: [
         {
-          id: 8,
+          id: '8',
           orderNo: 'NO1',
           planName: 'VIP 一年会员',
           quantity: 2,
-          amount: 1234,
+          amount: '1234',
           status: 2,
           paidAt,
         },
@@ -283,6 +283,23 @@ describe('InvoicePanel orders', () => {
   })
 
   it('submits the paid order amount in fen with the order number', async () => {
+    const maxInt64 = '9223372036854775807'
+    vi.mocked(fetchMembershipOrders).mockResolvedValue({
+      items: [
+        {
+          id: '1987654321012345678',
+          orderNo: 'NO1',
+          planName: 'VIP 一年会员',
+          quantity: 1,
+          amount: maxInt64,
+          status: 2,
+          paidAt,
+        },
+      ],
+      pageIndex: 1,
+      pageSize: 10,
+      totalElements: 1,
+    })
     const wrapper = await mountPanel()
     await showOrders(wrapper)
     await wrapper.get('.apply-link').trigger('click')
@@ -295,7 +312,7 @@ describe('InvoicePanel orders', () => {
       companyName: '河南省政策宝数字科技有限公司',
       taxNumber: '91410100MA4567890X',
       email: 'finance@example.com',
-      amount: 1234,
+      amount: maxInt64,
       orderNo: 'NO1',
       applyDate: `${dayjs().format('YYYY-MM-DD')}T00:00:00`,
       bankName: '中国工商银行',
@@ -327,20 +344,20 @@ describe('InvoicePanel orders', () => {
     vi.mocked(fetchMembershipOrders).mockResolvedValue({
       items: [
         {
-          id: 8,
+          id: '8',
           orderNo: 'NO1',
           planName: 'VIP 一年会员',
           quantity: 1,
-          amount: 1234,
+          amount: '1234',
           status: 1,
           paidAt,
         },
         {
-          id: 9,
+          id: '9',
           orderNo: 'NO2',
           planName: 'SVIP 一年会员',
           quantity: 1,
-          amount: 2000,
+          amount: '2000',
           status: 2,
           paidAt,
         },
@@ -385,7 +402,7 @@ describe('InvoicePanel orders', () => {
     await wrapper.get('.invoice-card').trigger('click')
     await flushPromises()
 
-    expect(fetchInvoiceApplication).toHaveBeenCalledWith(3)
+    expect(fetchInvoiceApplication).toHaveBeenCalledWith('1987654321012345678')
     expect(document.body.textContent).toContain('发票详情')
     expect(document.body.textContent).toContain('FP20261105001')
     expect(document.body.textContent).toContain('查看发票')
@@ -395,7 +412,7 @@ describe('InvoicePanel orders', () => {
     wrapper.getComponent({ name: 'APopconfirm' }).vm.$emit('confirm')
     await flushPromises()
 
-    expect(cancelInvoiceApplication).toHaveBeenCalledWith(3)
+    expect(cancelInvoiceApplication).toHaveBeenCalledWith('1987654321012345678')
     expect(message.success).toHaveBeenCalledWith('已撤销开票申请')
     wrapper.unmount()
   })

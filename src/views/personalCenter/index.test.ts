@@ -65,7 +65,7 @@ const { fetchMyMembership, allocateMembershipSlot } =
   await import('@/api/membership')
 
 const mountPage = async (stubs?: Record<string, unknown>, identity = 1) => {
-  localStorage.setItem('pb_access_token', 'access')
+  localStorage.setItem('pb_user', '{}')
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
@@ -190,12 +190,12 @@ describe('PersonalCenter membership period', () => {
           },
           slots: [
             {
-              id: 11,
+              id: '11',
               holderPhone: '19545670526',
               status: 2,
               allocatedAt: '2026-08-16T09:41:00',
             },
-            { id: 12, holderPhone: '', status: 1 },
+            { id: '12', holderPhone: '', status: 1 },
           ],
           totalCount: 2,
           allocatedCount: 1,
@@ -204,7 +204,7 @@ describe('PersonalCenter membership period', () => {
       ],
     })
     vi.mocked(allocateMembershipSlot).mockResolvedValue({
-      id: 12,
+      id: '12',
       holderPhone: '19067678686',
       status: 2,
     })

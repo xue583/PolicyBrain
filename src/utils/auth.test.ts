@@ -1,44 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   clearInviteCode,
-  clearToken,
+  clearSession,
   getInviteCode,
-  getRefreshToken,
   getStoredUser,
-  getToken,
+  hasSession,
   onNeedLogin,
-  pickTokens,
   rememberInviteCode,
-  saveSessionTokens,
   setStoredUser,
-  setToken,
   triggerNeedLogin,
 } from './auth'
-
-describe('pickTokens', () => {
-  it('returns empty for non-objects', () => {
-    expect(pickTokens(null)).toEqual({})
-    expect(pickTokens('token')).toEqual({})
-  })
-
-  it('reads nested data and alias fields', () => {
-    expect(
-      pickTokens({
-        data: {
-          access_token: 'a',
-          refresh_token: 'r',
-          accessTokenExpires: 'e',
-          refresh_expires: 're',
-        },
-      }),
-    ).toEqual({
-      accessToken: 'a',
-      refreshToken: 'r',
-      expires: 'e',
-      refreshTokenExpires: 're',
-    })
-  })
-})
 
 describe('invite code', () => {
   beforeEach(() => {
@@ -53,39 +24,45 @@ describe('invite code', () => {
   })
 })
 
-describe('auth storage', () => {
+describe('cookie session hints', () => {
   beforeEach(() => {
     localStorage.clear()
-    clearToken()
+    sessionStorage.clear()
   })
 
-  it('stores and clears session tokens', () => {
-    setToken('access')
-    expect(getToken()).toBe('access')
-
-    saveSessionTokens({
-      accessToken: 'a2',
-      refreshToken: 'r2',
-      expires: 'e2',
-      refreshTokenExpires: 're2',
-    })
-    expect(getToken()).toBe('a2')
-    expect(getRefreshToken()).toBe('r2')
-
-    clearToken()
-    expect(getToken()).toBe('')
-    expect(getRefreshToken()).toBe('')
-  })
-
-  it('round-trips stored user and ignores bad json', () => {
+  it('uses only the non-sensitive profile as the local session hint', () => {
+    expect(hasSession()).toBe(false)
     setStoredUser({ nickname: '张三', phone: '13800000000' })
+    expect(hasSession()).toBe(true)
     expect(getStoredUser()?.nickname).toBe('张三')
 
-    setStoredUser(null)
+    clearSession()
+    expect(hasSession()).toBe(false)
     expect(getStoredUser()).toBeNull()
+  })
 
+  it('ignores malformed stored profile json', () => {
     localStorage.setItem('pb_user', '{not-json')
     expect(getStoredUser()).toBeNull()
+    expect(hasSession()).toBe(false)
+  })
+
+  it('removes legacy access and refresh tokens from both storage areas', () => {
+    const keys = [
+      'pb_access_token',
+      'pb_refresh_token',
+      'pb_token_expires',
+      'pb_refresh_expires',
+    ]
+    for (const storage of [localStorage, sessionStorage]) {
+      keys.forEach((key) => storage.setItem(key, 'legacy-secret'))
+    }
+
+    clearSession()
+
+    for (const storage of [localStorage, sessionStorage]) {
+      keys.forEach((key) => expect(storage.getItem(key)).toBeNull())
+    }
   })
 })
 

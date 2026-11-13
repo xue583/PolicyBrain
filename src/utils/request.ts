@@ -30,15 +30,17 @@ import axios, {
 } from 'axios'
 import { message } from 'ant-design-vue'
 import { ApiError } from '@/utils/apiError'
-import { parseData } from '@/utils/crypto'
+import { clearSession, hasSession, triggerNeedLogin } from '@/utils/auth'
 import {
-  clearToken,
-  getRefreshToken,
-  getToken,
-  pickTokens,
-  saveSessionTokens,
-  triggerNeedLogin,
-} from '@/utils/auth'
+  ensureSessionKey,
+  getSessionKeyId,
+  hasSessionKey,
+  isUnexpectedPlainPayload,
+  parseData,
+  renewSessionKey,
+  resetSessionKey,
+} from '@/utils/crypto'
+import { CSRF_HEADER_NAME, ensureCsrfToken, resetCsrfToken } from '@/utils/csrf'
 
 export { ApiError }
 
@@ -49,8 +51,14 @@ export type RequestConfig = AxiosRequestConfig & {
   hideError?: boolean
   /** 跳过 401 自动刷新（登录/刷新自身请求） */
   skipAuthRefresh?: boolean
-  /** 内部：已重试过一次 */
+  /** 会话失效时只清理状态，不弹出登录框 */
+  suppressAuthPrompt?: boolean
+  /** 登录响应不受新 Cookie 请求头约束，跳过明文重协商 */
+  skipSessionKeyRenew?: boolean
+  /** 内部：已完成一次认证刷新 */
   _retry?: boolean
+  /** 内部：已完成一次会话密钥重协商 */
+  _sessionKeyRetry?: boolean
 }
 
 type ApiEnvelope = {
@@ -98,7 +106,7 @@ const stopLoading = () => {
 }
 
 /** 单个刷新 Promise，避免多个 401 并发重复刷新 */
-let refreshPromise: Promise<string> | null = null
+let refreshPromise: Promise<void> | null = null
 
 const AUTH_SKIP_RE =
   /\/(tokenRefreshes|sessions|smsCodes|smsCodeVerifications)(\/|$|\?)/i
@@ -179,42 +187,30 @@ export const unwrapEnvelope = (
  * - 信封内嵌加密体：`{ status, message, data: { encrypted: true, data: '<密文>' } }`
  * 未加密数据全程原样透传。
  */
-export const resolveResponseData = (raw: unknown, httpStatus: number) => {
-  const top = parseData(raw)
+export const resolveResponseData = async (raw: unknown, httpStatus: number) => {
+  const top = await parseData(raw)
   const unwrapped = unwrapEnvelope(top, httpStatus)
   return parseData(unwrapped)
 }
 
-const refreshAccessToken = async (): Promise<string> => {
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) {
-    throw new ApiError('登录已失效，请重新登录', 401)
-  }
+const refreshAccessToken = async (): Promise<void> => {
+  const csrfToken = await ensureCsrfToken()
 
-  // 使用裸 axios，避免走业务拦截器造成死循环
-  // Swagger: POST /auth/tokenRefreshes  PolicyRefreshTokenDto { token }
-  const { data } = await axios.post(
-    '/auth/tokenRefreshes',
-    { token: refreshToken },
-    {
-      timeout,
-      withCredentials: true,
-      headers: { 'Content-Type': 'application/json' },
+  // 空 body 刷新：refresh token 只从 HttpOnly Cookie 读取，响应令牌也不进入 JS 存储。
+  await axios.post('/auth/tokenRefreshes', undefined, {
+    timeout,
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json',
+      [CSRF_HEADER_NAME]: csrfToken,
     },
-  )
+  })
 
-  // 与业务响应同一套解密：裸 axios 不经过拦截器，加密刷新体会解不出令牌并被登出
-  const payload = resolveResponseData(data, 200)
-  const tokens = pickTokens(payload)
-  if (!tokens.accessToken) {
-    throw new ApiError('刷新令牌失败', 401)
-  }
-
-  saveSessionTokens(tokens)
-  return tokens.accessToken
+  // 后端按 access token 隔离密钥，刷新后必须重新绑定，不能复用旧映射。
+  await renewSessionKey()
 }
 
-const getSharedRefresh = (): Promise<string> => {
+const getSharedRefresh = (): Promise<void> => {
   if (!refreshPromise) {
     refreshPromise = refreshAccessToken().finally(() => {
       refreshPromise = null
@@ -223,54 +219,72 @@ const getSharedRefresh = (): Promise<string> => {
   return refreshPromise
 }
 
-const forceLogout = () => {
-  clearToken()
-  triggerNeedLogin()
+const forceLogout = (suppressAuthPrompt = false) => {
+  clearSession()
+  resetSessionKey()
+  resetCsrfToken()
+  if (!suppressAuthPrompt) triggerNeedLogin()
 }
 
 const handleUnauthorized = async (
   config: RetriableConfig,
   fallback: ApiError,
 ) => {
-  if (!getRefreshToken()) {
-    forceLogout()
-    throw fallback
-  }
-
   try {
-    const accessToken = await getSharedRefresh()
+    await getSharedRefresh()
     config._retry = true
-    config.headers = config.headers || {}
-    config.headers.Authorization = `Bearer ${accessToken}`
     return service.request(config)
   } catch (err) {
-    forceLogout()
+    forceLogout(config.suppressAuthPrompt)
     if (err instanceof ApiError) throw err
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      throw new ApiError(
+        readApiMessage(err.response.data, fallback.message),
+        401,
+      )
+    }
     throw new ApiError('登录已失效，请重新登录', 401)
   }
 }
 
-service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+service.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const cfg = config as RetriableConfig
-  if (cfg.loading) startLoading()
-
   if (shouldSkipApiPrefix(cfg.url)) {
     cfg.baseURL = ''
-  }
-
-  const token = getToken()
-  if (token) {
-    cfg.headers.Authorization = `Bearer ${token}`
   }
 
   if (typeof FormData !== 'undefined' && cfg.data instanceof FormData) {
     preserveMultipartContentType(cfg.headers)
   }
+
+  // pb_user 仅是登录态提示；真正的认证仍由浏览器自动携带 HttpOnly Cookie。
+  // 异步准备失败时挂上原始配置抛出，供响应拦截器按原始状态码（401 等）统一处理，避免被重包装成 500。
+  try {
+    if (hasSession() && !hasSessionKey()) await ensureSessionKey()
+
+    const keyId = getSessionKeyId()
+    if (keyId) cfg.headers.set('X-Session-Key-Id', keyId)
+    else cfg.headers.delete('X-Session-Key-Id')
+
+    const method = cfg.method?.toUpperCase() || 'GET'
+    if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+      const csrfToken = await ensureCsrfToken()
+      cfg.headers.set(CSRF_HEADER_NAME, csrfToken)
+    }
+  } catch (error) {
+    // 尚未 startLoading，清除标志避免错误分支误减并发 loading 计数
+    cfg.loading = false
+    if (error instanceof ApiError) error.config = cfg
+    throw error
+  }
+
+  // 异步准备失败时不增加 loading 计数，避免全局加载状态无法关闭。
+  if (cfg.loading) startLoading()
   return cfg
 })
 
 service.interceptors.response.use(
-  (response: AxiosResponse) => {
+  async (response: AxiosResponse) => {
     const cfg = response.config as RetriableConfig
     if (cfg.loading) stopLoading()
 
@@ -280,7 +294,19 @@ service.interceptors.response.use(
     }
 
     try {
-      return resolveResponseData(response.data, response.status) as never
+      // 已建立密钥却收到明文：重协商一次；仍明文则拒绝降级（Z10）。
+      if (hasSessionKey() && isUnexpectedPlainPayload(response.data)) {
+        if (!cfg.skipSessionKeyRenew && !cfg._sessionKeyRetry) {
+          cfg._sessionKeyRetry = true
+          if (await renewSessionKey()) return service.request(cfg)
+        }
+        throw new ApiError('会话加密已降级，请重新登录', 409)
+      }
+
+      return (await resolveResponseData(
+        response.data,
+        response.status,
+      )) as never
     } catch (err) {
       const apiErr = err as ApiError
       if (apiErr.status === 401 && !shouldSkipRefresh(cfg) && !cfg._retry) {
@@ -293,6 +319,19 @@ service.interceptors.response.use(
     }
   },
   async (error) => {
+    // 请求阶段抛出的 ApiError（会话密钥/CSRF 准备失败）保留原始状态码，走统一 401 处理，不重包装
+    if (error instanceof ApiError) {
+      const cfg = (error.config ?? {}) as RetriableConfig
+      if (cfg.loading) stopLoading()
+      if (error.status === 401 && !shouldSkipRefresh(cfg) && !cfg._retry) {
+        return handleUnauthorized(cfg, error)
+      }
+      if (!cfg.hideError && !axios.isCancel(error)) {
+        message.error(error.message || '请求失败')
+      }
+      throw error
+    }
+
     const cfg = (error.config || {}) as RetriableConfig
     if (cfg.loading) stopLoading()
 

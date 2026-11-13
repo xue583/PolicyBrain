@@ -62,7 +62,7 @@ describe('useFollowable', () => {
 
   it('follows and unfollows a 19-digit id through the account API', async () => {
     const auth = useAuthStore()
-    auth.token = 'token'
+    auth.user = {}
 
     const id = ref('1987654321012345678')
     const { followed, toggleFollow, syncFollowed } = useFollowable(
@@ -96,7 +96,7 @@ describe('useFollowable', () => {
 
   it('re-syncs when the target id changes', async () => {
     const auth = useAuthStore()
-    auth.token = 'token'
+    auth.user = {}
     vi.mocked(fetchAccountFollows).mockResolvedValue({
       items: [{ targetId: '2', followId: '9', targetType: FOLLOW_ENTERPRISE }],
       pageIndex: 1,
@@ -114,7 +114,7 @@ describe('useFollowable', () => {
 
   it('keeps paging until every followed id is loaded', async () => {
     const auth = useAuthStore()
-    auth.token = 'token'
+    auth.user = {}
     vi.mocked(fetchAccountFollows).mockImplementation(async (query) => {
       if (query?.pageIndex === 2) {
         return {

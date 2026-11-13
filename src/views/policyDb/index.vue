@@ -16,6 +16,7 @@ import {
   industries as fallbackIndustries,
   infoTypes,
   policyLevels,
+  type PolicyLevelCode,
 } from '../../mock/filters'
 import {
   fetchIssuingAuthorityOptions,
@@ -23,6 +24,7 @@ import {
   type IssuingAuthorityOption,
 } from '@/api/policies'
 import { fetchIndustryTree } from '@/api/meta'
+import { softFail } from '@/utils/softFail'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 import { useRegionStore } from '@/stores/region'
@@ -42,18 +44,12 @@ const industryTree = ref(toIndustryNodes(fallbackIndustries))
 const filters = reactive({
   departmentId: '',
   department: '',
-  levels: [] as string[],
+  levels: [] as PolicyLevelCode[],
   industryTags: [] as string[],
   infoTypes: [] as string[],
 })
 
-/** 与后端发布单位等级一致：0 国家 / 1 省 / 2 市 / 3 区县 */
-const POLICY_LEVEL_CODE: Record<string, number> = {
-  national: 0,
-  provincial: 1,
-  municipal: 2,
-  district: 3,
-}
+/** filters.levels 即后端发布单位等级：0 国家 / 1 省 / 2 市 / 3 区县，无需转换 */
 
 const departments = ref<IssuingAuthorityOption[]>([])
 const departmentsLoading = ref(false)
@@ -130,9 +126,7 @@ const { showMore: showMoreDepartments, visibleList: visibleDepartments } =
 let departmentSeq = 0
 const loadDepartments = async () => {
   const seq = ++departmentSeq
-  const levels = filters.levels
-    .map((item) => POLICY_LEVEL_CODE[item])
-    .filter((item): item is number => item !== undefined)
+  const levels = [...filters.levels]
   const provinceId = region.provinceId
   if (!levels.length || provinceId == null) {
     departments.value = []
@@ -150,7 +144,7 @@ const loadDepartments = async () => {
           provinceId,
           cityId: region.cityId,
           districtId: region.districtId,
-        }).catch(() => [] as IssuingAuthorityOption[]),
+        }).catch(softFail([] as IssuingAuthorityOption[], '政策库发文机关')),
       ),
     )
     if (seq !== departmentSeq) return
@@ -238,7 +232,7 @@ const removeCondition = (key: string) => {
     filters.departmentId = ''
     filters.department = ''
   } else if (key.startsWith('level:')) {
-    const value = key.slice('level:'.length)
+    const value = Number(key.slice('level:'.length)) as PolicyLevelCode
     filters.levels = filters.levels.filter((item) => item !== value)
   } else if (key.startsWith('industry:')) {
     const value = key.slice('industry:'.length)
@@ -263,7 +257,7 @@ onMounted(() => {
     .then((nodes) => {
       if (nodes.length) industryTree.value = nodes
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '政策库行业筛选'))
 })
 
 const columns = [

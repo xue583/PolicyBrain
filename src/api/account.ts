@@ -346,6 +346,7 @@ const mapUserEnterprise = (raw: unknown): PolicyUserEnterprise | null => {
   )
   if (enterpriseId == null) return null
   return {
+    ...body,
     enterpriseId,
     name: readEnterpriseText(body.name ?? body.Name),
     creditCode: readEnterpriseText(body.creditCode ?? body.CreditCode),
@@ -380,6 +381,7 @@ export const normalizeUserEnterpriseList = (
   const identity = identityRaw == null ? Number.NaN : Number(identityRaw)
   const canBindMore = body.canBindMore ?? body.CanBindMore
   return {
+    ...body,
     items: rawItems
       .map(mapUserEnterprise)
       .filter((item): item is PolicyUserEnterprise => item != null),

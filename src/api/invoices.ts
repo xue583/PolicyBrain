@@ -1,5 +1,6 @@
 import { request } from '@/utils/request'
 import { asPage, compactParams, type PageQuery } from '@/api/paging'
+import { formatFen, normalizeFen } from '@/utils/money'
 
 /**
  * 发票类型。Swagger 只给出 1 / 2，与表单选项顺序一致：
@@ -26,12 +27,9 @@ export const InvoiceApplicationStatus = {
 export type InvoiceApplicationStatus =
   (typeof InvoiceApplicationStatus)[keyof typeof InvoiceApplicationStatus]
 
-/** 发票金额由分转为元，保留两位小数。 */
-export const formatInvoiceAmount = (amount?: number | null) => {
-  const fen = Number(amount)
-  if (!Number.isFinite(fen)) return '0.00'
-  return (Math.round(fen) / 100).toFixed(2)
-}
+/** 发票金额由分转为元，保留两位小数且不经过 JavaScript Number。 */
+export const formatInvoiceAmount = (amount?: string | null) =>
+  formatFen(normalizeFen(amount) ?? '0', true)
 
 export const invoiceTypeLabel = (type?: number | null) => {
   if (type === InvoiceType.Ordinary) return '普票'
@@ -56,7 +54,7 @@ export const invoiceStatusLabel = (status?: number | null) => {
 
 /** GET /account/invoices/applications 单条申请 */
 export type InvoiceApplication = {
-  id?: number
+  id?: string
   applyNo?: string | null
   orderNo?: string | null
   applyDate?: string | null
@@ -68,7 +66,7 @@ export type InvoiceApplication = {
   address?: string | null
   email?: string | null
   /** 发票金额，单位分 */
-  amount?: number
+  amount?: string
   status?: number
   invoiceNo?: string | null
   invoiceFileUrl?: string | null
@@ -87,8 +85,8 @@ export type CreateInvoiceApplicationPayload = {
   companyName: string
   taxNumber: string
   email: string
-  /** 发票金额，单位分，不得超过订单实付 */
-  amount: number
+  /** 发票金额，单位分，不得超过订单实付。后端 Int64 按字符串传输 */
+  amount: string
   orderNo?: string
   /** 申请日期，不得晚于当天 */
   applyDate?: string
@@ -117,7 +115,7 @@ export const fetchInvoiceApplications = async (query: PageQuery = {}) => {
 }
 
 /** GET /account/invoices/applications/{id} */
-export const fetchInvoiceApplication = (id: number | string) => {
+export const fetchInvoiceApplication = (id: string) => {
   return request<InvoiceApplication>({
     url: `/account/invoices/applications/${id}`,
     method: 'get',
@@ -138,7 +136,7 @@ export const createInvoiceApplication = (
 }
 
 /** POST /account/invoices/applications/{id}/cancel 撤销待开票申请 */
-export const cancelInvoiceApplication = (id: number | string) => {
+export const cancelInvoiceApplication = (id: string) => {
   return request<InvoiceApplication>({
     url: `/account/invoices/applications/${id}/cancel`,
     method: 'post',

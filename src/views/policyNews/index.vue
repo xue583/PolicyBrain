@@ -12,12 +12,14 @@ import {
   infoTypes as fallbackInfoTypes,
   type PolicyItem,
 } from '../../mock/policyNews'
+import type { PolicyLevelCode } from '../../mock/filters'
 import { fetchNewsPage } from '@/api/news'
 import { fetchIndustryTree, fetchInfoTypeOptions } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import { useRegionStore } from '@/stores/region'
 import { clearRegionSelection } from '@/utils/regionActions'
 import { toIndustryNodes } from '@/utils/industryNodes'
+import { softFail } from '@/utils/softFail'
 import RegionCascadeFilter from '@/components/common/RegionCascadeFilter.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterRow from '@/components/common/FilterRow.vue'
@@ -35,7 +37,7 @@ const { selectedLabel: regionLabel } = storeToRefs(region)
 
 const filters = reactive({
   industries: [] as string[],
-  levels: [] as string[],
+  levels: [] as PolicyLevelCode[],
   infoTypes: [] as string[],
 })
 
@@ -108,7 +110,7 @@ const removeCondition = (key: string) => {
     const value = key.slice('industry:'.length)
     filters.industries = filters.industries.filter((i) => i !== value)
   } else if (key.startsWith('level:')) {
-    const value = key.slice('level:'.length)
+    const value = Number(key.slice('level:'.length)) as PolicyLevelCode
     filters.levels = filters.levels.filter((i) => i !== value)
   } else if (key.startsWith('type:')) {
     const value = key.slice('type:'.length)
@@ -128,12 +130,12 @@ onMounted(() => {
     .then((nodes) => {
       if (nodes.length) industryTree.value = nodes
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '资讯行业筛选'))
   void fetchInfoTypeOptions()
     .then((options) => {
       if (options.length) infoTypes.value = options
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '资讯类型选项'))
 })
 
 const openDetail = (item: PolicyItem) => {

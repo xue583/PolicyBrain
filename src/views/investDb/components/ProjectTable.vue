@@ -2,7 +2,7 @@
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons-vue'
 import type { TableColumnType } from 'ant-design-vue'
-import type { InvestProject } from '../../../mock/investDb'
+import { investResultLabels, type InvestProject } from '../../../mock/investDb'
 
 defineProps<{
   dataSource: InvestProject[]
@@ -22,8 +22,7 @@ const listLocale = {
 }
 
 const resultLabel = (record: InvestProject) =>
-  record.resultLabel ||
-  (record.result === 'passed' ? '办结（通过）' : '未办结（驳回）')
+  record.resultLabel || investResultLabels[record.result]
 
 const columns: TableColumnType<InvestProject>[] = [
   {
@@ -102,9 +101,12 @@ const columns: TableColumnType<InvestProject>[] = [
           <span class="clamp-cell">{{ record.recordUnit }}</span>
         </template>
         <template v-else-if="column.key === 'result'">
-          <span class="result" :class="record.result">
-            <CheckCircleFilled v-if="record.result === 'passed'" />
-            <CloseCircleFilled v-else />
+          <span class="result" :class="`result-${record.result}`">
+            <CheckCircleFilled v-if="record.result === 1" />
+            <CloseCircleFilled
+              v-else-if="record.result === 2 || record.result === 3"
+            />
+            <span v-else class="result-dot" />
             {{ resultLabel(record as InvestProject) }}
           </span>
         </template>
@@ -173,14 +175,28 @@ a.project-name {
   line-height: 20px;
   white-space: nowrap;
 
-  &.passed {
+  &.result-1 {
     color: #52c41a;
     background: #f6ffed;
   }
 
-  &.rejected {
+  &.result-2,
+  &.result-3 {
     color: #ff4d4f;
     background: #fff2f0;
+  }
+
+  &.result-0,
+  &.result-4 {
+    color: #595959;
+    background: #f5f5f5;
+  }
+
+  .result-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentcolor;
   }
 
   .anticon {

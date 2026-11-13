@@ -4,7 +4,7 @@ import {
   type RouteLocationNormalized,
   type RouteRecordRaw,
 } from 'vue-router'
-import { getToken, triggerNeedLogin } from '@/utils/auth'
+import { hasSession, triggerNeedLogin } from '@/utils/auth'
 import SubPageLayout from '@/components/SubPageLayout.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -235,7 +235,7 @@ export const applyAuthGuard = (to: RouteLocationNormalized) => {
   document.title = `${title} - 政策大脑`
 
   const needsAuth = to.matched.some((record) => record.meta.requiresAuth)
-  if (needsAuth && !getToken()) {
+  if (needsAuth && !hasSession()) {
     triggerNeedLogin()
     return { name: 'home' }
   }

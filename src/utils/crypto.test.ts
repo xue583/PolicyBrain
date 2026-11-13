@@ -1,153 +1,201 @@
-import { describe, expect, it, vi, afterEach } from 'vitest'
-import CryptoJS from 'crypto-js'
+import axios, { type AxiosResponse } from 'axios'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/utils/apiError'
 
-const { decryptData, parseData, maskSecret, unmaskSecret } =
-  await import('./crypto')
+vi.mock('@/utils/csrf', () => ({
+  CSRF_HEADER_NAME: 'X-CSRF-Token',
+  ensureCsrfToken: vi.fn(),
+}))
 
-/** AES-256 需要 32 字节密钥，CBC 初始向量 16 字节 */
-const KEY_BASE64 = CryptoJS.enc.Utf8.parse(
-  '0123456789abcdef0123456789abcdef',
-).toString(CryptoJS.enc.Base64)
-const IV_BASE64 = CryptoJS.enc.Utf8.parse('0123456789abcdef').toString(
-  CryptoJS.enc.Base64,
-)
+const {
+  decryptData,
+  ensureSessionKey,
+  getSessionKeyId,
+  hasSessionKey,
+  parseData,
+  prepareSessionKey,
+  renewSessionKey,
+  resetSessionKey,
+} = await import('./crypto')
+const { ensureCsrfToken } = await import('@/utils/csrf')
 
-const encrypt = (value: unknown, keyB64 = KEY_BASE64, ivB64 = IV_BASE64) =>
-  CryptoJS.AES.encrypt(
-    JSON.stringify(value),
-    CryptoJS.enc.Base64.parse(keyB64),
-    {
-      iv: CryptoJS.enc.Base64.parse(ivB64),
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7,
-    },
-  ).toString()
-
-const stubSecrets = () => {
-  vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(KEY_BASE64))
-  vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
+const toBase64 = (bytes: Uint8Array | ArrayBuffer) => {
+  const view = ArrayBuffer.isView(bytes)
+    ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    : new Uint8Array(bytes)
+  return btoa(Array.from(view, (byte) => String.fromCharCode(byte)).join(''))
 }
 
-afterEach(() => {
-  vi.unstubAllEnvs()
-})
+const fromBase64 = (value: string) =>
+  Uint8Array.from(atob(value), (char) => char.charCodeAt(0))
 
-describe('decryptData', () => {
-  it('decrypts ciphertext into the original object', () => {
-    stubSecrets()
-    const cipher = encrypt({ id: 7, name: '政策 Brain', list: [1, 2, 3] })
-    expect(decryptData(cipher)).toEqual({
+const openEnvelope = async (privateKey: CryptoKey, keyEnvelope: string) => {
+  const plain = await crypto.subtle.decrypt(
+    { name: 'RSA-OAEP' },
+    privateKey,
+    fromBase64(keyEnvelope) as BufferSource,
+  )
+  const bytes = new Uint8Array(plain)
+  expect(bytes).toHaveLength(48)
+  return { keyBytes: bytes.slice(0, 32), iv: bytes.slice(32) }
+}
+
+const encrypt = async (
+  privateKey: CryptoKey,
+  keyEnvelope: string,
+  value: unknown,
+) => {
+  const { keyBytes, iv } = await openEnvelope(privateKey, keyEnvelope)
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyBytes as BufferSource,
+    { name: 'AES-CBC' },
+    false,
+    ['encrypt'],
+  )
+  // 与后端一致：每消息随机 IV，密文 = Base64(IV‖cipher)；信封 IV 仅作交换材料
+  const messageIv = crypto.getRandomValues(new Uint8Array(16))
+  void iv
+  const cipher = await crypto.subtle.encrypt(
+    { name: 'AES-CBC', iv: messageIv as BufferSource },
+    key,
+    new TextEncoder().encode(JSON.stringify(value)),
+  )
+  const packed = new Uint8Array(16 + cipher.byteLength)
+  packed.set(messageIv, 0)
+  packed.set(new Uint8Array(cipher), 16)
+  return toBase64(packed)
+}
+
+const mockPublicKey = async () => {
+  const pair = (await crypto.subtle.generateKey(
+    {
+      name: 'RSA-OAEP',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256',
+    },
+    true,
+    ['encrypt', 'decrypt'],
+  )) as CryptoKeyPair
+  const publicKey = toBase64(
+    await crypto.subtle.exportKey('spki', pair.publicKey),
+  )
+  vi.spyOn(axios, 'get').mockResolvedValue({
+    data: { data: { enabled: true, publicKey } },
+  } as AxiosResponse)
+  return pair.privateKey
+}
+
+describe('random session encryption', () => {
+  beforeEach(() => {
+    resetSessionKey()
+    vi.clearAllMocks()
+    vi.mocked(ensureCsrfToken).mockResolvedValue('csrf-token')
+  })
+
+  afterEach(() => {
+    resetSessionKey()
+    vi.restoreAllMocks()
+  })
+
+  it('wraps a random 48-byte AES secret with RSA-OAEP and decrypts AES-CBC data', async () => {
+    const privateKey = await mockPublicKey()
+    const exchange = await prepareSessionKey()
+    expect(exchange).not.toBeNull()
+
+    const cipher = await encrypt(privateKey, exchange!.keyEnvelope, {
+      id: 7,
+      name: '政策 Brain',
+      list: [1, 2, 3],
+    })
+    await expect(parseData({ encrypted: true, data: cipher })).resolves.toEqual(
+      {
+        id: 7,
+        name: '政策 Brain',
+        list: [1, 2, 3],
+      },
+    )
+    await expect(decryptData(cipher)).resolves.toEqual({
       id: 7,
       name: '政策 Brain',
       list: [1, 2, 3],
     })
   })
 
-  it('throws ApiError when key or iv is not configured', () => {
-    vi.stubEnv('VITE_CRYPTO_KEY', '')
-    vi.stubEnv('VITE_CRYPTO_IV', '')
-    expect(() => decryptData(encrypt({ id: 1 }))).toThrow(ApiError)
+  it('establishes the session mapping with CSRF and reuses the current key id', async () => {
+    const privateKey = await mockPublicKey()
+    const post = vi.spyOn(axios, 'post').mockResolvedValue({
+      data: { status: 200, data: null },
+    } as AxiosResponse)
+
+    const keyId = await ensureSessionKey()
+    expect(keyId).toBe(getSessionKeyId())
+    expect(hasSessionKey()).toBe(true)
+    expect(post).toHaveBeenCalledOnce()
+
+    const [url, body, config] = post.mock.calls[0]!
+    expect(url).toBe('/auth/keyExchanges')
+    expect(config).toMatchObject({
+      withCredentials: true,
+      headers: { 'X-CSRF-Token': 'csrf-token' },
+    })
+    const exchange = body as { keyId: string; keyEnvelope: string }
+    expect(exchange.keyId).toBe(keyId)
+    await openEnvelope(privateKey, exchange.keyEnvelope)
+
+    await expect(ensureSessionKey()).resolves.toBe(keyId)
+    expect(post).toHaveBeenCalledOnce()
   })
 
-  it('throws ApiError when the ciphertext cannot be decrypted', () => {
-    stubSecrets()
-    // 用另一把密钥加密，配置密钥解出的不是合法 JSON
-    const otherKey = CryptoJS.enc.Utf8.parse(
-      'ffffffffffffffffffffffffffffffff',
-    ).toString(CryptoJS.enc.Base64)
-    const cipher = encrypt({ id: 1 }, otherKey)
+  it('renew waits for the in-flight exchange and issues a fresh key id', async () => {
+    await mockPublicKey()
+    let resolveExchange!: (v: AxiosResponse) => void
+    const pending = new Promise<AxiosResponse>((resolve) => {
+      resolveExchange = resolve
+    })
+    vi.spyOn(axios, 'post').mockReturnValue(pending)
 
-    try {
-      decryptData(cipher)
-      expect.unreachable('应当抛出 ApiError')
-    } catch (err) {
-      expect(err).toBeInstanceOf(ApiError)
-      expect((err as ApiError).message).toBe('数据解密失败')
-    }
-  })
-  it('treats truthy encrypted values (1, "true") as encrypted', () => {
-    stubSecrets()
-    const cipher = encrypt({ id: 3 })
-    expect(parseData({ encrypted: 1, data: cipher })).toEqual({ id: 3 })
-    expect(parseData({ encrypted: 'true', data: cipher })).toEqual({ id: 3 })
-  })
+    // 旧交换在途
+    const first = ensureSessionKey()
+    // renew 不应复用在途旧交换的 keyId，而是等其落定后重新交换
+    const renewed = renewSessionKey()
+    resolveExchange({ data: { status: 200, data: null } } as AxiosResponse)
+    const staleKeyId = await first
+    expect(staleKeyId).not.toBe('')
 
-  it('supports a 16-byte (AES-128) key', () => {
-    const keyB64 = CryptoJS.enc.Utf8.parse('0123456789abcdef').toString(
-      CryptoJS.enc.Base64,
-    )
-    vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(keyB64))
-    vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
-    const cipher = encrypt({ id: 9 }, keyB64)
-    expect(parseData({ encrypted: true, data: cipher })).toEqual({ id: 9 })
+    // renewed 完成后的 keyId 必须与旧 keyId 不同（新密钥、新交换）
+    vi.spyOn(axios, 'post').mockResolvedValue({
+      data: { status: 200, data: null },
+    } as AxiosResponse)
+    const newKeyId = await renewed
+    expect(newKeyId).not.toBe(staleKeyId)
+    expect(getSessionKeyId()).toBe(newKeyId)
   })
 
-  it('throws ApiError when the configured key size is invalid', () => {
-    // 20 字节不是 AES 合法密钥长度（16/24/32）
-    const badKey = CryptoJS.enc.Utf8.parse('12345678901234567890').toString(
-      CryptoJS.enc.Base64,
-    )
-    vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(badKey))
-    vi.stubEnv('VITE_CRYPTO_IV', maskSecret(IV_BASE64))
-    expect(() => decryptData(encrypt({ id: 1 }))).toThrow(ApiError)
+  it('does not generate or upload a key when backend encryption is disabled', async () => {
+    vi.spyOn(axios, 'get').mockResolvedValue({
+      data: { data: { enabled: false, publicKey: null } },
+    } as AxiosResponse)
+    const post = vi.spyOn(axios, 'post')
+
+    await expect(prepareSessionKey()).resolves.toBeNull()
+    await expect(ensureSessionKey()).resolves.toBe('')
+    expect(hasSessionKey()).toBe(false)
+    expect(post).not.toHaveBeenCalled()
   })
 
-  it('throws ApiError when the configured iv is not 16 bytes', () => {
-    const badIv = CryptoJS.enc.Utf8.parse('123456789012345').toString(
-      CryptoJS.enc.Base64,
-    )
-    vi.stubEnv('VITE_CRYPTO_KEY', maskSecret(KEY_BASE64))
-    vi.stubEnv('VITE_CRYPTO_IV', maskSecret(badIv))
-    try {
-      decryptData(encrypt({ id: 1 }))
-      expect.unreachable('应当抛出 ApiError')
-    } catch (err) {
-      expect((err as ApiError).message).toBe('数据解密密钥配置无效')
-    }
-  })
-})
-
-describe('parseData', () => {
-  it('returns plain payload as-is', () => {
-    expect(parseData({ id: 1, name: 'ok' })).toEqual({ id: 1, name: 'ok' })
-  })
-
-  it('returns payload as-is when encrypted is false', () => {
-    expect(parseData({ encrypted: false, data: { id: 1 } })).toEqual({
+  it('passes plain payloads through and rejects invalid ciphertext explicitly', async () => {
+    expect(await parseData({ id: 1 })).toEqual({ id: 1 })
+    expect(await parseData({ encrypted: false, data: { id: 1 } })).toEqual({
       encrypted: false,
       data: { id: 1 },
     })
-  })
 
-  it('treats non-string data as plain payload', () => {
-    expect(parseData({ encrypted: true, data: { id: 1 } })).toEqual({
-      encrypted: true,
-      data: { id: 1 },
-    })
-  })
-
-  it('decrypts encrypted payload with the configured key and iv', () => {
-    stubSecrets()
-    const cipher = encrypt({ id: 7, list: [1, 2, 3] })
-    expect(parseData({ encrypted: true, data: cipher })).toEqual({
-      id: 7,
-      list: [1, 2, 3],
-    })
-  })
-})
-
-describe('maskSecret', () => {
-  it('matches the generator script output (fixed vector)', () => {
-    // 固定向量由 scripts/mask-crypto-secret.mjs 生成，
-    // 用于锁定运行时实现与生成脚本算法一致
-    expect(maskSecret('MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=')).toBe(
-      'ehnUuyPeWcJ5N/L2IfNOmm5vw640zkmLejfc8iDwUcB4Gf2qN8lGmG0KyP8=',
-    )
-  })
-
-  it('round-trips: unmasking a masked secret restores the plain secret', () => {
-    expect(unmaskSecret(maskSecret(KEY_BASE64))).toBe(KEY_BASE64)
-    expect(unmaskSecret(maskSecret(IV_BASE64))).toBe(IV_BASE64)
+    await mockPublicKey()
+    await prepareSessionKey()
+    await expect(
+      parseData({ encrypted: true, data: 'not-base64!' }),
+    ).rejects.toBeInstanceOf(ApiError)
   })
 })

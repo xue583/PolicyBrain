@@ -6,11 +6,12 @@ import {
   type RegionIdQuery,
 } from '@/api/paging'
 import { mapNewsItem } from '@/api/mapPortal'
+import type { PolicyLevelCode } from '@/mock/filters'
 
 export type NewsQuery = PageQuery &
   RegionIdQuery & {
     keyword?: string
-    levels?: string[]
+    levels?: PolicyLevelCode[]
     infoTypes?: string[]
     industries?: string[]
   }

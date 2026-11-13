@@ -9,6 +9,8 @@ import {
 import { PolicyUserType } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/utils/request'
+import { toErrorMessage } from '@/utils/apiError'
+import { softFail } from '@/utils/softFail'
 
 const emptyList = (): PolicyUserEnterpriseList => ({ items: [] })
 
@@ -47,8 +49,11 @@ export const useMyEnterprises = () => {
         list.value = data
         loaded.value = true
       })
-      .catch(() => {
+      .catch((error) => {
+        // 主列表失败：显式报错并清空（不用 softFail，见 softFail.ts）
+        list.value = emptyList()
         loaded.value = false
+        message.error(toErrorMessage(error, '我的企业列表加载失败'))
       })
       .finally(() => {
         loading.value = false
@@ -75,7 +80,9 @@ export const useMyEnterprises = () => {
           loaded.value = true
           message.success('已解绑')
           if (specialist) {
-            await auth.loadCurrentUser().catch(() => undefined)
+            await auth
+              .loadCurrentUser()
+              .catch(softFail(undefined, '登录信息刷新'))
           }
         } catch (err) {
           message.error(

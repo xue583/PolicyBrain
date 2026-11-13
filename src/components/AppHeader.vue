@@ -16,6 +16,7 @@ import { selectRegionCity, selectRegionProvince } from '@/utils/regionActions'
 import { useAuthStore } from '@/stores/auth'
 import { useRegionStore } from '@/stores/region'
 import { onNeedLogin } from '@/utils/auth'
+import { softFail } from '@/utils/softFail'
 import logoImg from '@/assets/logo-full.png'
 import logoLightImg from '@/assets/logo-light.png'
 import robotImg from '@/assets/home/robot.png'
@@ -215,7 +216,7 @@ onMounted(() => {
     .then((provinces) => {
       provinceOptions.value = provinces
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '顶栏地区选项'))
 })
 
 onUnmounted(() => {

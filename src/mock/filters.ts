@@ -1,4 +1,6 @@
 export type PolicyLevel = 'national' | 'provincial' | 'municipal' | 'district'
+/** 后端 PolicyLevelEnum：0 国家、1 省、2 市、3 区县。 */
+export type PolicyLevelCode = 0 | 1 | 2 | 3
 export type PolicyInfoType = 'applying' | 'publicizing' | 'new'
 
 export const regions = [
@@ -34,11 +36,11 @@ export const industries = [
   '居民服务、修理和其他服务业',
 ]
 
-export const policyLevels: { label: string; value: PolicyLevel }[] = [
-  { label: '国家级', value: 'national' },
-  { label: '省级', value: 'provincial' },
-  { label: '市级', value: 'municipal' },
-  { label: '区级', value: 'district' },
+export const policyLevels: { label: string; value: PolicyLevelCode }[] = [
+  { label: '国家级', value: 0 },
+  { label: '省级', value: 1 },
+  { label: '市级', value: 2 },
+  { label: '区级', value: 3 },
 ]
 
 export const infoTypes: { label: string; value: PolicyInfoType }[] = [

@@ -17,6 +17,15 @@ vi.mock('@/api/auth', async () => {
   }
 })
 
+vi.mock('@/utils/crypto', () => ({
+  ensureSessionKey: vi.fn(),
+  resetSessionKey: vi.fn(),
+}))
+
+vi.mock('@/utils/csrf', () => ({
+  resetCsrfToken: vi.fn(),
+}))
+
 const {
   createSession,
   fetchCurrentUser,
@@ -26,15 +35,17 @@ const {
   uploadCurrentUserAvatar,
   verifySmsCode,
 } = await import('@/api/auth')
+const { ensureSessionKey } = await import('@/utils/crypto')
 
 describe('useAuthStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
     vi.clearAllMocks()
+    vi.mocked(ensureSessionKey).mockResolvedValue('session-key')
   })
 
-  it('applies session tokens and loads the current user on sms login', async () => {
+  it('keeps tokens out of storage and loads the current user on sms login', async () => {
     vi.mocked(createSession).mockResolvedValue({
       accessToken: 'access',
       refreshToken: 'refresh',
@@ -53,7 +64,9 @@ describe('useAuthStore', () => {
     })
     expect(auth.isLoggedIn).toBe(true)
     expect(auth.user?.nickname).toBe('李四')
-    expect(localStorage.getItem('pb_access_token')).toBe('access')
+    expect(localStorage.getItem('pb_access_token')).toBeNull()
+    expect(localStorage.getItem('pb_refresh_token')).toBeNull()
+    expect(sessionStorage.getItem('pb_access_token')).toBeNull()
   })
 
   it('creates a register session on the same endpoint and forwards invite code', async () => {
@@ -74,9 +87,8 @@ describe('useAuthStore', () => {
   })
 
   it('clears local session even if logout api fails', async () => {
-    localStorage.setItem('pb_access_token', 'access')
+    localStorage.setItem('pb_user', '{}')
     const auth = useAuthStore()
-    auth.token = 'access'
     vi.mocked(logoutSession).mockRejectedValue(new Error('network'))
 
     await auth.logout()
@@ -103,7 +115,6 @@ describe('useAuthStore', () => {
   })
 
   it('keeps cached profile when hydrate fails for a non-auth reason', async () => {
-    localStorage.setItem('pb_access_token', 'access')
     localStorage.setItem(
       'pb_user',
       JSON.stringify({ phone: '19545670526', identity: 1 }),

@@ -18,6 +18,7 @@ import {
   identityLabel,
   maskPhone,
 } from '@/utils/userDisplay'
+import { softFail } from '@/utils/softFail'
 import baseIcon from '@/assets/personalCenter/基础@2x.png'
 import msgIcon from '@/assets/personalCenter/goutong@2x.png'
 import shareIcon from '@/assets/personalCenter/fenxiang2@2x.png'
@@ -161,7 +162,7 @@ const loadMembership = () => {
     .then((data) => {
       membership.value = data && typeof data === 'object' ? data : null
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '会员信息'))
 }
 
 const uploadAvatarOpen = ref(false)
@@ -212,11 +213,11 @@ const showBindEnterprise = computed(() => {
 
 const onEnterpriseBound = async () => {
   await loadEnterprises()
-  await auth.loadCurrentUser().catch(() => undefined)
+  await auth.loadCurrentUser().catch(softFail(undefined, '登录信息刷新'))
 }
 
 onMounted(() => {
-  void auth.loadCurrentUser().catch(() => undefined)
+  void auth.loadCurrentUser().catch(softFail(undefined, '登录信息刷新'))
   loadMembership()
   void loadEnterprises()
 })

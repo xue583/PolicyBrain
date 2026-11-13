@@ -26,18 +26,18 @@ export type MembershipPlan = {
   level?: number
   durationType?: number
   durationDays?: number
-  /** 标准售价，单位分；0 表示免费开通 */
-  price?: number
-  /** 划线价，单位分；0 表示不展示 */
-  originalPrice?: number
+  /** 标准售价，单位分；0 表示免费开通。后端 Int64 按字符串返回 */
+  price?: string
+  /** 划线价，单位分；0 表示不展示。后端 Int64 按字符串返回 */
+  originalPrice?: string
   sort?: number
   description?: string | null
   /** 适用身份，PolicyUserType：1 企业专员 / 2 企服人员 */
   applicableIdentity?: number
   /** 每用户可购买次数，0 表示不限 */
   purchaseLimit?: number
-  /** 当前生效实付价，单位分 */
-  currentPrice?: number
+  /** 当前生效实付价，单位分。后端 Int64 按字符串返回 */
+  currentPrice?: string
 }
 
 /** GET /account/memberships/benefits 单项 */
@@ -121,7 +121,7 @@ export type MembershipIntent = {
   /** 购买数量（名额数） */
   quantity?: number
   /** 实付金额，单位分；单价 × 数量 */
-  amount?: number
+  amount?: string
   status?: number
   /** 意向失效时间，超时后需重新下单 */
   expiresAt?: string | null
@@ -130,7 +130,7 @@ export type MembershipIntent = {
 
 /** 已提升的正式会员订单 */
 export type MembershipOrder = {
-  id?: number
+  id?: string
   orderNo?: string | null
   planCode?: string | null
   planName?: string | null
@@ -140,7 +140,7 @@ export type MembershipOrder = {
   /** 购买数量（名额数） */
   quantity?: number
   /** 实付金额，单位分 */
-  amount?: number
+  amount?: string
   status?: number
   channel?: string | null
   channelTradeNo?: string | null
@@ -158,7 +158,7 @@ export type MembershipPaymentStatus = {
   planCode?: string | null
   planName?: string | null
   level?: number
-  amount?: number
+  amount?: string
   paidAt?: string | null
   createTime?: string | null
   /** 意向已提升为正式订单时返回 */
@@ -252,7 +252,7 @@ export type MembershipSlotStatus =
 
 /** GET /account/memberships/batches/{orderNo} 的名额行 */
 export type MembershipSlot = {
-  id?: number | string
+  id?: string
   orderNo?: string | null
   level?: number
   durationType?: number
@@ -282,12 +282,9 @@ export const fetchMembershipBatch = (orderNo: string) => {
 }
 
 /** 把一个空名额分配给已注册手机号，被分配者时长叠加。 */
-export const allocateMembershipSlot = (
-  slotId: number | string,
-  phone: string,
-) => {
+export const allocateMembershipSlot = (slotId: string, phone: string) => {
   return request<MembershipSlot>({
-    url: `/account/memberships/slots/${encodeURIComponent(String(slotId))}/allocation`,
+    url: `/account/memberships/slots/${encodeURIComponent(slotId)}/allocation`,
     method: 'post',
     data: { phone },
   })

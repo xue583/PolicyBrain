@@ -18,13 +18,13 @@ const plan = (overrides: Record<string, unknown> = {}) => ({
   level: MembershipLevel.Vip,
   durationType: 3,
   durationDays: 365,
-  price: 70800,
-  originalPrice: 0,
+  price: '70800',
+  originalPrice: '0',
   sort: 2,
   description: '超值特惠',
   applicableIdentity: 1,
   purchaseLimit: 0,
-  currentPrice: 36800,
+  currentPrice: '36800',
   ...overrides,
 })
 
@@ -45,7 +45,7 @@ describe('membership plan mapping', () => {
       id: 'vip_year',
       level: 1,
       name: '年度会员',
-      price: 998,
+      price: '998',
       original: undefined,
       daily: '2.73',
       tag: '仅可买一次',
@@ -58,21 +58,41 @@ describe('membership plan mapping', () => {
 
   it('prices from the standard price field and converts fen into yuan', () => {
     const [card] = toPlanCards([plan()])
-    expect(card?.price).toBe(708)
+    expect(card?.price).toBe('708')
     expect(card?.original).toBeUndefined()
     expect(card?.saved).toBeUndefined()
     expect(card?.daily).toBe('1.94')
 
     const [struck] = toPlanCards([plan({ originalPrice: 99900 })])
-    expect(struck?.price).toBe(708)
-    expect(struck?.original).toBe(999)
+    expect(struck?.price).toBe('708')
+    expect(struck?.original).toBe('999')
     expect(struck?.saved).toBe('291')
 
     // 接口没返回 price 时才回退 currentPrice
     const [fallback] = toPlanCards([
       plan({ price: undefined, currentPrice: 36800 }),
     ])
-    expect(fallback?.price).toBe(368)
+    expect(fallback?.price).toBe('368')
+  })
+
+  it('compares string amounts numerically and preserves Int64 precision', () => {
+    const [lexicalBoundary] = toPlanCards([
+      plan({ price: '99', originalPrice: '100', currentPrice: '99' }),
+    ])
+
+    expect(lexicalBoundary).toMatchObject({
+      price: '0.99',
+      priceFen: '99',
+      original: '1',
+      saved: '0.01',
+    })
+
+    const maxInt64 = '9223372036854775807'
+    const [large] = toPlanCards([
+      plan({ price: maxInt64, originalPrice: '0', currentPrice: maxInt64 }),
+    ])
+    expect(large?.priceFen).toBe(maxInt64)
+    expect(large?.price).toBe('92233720368547758.07')
   })
 
   it('sorts by sort, dedupes code, and features the first plan of each level', () => {

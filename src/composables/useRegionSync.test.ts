@@ -40,7 +40,7 @@ const mountSync = async () => {
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
-  auth.token = 'access'
+  auth.user = {}
 
   const wrapper = mount(Host, {
     global: { plugins: [pinia, router] },

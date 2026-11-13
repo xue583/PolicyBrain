@@ -41,12 +41,12 @@ vi.mock('@/api/membership', async () => {
 const { createMembershipOrder, createMembershipPayment, fetchMembershipOrder } =
   await import('@/api/membership')
 
-const mountPanel = (props?: { price?: number; planCode?: string }) => {
+const mountPanel = (props?: { price?: string; planCode?: string }) => {
   const pinia = createPinia()
   setActivePinia(pinia)
   return mount(MemberPayPanel, {
     props: {
-      price: props?.price ?? 368,
+      price: props?.price ?? '368',
       planCode: props?.planCode ?? 'vip_yearly',
       qrFrame: 'frame.png',
     },
@@ -95,7 +95,7 @@ describe('MemberPayPanel alipay checkout', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const auth = useAuthStore()
-    auth.token = 'access'
+    auth.user = {}
     vi.mocked(createMembershipOrder).mockResolvedValue({
       orderNo: 'M20261029001',
       status: 1,
@@ -114,7 +114,7 @@ describe('MemberPayPanel alipay checkout', () => {
       })
 
     const wrapper = mount(MemberPayPanel, {
-      props: { price: 368, planCode: 'vip_yearly', qrFrame: 'frame.png' },
+      props: { price: '368', planCode: 'vip_yearly', qrFrame: 'frame.png' },
       global: {
         plugins: [pinia],
         stubs: {
@@ -155,7 +155,7 @@ describe('MemberPayPanel alipay checkout', () => {
   it('opens a free plan without leaving the page', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
-    useAuthStore().token = 'access'
+    useAuthStore().user = {}
     const open = vi.spyOn(window, 'open')
     vi.mocked(createMembershipOrder).mockResolvedValue({
       orderNo: 'FREE1',
@@ -167,7 +167,7 @@ describe('MemberPayPanel alipay checkout', () => {
     })
 
     const wrapper = mount(MemberPayPanel, {
-      props: { price: 0, planCode: 'vip_yearly', qrFrame: 'frame.png' },
+      props: { price: '0', planCode: 'vip_yearly', qrFrame: 'frame.png' },
       global: { plugins: [pinia] },
     })
 
@@ -187,7 +187,7 @@ describe('MemberPayPanel alipay checkout', () => {
     vi.useFakeTimers()
     const pinia = createPinia()
     setActivePinia(pinia)
-    useAuthStore().token = 'access'
+    useAuthStore().user = {}
     vi.mocked(createMembershipOrder).mockResolvedValue({
       orderNo: 'M20261030001',
       status: 1,
@@ -206,7 +206,7 @@ describe('MemberPayPanel alipay checkout', () => {
       })
 
     const wrapper = mount(MemberPayPanel, {
-      props: { price: 368, planCode: 'vip_yearly', qrFrame: 'frame.png' },
+      props: { price: '368', planCode: 'vip_yearly', qrFrame: 'frame.png' },
       global: { plugins: [pinia] },
     })
 
@@ -238,7 +238,7 @@ describe('MemberPayPanel alipay checkout', () => {
   it('writes the seat count into an enterprise order', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
-    useAuthStore().token = 'access'
+    useAuthStore().user = {}
     vi.mocked(createMembershipOrder).mockResolvedValue({
       orderNo: 'ENT1',
       status: 1,
@@ -252,7 +252,7 @@ describe('MemberPayPanel alipay checkout', () => {
 
     const wrapper = mount(MemberPayPanel, {
       props: {
-        price: 8400,
+        price: '8400',
         planCode: 'ent_vip_3y',
         quantity: 5,
         qrFrame: 'frame.png',

@@ -123,6 +123,7 @@ export const mapExportEnterprise = (
   const record = asRecord(raw)
   const address = pickString(record, ['address'])
   return {
+    ...record,
     id: pickString(record, ['id', 'index'], String(index + 1)),
     name: pickString(record, ['name']),
     address: address || regionText(record) || '-',
@@ -156,6 +157,7 @@ export const mapBatchQueryPage = (raw: unknown): BatchQueryPage => {
 export const mapEnterpriseExportJob = (raw: unknown): EnterpriseExportJob => {
   const record = asRecord(raw)
   return {
+    ...record,
     jobId: pickString(record, ['jobId']),
     queryType: pickNumber(record, ['queryType']),
     status: pickNumber(record, ['status']),

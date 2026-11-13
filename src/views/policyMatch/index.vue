@@ -18,6 +18,7 @@ import { useRegionStore } from '@/stores/region'
 import { triggerNeedLogin } from '@/utils/auth'
 import { downloadCsv } from '@/utils/downloadCsv'
 import { toErrorMessage } from '@/utils/apiError'
+import { softFail } from '@/utils/softFail'
 import {
   fetchIssuingAuthorityOptions,
   fetchPolicyPage,
@@ -396,9 +397,12 @@ const loadDepartments = async () => {
     })
     if (seq !== departmentSeq) return
     departments.value = list
-  } catch {
+  } catch (error) {
     if (seq !== departmentSeq) return
-    departments.value = []
+    departments.value = softFail(
+      [] as IssuingAuthorityOption[],
+      '匹配页发文机关',
+    )(error)
   }
 }
 
@@ -411,13 +415,15 @@ const fillRegionPreview = async () => {
   const henan = provinces.value.find((item) => item.label.includes('河南'))
   if (!henan || henan.id < 0) return
   regionCities.value = await loadRegionOptions(henan.id).catch(
-    () => [] as CityOption[],
+    softFail([] as CityOption[], '匹配页地区预览'),
   )
   const zhengzhou = regionCities.value.find((item) =>
     item.label.includes('郑州'),
   )
   regionDistricts.value = zhengzhou
-    ? await loadRegionOptions(zhengzhou.id).catch(() => [] as CityOption[])
+    ? await loadRegionOptions(zhengzhou.id).catch(
+        softFail([] as CityOption[], '匹配页地区预览'),
+      )
     : []
 }
 
@@ -440,7 +446,9 @@ const syncCities = async () => {
   const groups = await Promise.all(
     provinceIds.map(async (id) => ({
       id,
-      children: await loadRegionOptions(id).catch(() => [] as CityOption[]),
+      children: await loadRegionOptions(id).catch(
+        softFail([] as CityOption[], '匹配页市级选项'),
+      ),
     })),
   )
   if (seq !== citySeq) return
@@ -499,7 +507,9 @@ const syncDistricts = async () => {
   }
   const lists = await Promise.all(
     source.map((item) =>
-      loadRegionOptions(item.id).catch(() => [] as CityOption[]),
+      loadRegionOptions(item.id).catch(
+        softFail([] as CityOption[], '匹配页区县选项'),
+      ),
     ),
   )
   if (seq !== districtSeq) return
@@ -555,7 +565,7 @@ const refreshGrades = async () => {
   const province = stored ?? henan ?? list[0]
   if (!province) return
   const cityOptions = await loadRegionOptions(province.id).catch(
-    () => [] as CityOption[],
+    softFail([] as CityOption[], '匹配页等级城市'),
   )
   gradeCities.value = cityOptions
   gradeOptions.value = [
@@ -568,8 +578,8 @@ const refreshGrades = async () => {
 const initRegions = async () => {
   try {
     provinces.value = await loadRegionOptions()
-  } catch {
-    provinces.value = []
+  } catch (error) {
+    provinces.value = softFail([] as CityOption[], '匹配页省级选项')(error)
   }
   if (!provinces.value.length) {
     usingFallbackRegion.value = true
@@ -748,7 +758,8 @@ onMounted(() => {
     .then((groups) => {
       hotKeywords.value = groups.policies.map((item) => item.keyword)
     })
-    .catch(() => {
+    .catch((error) => {
+      softFail(undefined, '匹配页热词')(error)
       hotKeywords.value = []
     })
   void searchPolicies()

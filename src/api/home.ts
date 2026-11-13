@@ -18,6 +18,7 @@ const mapKeyword = (raw: unknown): HotKeyword | null => {
   const keyword = pickString(record, ['keyword', 'Keyword']).trim()
   if (!keyword) return null
   return {
+    ...record,
     keyword,
     hitCount: pickNumber(record, ['hitCount', 'HitCount']),
   }

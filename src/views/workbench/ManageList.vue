@@ -8,6 +8,8 @@ import {
 import { setCurrentEnterprise } from '@/api/account'
 import { fetchEnterpriseDetail } from '@/api/enterprises'
 import { displayRegisteredCapital } from '@/api/mapPortal'
+import { ApiError } from '@/utils/apiError'
+import { message } from 'ant-design-vue'
 import { useMyEnterprises } from '@/composables/useMyEnterprises'
 import { enterpriseStatusText } from '@/mock/enterpriseDb/list'
 import type { EnterpriseDetail } from '@/mock/enterpriseDb/types'
@@ -160,6 +162,7 @@ const selectCompany = (id?: string, syncCurrent = false) => {
   void loadDetail(id)
   const current = items.value.find((item) => item.enterpriseId === id)
   if (syncCurrent && current && !current.isCurrent) {
+    // 用户触发的变更动作：失败必须显式报错，不用 softFail（那是元数据子请求的软降级）
     void setCurrentEnterprise(id)
       .then((next) => {
         if (!next.items.length) return
@@ -167,7 +170,13 @@ const selectCompany = (id?: string, syncCurrent = false) => {
         if (!next.items.some((item) => item.enterpriseId === id)) return
         companyId.value = id
       })
-      .catch(() => undefined)
+      .catch((error) => {
+        message.error(
+          error instanceof ApiError
+            ? error.message
+            : '默认企业切换失败，请重试',
+        )
+      })
   }
 }
 

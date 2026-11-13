@@ -61,7 +61,7 @@ const mountPanel = async () => {
 
 describe('MessagePanel', () => {
   beforeEach(() => {
-    localStorage.setItem('pb_access_token', 'access')
+    localStorage.setItem('pb_user', '{}')
     resetMessageUnread()
     vi.clearAllMocks()
     vi.mocked(fetchUnreadMessageCount).mockResolvedValue(2)

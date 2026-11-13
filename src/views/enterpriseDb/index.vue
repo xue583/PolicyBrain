@@ -22,6 +22,7 @@ import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue
 import industryTagIcon from '../../assets/enterpriseDb/industry-tag.png'
 import emptyNews from '@/assets/home/empty-news.png'
 import { toIndustryNodes } from '@/utils/industryNodes'
+import { softFail } from '@/utils/softFail'
 
 defineOptions({ name: 'EnterpriseDb' })
 
@@ -75,7 +76,7 @@ onMounted(() => {
     .then((nodes) => {
       if (nodes.length) industryTree.value = nodes
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '企业库行业筛选'))
 })
 
 const locationText = (item: EnterpriseItem) => `${item.province}/${item.city}`

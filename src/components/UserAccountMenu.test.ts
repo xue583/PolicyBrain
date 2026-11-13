@@ -36,7 +36,6 @@ const mountMenu = async () => {
   const pinia = createPinia()
   setActivePinia(pinia)
   const auth = useAuthStore()
-  auth.token = 'access'
   auth.user = {
     phone: '19545670526',
     identity: 1,

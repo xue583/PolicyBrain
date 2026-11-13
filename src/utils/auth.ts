@@ -1,15 +1,12 @@
-/**
- * Token 持久化。
- * 生产环境应由后端通过 Set-Cookie（HttpOnly + Secure + SameSite）下发会话，
- * 前端只保留用户展示信息。开发阶段可通过 VITE_AUTH_STORAGE 切换存储介质。
- */
-const TOKEN_KEY = 'pb_access_token'
 const INVITE_KEY = 'pb_invite_code'
 const INVITE_REGISTER_KEY = 'pb_invite_register'
-const REFRESH_KEY = 'pb_refresh_token'
-const EXPIRES_KEY = 'pb_token_expires'
-const REFRESH_EXPIRES_KEY = 'pb_refresh_expires'
 const USER_KEY = 'pb_user'
+const LEGACY_TOKEN_KEYS = [
+  'pb_access_token',
+  'pb_refresh_token',
+  'pb_token_expires',
+  'pb_refresh_expires',
+]
 
 export type AuthUser = {
   id?: string | number
@@ -26,36 +23,11 @@ export type AuthUser = {
   [key: string]: unknown
 }
 
-export type SessionTokens = {
-  accessToken?: string
-  refreshToken?: string
-  expires?: string
-  refreshTokenExpires?: string
-}
-
 type Listener = () => void
 const authListeners = new Set<Listener>()
 const needLoginListeners = new Set<Listener>()
-/** 路由守卫可能早于 Header 订阅登录弹窗 */
+/** 路由守卫可能早于 Header 订阅登录弹窗。 */
 let pendingNeedLogin = false
-
-const resolveStorage = (): Storage => {
-  if (typeof window === 'undefined') {
-    return {
-      getItem: () => null,
-      setItem: () => undefined,
-      removeItem: () => undefined,
-      clear: () => undefined,
-      key: () => null,
-      length: 0,
-    } as Storage
-  }
-  return import.meta.env.VITE_AUTH_STORAGE === 'sessionStorage'
-    ? window.sessionStorage
-    : window.localStorage
-}
-
-const storage = resolveStorage()
 
 const emitAuthChange = () => {
   authListeners.forEach((fn) => fn())
@@ -84,7 +56,7 @@ export const triggerNeedLogin = () => {
   needLoginListeners.forEach((fn) => fn())
 }
 
-/** 邀请链接 `/?invite=` 暂存，登录/注册创建会话时随 PolicyLoginDto.inviteCode 上传 */
+/** 邀请链接 `/?invite=` 暂存，登录/注册创建会话时随 PolicyLoginDto.inviteCode 上传。 */
 export const rememberInviteCode = (code: string) => {
   if (typeof window === 'undefined') return
   const value = code.trim()
@@ -103,7 +75,7 @@ export const clearInviteCode = () => {
   window.sessionStorage.removeItem(INVITE_REGISTER_KEY)
 }
 
-/** 从邀请链接进入且未登录时，下一次打开登录弹窗切到注册 */
+/** 从邀请链接进入且未登录时，下一次打开登录弹窗切到注册。 */
 export const markInviteRegister = () => {
   if (typeof window === 'undefined') return
   window.sessionStorage.setItem(INVITE_REGISTER_KEY, '1')
@@ -116,65 +88,19 @@ export const consumeInviteRegister = () => {
   return pending
 }
 
-export const getToken = (): string => {
-  return storage.getItem(TOKEN_KEY) || ''
-}
-
-export const setToken = (token: string) => {
-  storage.setItem(TOKEN_KEY, token)
-  emitAuthChange()
-}
-
-export const getRefreshToken = (): string => {
-  return storage.getItem(REFRESH_KEY) || ''
-}
-
-export const setRefreshToken = (token: string) => {
-  storage.setItem(REFRESH_KEY, token)
-  emitAuthChange()
-}
-
-export const getTokenExpires = (): string => {
-  return storage.getItem(EXPIRES_KEY) || ''
-}
-
-export const getRefreshTokenExpires = (): string => {
-  return storage.getItem(REFRESH_EXPIRES_KEY) || ''
-}
-
-/** 检查 access token 是否已过期（基于本地存储的 expires 字段） */
-export const isTokenExpired = (): boolean => {
-  const expires = getTokenExpires()
-  if (!expires) return false // 无过期时间则认为未过期
-  try {
-    return Date.now() >= new Date(expires).getTime()
-  } catch {
-    return false
+/** 清理旧版本遗留的 Web Storage 令牌，避免升级后继续暴露。 */
+const removeLegacyTokens = () => {
+  if (typeof window === 'undefined') return
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    LEGACY_TOKEN_KEYS.forEach((key) => storage.removeItem(key))
   }
 }
 
-/** 检查 refresh token 是否已过期 */
-export const isRefreshTokenExpired = (): boolean => {
-  const expires = getRefreshTokenExpires()
-  if (!expires) return false
-  try {
-    return Date.now() >= new Date(expires).getTime()
-  } catch {
-    return false
-  }
-}
-
-export const clearToken = () => {
-  storage.removeItem(TOKEN_KEY)
-  storage.removeItem(REFRESH_KEY)
-  storage.removeItem(EXPIRES_KEY)
-  storage.removeItem(REFRESH_EXPIRES_KEY)
-  storage.removeItem(USER_KEY)
-  emitAuthChange()
-}
+removeLegacyTokens()
 
 export const getStoredUser = (): AuthUser | null => {
-  const raw = storage.getItem(USER_KEY)
+  if (typeof window === 'undefined') return null
+  const raw = window.localStorage.getItem(USER_KEY)
   if (!raw) return null
   try {
     return JSON.parse(raw) as AuthUser
@@ -183,64 +109,18 @@ export const getStoredUser = (): AuthUser | null => {
   }
 }
 
+/** 非敏感用户资料仅用于登录态提示，真正的认证凭据只存在 HttpOnly Cookie。 */
+export const hasSession = (): boolean => getStoredUser() != null
+
 export const setStoredUser = (user: AuthUser | null) => {
-  if (!user) {
-    storage.removeItem(USER_KEY)
-  } else {
-    storage.setItem(USER_KEY, JSON.stringify(user))
-  }
+  if (typeof window === 'undefined') return
+  if (!user) window.localStorage.removeItem(USER_KEY)
+  else window.localStorage.setItem(USER_KEY, JSON.stringify(user))
   emitAuthChange()
 }
 
-export const saveSessionTokens = (tokens: SessionTokens) => {
-  if (tokens.accessToken) {
-    storage.setItem(TOKEN_KEY, tokens.accessToken)
-  }
-  if (tokens.refreshToken) {
-    storage.setItem(REFRESH_KEY, tokens.refreshToken)
-  }
-  if (tokens.expires) {
-    storage.setItem(EXPIRES_KEY, tokens.expires)
-  }
-  if (tokens.refreshTokenExpires) {
-    storage.setItem(REFRESH_EXPIRES_KEY, tokens.refreshTokenExpires)
-  }
+export const clearSession = () => {
+  if (typeof window !== 'undefined') window.localStorage.removeItem(USER_KEY)
+  removeLegacyTokens()
   emitAuthChange()
-}
-
-export const pickTokens = (payload: unknown): SessionTokens => {
-  if (!payload || typeof payload !== 'object') return {}
-  const data = payload as Record<string, unknown>
-  // 支持单层或双层 data 嵌套
-  let nested: Record<string, unknown> = data
-  if (data.data && typeof data.data === 'object') {
-    nested = data.data as Record<string, unknown>
-  }
-  if (nested.data && typeof nested.data === 'object') {
-    nested = nested.data as Record<string, unknown>
-  }
-
-  const accessToken =
-    (nested.accessToken as string) ||
-    (nested.access_token as string) ||
-    (nested.token as string) ||
-    (nested.jwt as string) ||
-    undefined
-
-  const refreshToken =
-    (nested.refreshToken as string) ||
-    (nested.refresh_token as string) ||
-    undefined
-
-  const expires =
-    (nested.expires as string) ||
-    (nested.accessTokenExpires as string) ||
-    undefined
-
-  const refreshTokenExpires =
-    (nested.refreshTokenExpires as string) ||
-    (nested.refresh_expires as string) ||
-    undefined
-
-  return { accessToken, refreshToken, expires, refreshTokenExpires }
 }

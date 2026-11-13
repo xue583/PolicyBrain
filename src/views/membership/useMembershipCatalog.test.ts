@@ -25,7 +25,7 @@ describe('useMembershipCatalog', () => {
 
   it('reuses the catalog for the same signed-in session', async () => {
     const auth = useAuthStore()
-    auth.token = 'access'
+    auth.user = {}
     const first = useMembershipCatalog()
     const second = useMembershipCatalog()
 

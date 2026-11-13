@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useRegionStore } from '@/stores/region'
 import { toErrorMessage } from '@/utils/apiError'
 import { selectRegionProvince } from '@/utils/regionActions'
+import { softFail } from '@/utils/softFail'
 import {
   hasRegionIds,
   parseRegionIds,
@@ -108,7 +109,9 @@ export const useRegionSync = () => {
   const hydrateFromRoute = async (ids: RegionIds) => {
     if (!hasRegionIds(ids)) return
     const seq = ++hydrateSeq
-    const provinces = await loadRegionOptions().catch(() => [])
+    const provinces = await loadRegionOptions().catch(
+      softFail([], '路由地区回填'),
+    )
     if (seq !== hydrateSeq) return
 
     const province = provinces.find((item) => item.id === ids.provinceId)
@@ -122,7 +125,9 @@ export const useRegionSync = () => {
       return
     }
 
-    const cities = await loadRegionOptions(province.id).catch(() => [])
+    const cities = await loadRegionOptions(province.id).catch(
+      softFail([], '路由地区回填'),
+    )
     if (seq !== hydrateSeq) return
     region.setCityLabels(cities.map((item) => item.label))
     const city = cities.find((item) => item.id === ids.cityId)
@@ -140,7 +145,9 @@ export const useRegionSync = () => {
       return
     }
 
-    const districts = await loadRegionOptions(city.id).catch(() => [])
+    const districts = await loadRegionOptions(city.id).catch(
+      softFail([], '路由地区回填'),
+    )
     if (seq !== hydrateSeq) return
     const district = districts.find((item) => item.id === ids.districtId)
     applySelection({
@@ -156,10 +163,14 @@ export const useRegionSync = () => {
   /** 登录用户没有路由地区时，用账号里保存的地区恢复 */
   const restoreFromUserContext = async () => {
     if (region.provinceId != null || !isLoggedIn.value) return
-    const context = await fetchUserContext().catch(() => null)
+    const context = await fetchUserContext().catch(
+      softFail(null, '账号地区上下文'),
+    )
     if (!context || region.provinceId != null) return
 
-    const provinces = await loadRegionOptions().catch(() => [])
+    const provinces = await loadRegionOptions().catch(
+      softFail([], '账号地区回填'),
+    )
     const saved = resolveContextRegion(context, [], provinces)
     const province =
       provinces.find((item) => item.id === saved.provinceId) ??
@@ -178,7 +189,9 @@ export const useRegionSync = () => {
       return
     }
 
-    const cities = await loadRegionOptions(province.id).catch(() => [])
+    const cities = await loadRegionOptions(province.id).catch(
+      softFail([], '账号地区回填'),
+    )
     region.setCityLabels(cities.map((item) => item.label))
     const city =
       cities.find((item) => item.id === saved.cityId) ??

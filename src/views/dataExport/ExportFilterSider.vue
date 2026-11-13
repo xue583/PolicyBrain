@@ -13,6 +13,7 @@ import {
   policyYears,
   provinces as fallbackProvinces,
 } from '../../mock/dataExport'
+import { softFail } from '@/utils/softFail'
 
 defineOptions({ name: 'ExportFilterSider' })
 
@@ -66,18 +67,18 @@ onMounted(() => {
       const labels = list.map((item) => item.label).filter(Boolean)
       if (labels.length) provinceOptions.value = labels
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '导出筛选地区选项'))
   void fetchIndustryNames()
     .then((names) => {
       if (names.length) industryOptions.value = names
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '导出筛选行业选项'))
   void fetchHotKeywords('policy', 10)
     .then((groups) => {
       const names = groups.policies.map((item) => item.keyword).filter(Boolean)
       if (names.length) hotPolicyOptions.value = names
     })
-    .catch(() => undefined)
+    .catch(softFail(undefined, '导出筛选热词'))
 })
 
 const toggleTag = (list: string[], value: string) => {

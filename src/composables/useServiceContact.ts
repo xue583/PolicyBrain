@@ -1,6 +1,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { fetchServiceContacts, type ServiceContact } from '@/api/account'
 import { SITE } from '@/constants/site'
+import { softFail } from '@/utils/softFail'
 
 const contact = ref<ServiceContact | null>(null)
 let pending: Promise<void> | null = null
@@ -20,7 +21,8 @@ export const loadServiceContact = () => {
       contact.value = data ?? null
       settled = true
     })
-    .catch(() => {
+    .catch((error) => {
+      softFail(undefined, '客服联系方式')(error)
       settled = false
     })
     .finally(() => {

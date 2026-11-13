@@ -18,7 +18,7 @@ defineOptions({ name: 'InvoiceDetailModal' })
 const open = defineModel<boolean>('open', { default: false })
 
 const props = defineProps<{
-  applicationId?: number | null
+  applicationId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -61,7 +61,7 @@ const statusClass = (status?: number) => {
   }
 }
 
-const load = async (id: number) => {
+const load = async (id: string) => {
   loading.value = true
   error.value = ''
   try {

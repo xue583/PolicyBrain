@@ -1,56 +1,49 @@
-/**
- * 后端数据解密工具模块
- * 后端对敏感数据采用 AES-CBC（128/192/256 位，PKCS#7 填充）加密，密文以 Base64 字符串下发，
- * 密钥（VITE_CRYPTO_KEY）与初始向量（VITE_CRYPTO_IV）由后端提供，通过环境变量注入。
- *
- * 环境变量中存放的不是明文密钥，而是 XOR 掩码串（见 maskSecret）：
- * Vite 会把 import.meta.env 的值静态内联进打包产物，若存明文，产物中可直接搜索到密钥；
- * 存掩码串则产物中不含明文，运行时还原后再解密。
- * 掩码串由 scripts/mask-crypto-secret.mjs 从明文 Base64 密钥生成。
- *
- * 响应数据分为两种形态：
- * - 明文：直接返回业务数据
- * - 密文：`{ encrypted: true, data: '<Base64 密文>' }`，解密后为 JSON 字符串，需再 parse
- *
- * 使用场景：
- * - 请求层响应拦截器统一解密（见 utils/request.ts）
- * - 需要单独解密的业务数据
- */
-import CryptoJS from 'crypto-js'
+import axios from 'axios'
 import { ApiError } from '@/utils/apiError'
+import { CSRF_HEADER_NAME, ensureCsrfToken } from '@/utils/csrf'
 
-/** 后端响应中的数据信封：encrypted 为真值时 data 是 Base64 密文 */
+/** 后端响应中的数据信封：encrypted 为真值时 data 是 Base64 密文。 */
 export type ApiPayload = {
   encrypted?: boolean | number | string
   data?: unknown
 }
 
-/** 与后端约定对齐采用 truthy 判断：encrypted 为 1、"true" 等真值均视为加密 */
+export type SessionKeyExchange = {
+  keyId: string
+  keyEnvelope: string
+}
+
+type SessionKey = {
+  keyId: string
+  key: CryptoKey
+  /** 交换信封仍携带 IV；业务密文改为每消息 IV 前缀，解密不再使用此字段。 */
+  iv: Uint8Array
+}
+
+let currentKey: SessionKey | null = null
+let publicKeyPromise: Promise<string | null> | null = null
+let exchangePromise: Promise<string> | null = null
+let resetVersion = 0
+
 const isEncryptedPayload = (payload: unknown): payload is { data: string } => {
   if (!payload || typeof payload !== 'object') return false
   const body = payload as ApiPayload
   return !!body.encrypted && typeof body.data === 'string'
 }
 
-/** AES 密钥合法字节数（128/192/256 位），CBC 初始向量固定 16 字节 */
-const VALID_KEY_SIZES = [16, 24, 32]
-
-/** 掩码盐：明文密钥与盐逐字节循环异或后再 Base64，形成环境变量中的掩码串 */
-const MASK_SALT = [0x37, 0x5d, 0x91, 0xc2, 0x6e, 0xa4, 0x08, 0xf3]
-
-const xorMask = (bytes: Uint8Array) => {
-  for (let i = 0; i < bytes.length; i += 1) {
-    bytes[i] ^= MASK_SALT[i % MASK_SALT.length]
-  }
-  return bytes
+/** 标识加密开启但未获得密文的响应，请求层据此重新协商，而非静默接受降级。 */
+export const isUnexpectedPlainPayload = (payload: unknown): boolean => {
+  if (!payload || typeof payload !== 'object') return false
+  const body = payload as ApiPayload
+  return body.encrypted === false && body.data != null
 }
 
-/**
- * 明文 Base64 密钥与其掩码串的互相转换（XOR 自反，同一变换执行两次即还原）。
- * 导出供生成脚本（scripts/mask-crypto-secret.mjs）与测试使用，保证两端算法一致。
- */
-export const maskSecret = (plain: string): string => {
-  const bytes = xorMask(Uint8Array.from(plain, (c) => c.charCodeAt(0) & 0xff))
+const bytesFromBase64 = (value: string): Uint8Array => {
+  const binary = atob(value)
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0))
+}
+
+const bytesToBase64 = (bytes: Uint8Array): string => {
   let binary = ''
   bytes.forEach((byte) => {
     binary += String.fromCharCode(byte)
@@ -58,47 +51,188 @@ export const maskSecret = (plain: string): string => {
   return btoa(binary)
 }
 
-/** 掩码串还原为明文 Base64 密钥 */
-export const unmaskSecret = (masked: string): string => {
-  const binary = atob(masked)
-  const bytes = xorMask(Uint8Array.from(binary, (c) => c.charCodeAt(0)))
-  return String.fromCharCode(...bytes)
+const randomBytes = (size: number): Uint8Array => {
+  const bytes = new Uint8Array(size)
+  crypto.getRandomValues(bytes)
+  return bytes
 }
 
-/** 从环境变量读取掩码串并还原出密钥与初始向量，任一未配置时返回 null */
-const readSecrets = () => {
-  const keyMasked = import.meta.env.VITE_CRYPTO_KEY
-  const ivMasked = import.meta.env.VITE_CRYPTO_IV
-  if (!keyMasked || !ivMasked) return null
-  const key = CryptoJS.enc.Base64.parse(unmaskSecret(keyMasked))
-  const iv = CryptoJS.enc.Base64.parse(unmaskSecret(ivMasked))
-  if (!VALID_KEY_SIZES.includes(key.sigBytes) || iv.sigBytes !== 16) {
-    throw new ApiError('数据解密密钥配置无效', 500)
+/** 获取后端 SPKI 公钥；null 明确表示后端未启用响应加密。 */
+const getPublicKey = (): Promise<string | null> => {
+  if (!publicKeyPromise) {
+    publicKeyPromise = (async () => {
+      try {
+        const { data } = await axios.get('/auth/keyExchanges/publicKey', {
+          withCredentials: true,
+        })
+        const body = data?.data ?? data
+        if (body?.enabled === false) return null
+        if (body?.enabled === true && typeof body.publicKey === 'string') {
+          return body.publicKey
+        }
+        throw new Error('invalid key exchange configuration')
+      } catch {
+        publicKeyPromise = null
+        throw new ApiError('会话加密公钥获取失败', 500)
+      }
+    })()
   }
-  return { key, iv }
+  return publicKeyPromise
 }
 
-/** AES-CBC / PKCS#7 解密 Base64 密文，返回解析后的业务数据 */
-export const decryptData = <T = unknown>(cipherText: string): T => {
-  const secrets = readSecrets()
-  if (!secrets) {
-    throw new ApiError('数据解密密钥未配置', 500)
-  }
+/** 生成 32 字节 AES Key、16 字节 IV，并用 RSA-OAEP-SHA256 封装 48 字节秘密。 */
+const createSessionKey = async (): Promise<
+  (SessionKeyExchange & { session: SessionKey }) | null
+> => {
+  const publicKey = await getPublicKey()
+  if (publicKey == null) return null
+  if (!crypto.subtle) throw new ApiError('当前环境不支持会话加密', 500)
 
   try {
-    const bytes = CryptoJS.AES.decrypt(cipherText, secrets.key, {
-      iv: secrets.iv,
-      mode: CryptoJS.mode.CBC,
-      padding: CryptoJS.pad.Pkcs7,
-    })
-    return JSON.parse(bytes.toString(CryptoJS.enc.Utf8)) as T
+    const rsaKey = await crypto.subtle.importKey(
+      'spki',
+      bytesFromBase64(publicKey) as BufferSource,
+      { name: 'RSA-OAEP', hash: 'SHA-256' },
+      false,
+      ['encrypt'],
+    )
+    const keyBytes = randomBytes(32)
+    const iv = randomBytes(16)
+    const plain = new Uint8Array(48)
+    plain.set(keyBytes)
+    plain.set(iv, 32)
+
+    const envelope = await crypto.subtle.encrypt(
+      { name: 'RSA-OAEP' },
+      rsaKey,
+      plain,
+    )
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyBytes as BufferSource,
+      { name: 'AES-CBC' },
+      false,
+      ['decrypt'],
+    )
+    const keyId = bytesToBase64(randomBytes(16))
+    return {
+      keyId,
+      keyEnvelope: bytesToBase64(new Uint8Array(envelope)),
+      session: { keyId, key, iv },
+    }
+  } catch {
+    throw new ApiError('会话密钥生成失败', 500)
+  }
+}
+
+/** 登录前生成并激活新密钥；后端未启用加密时显式返回 null。 */
+export const prepareSessionKey =
+  async (): Promise<SessionKeyExchange | null> => {
+    const candidate = await createSessionKey()
+    if (!candidate) {
+      currentKey = null
+      return null
+    }
+
+    currentKey = candidate.session
+    return { keyId: candidate.keyId, keyEnvelope: candidate.keyEnvelope }
+  }
+
+export const getSessionKeyId = (): string => currentKey?.keyId ?? ''
+export const hasSessionKey = (): boolean => currentKey != null
+
+/** 为已有 Cookie/Bearer 会话建立密钥映射，页面刷新后可再次调用。 */
+export const ensureSessionKey = (): Promise<string> => {
+  if (currentKey) return Promise.resolve(currentKey.keyId)
+  if (exchangePromise) return exchangePromise
+
+  const version = resetVersion
+  exchangePromise = (async () => {
+    const candidate = await createSessionKey()
+    if (!candidate) return ''
+    const csrfToken = await ensureCsrfToken()
+    try {
+      await axios.post(
+        '/auth/keyExchanges',
+        { keyId: candidate.keyId, keyEnvelope: candidate.keyEnvelope },
+        {
+          withCredentials: true,
+          headers: { [CSRF_HEADER_NAME]: csrfToken },
+        },
+      )
+    } catch (error) {
+      const status = axios.isAxiosError(error)
+        ? (error.response?.status ?? 500)
+        : 500
+      throw new ApiError(
+        status === 401 ? '登录已失效' : '会话密钥交换失败',
+        status,
+      )
+    }
+
+    if (version !== resetVersion) throw new ApiError('登录态已变更', 401)
+    currentKey = candidate.session
+    return candidate.keyId
+  })().finally(() => {
+    exchangePromise = null
+  })
+  return exchangePromise
+}
+
+let renewPromise: Promise<string> | null = null
+
+/** 后端内存密钥失效时生成新密钥并重新交换，不复用旧 IV。
+ *  在途的旧交换 Promise 必须先落定（它成功后会写入 currentKey），随后清空 currentKey
+ *  再重新交换——清空放在等待之前会被旧交换的赋值覆盖，renew 退化成复用旧 keyId 的 no-op。 */
+export const renewSessionKey = (): Promise<string> => {
+  if (renewPromise) return renewPromise
+  renewPromise = (async () => {
+    if (exchangePromise) {
+      try {
+        await exchangePromise
+      } catch {
+        // 旧交换失败不影响本次重试换新
+      }
+      exchangePromise = null
+    }
+    currentKey = null
+    return ensureSessionKey()
+  })()
+  return renewPromise.finally(() => {
+    renewPromise = null
+  })
+}
+
+/** 退出或认证失效时清除当前页密钥及缓存公钥。 */
+export const resetSessionKey = () => {
+  resetVersion += 1
+  currentKey = null
+  publicKeyPromise = null
+}
+
+/** AES-CBC / PKCS#7 解密 Base64(IV‖cipher) 密文，返回解析后的业务数据。 */
+export const decryptData = async <T = unknown>(
+  cipherText: string,
+): Promise<T> => {
+  if (!currentKey) throw new ApiError('会话密钥未建立', 409)
+  try {
+    const packed = bytesFromBase64(cipherText)
+    if (packed.byteLength <= 16) throw new Error('cipher too short')
+    const iv = packed.subarray(0, 16)
+    const cipher = packed.subarray(16)
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-CBC', iv: iv as BufferSource },
+      currentKey.key,
+      cipher as BufferSource,
+    )
+    return JSON.parse(new TextDecoder().decode(plain)) as T
   } catch {
     throw new ApiError('数据解密失败', 500)
   }
 }
 
-/** 响应数据解密入口：未加密数据原样返回，加密数据自动解密 */
-export const parseData = <T = unknown>(payload: unknown): T => {
+/** 明文原样返回，密文仅使用当前随机会话密钥解密。 */
+export const parseData = async <T = unknown>(payload: unknown): Promise<T> => {
   if (!isEncryptedPayload(payload)) return payload as T
   return decryptData<T>(payload.data)
 }
