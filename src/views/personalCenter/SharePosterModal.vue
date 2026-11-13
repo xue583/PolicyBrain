@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { fetchShareLink } from '@/api/account'
-import posterBg from '@/assets/personalCenter/share-poster-bg@2x.png'
+import posterBg from '@/assets/personalCenter/share-poster-bg@2x.webp'
 import { ApiError } from '@/utils/request'
 
 defineOptions({ name: 'SharePosterModal' })

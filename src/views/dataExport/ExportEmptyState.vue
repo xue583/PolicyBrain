@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import emptyImage from '../../assets/export/empty.png'
+import emptyImage from '../../assets/export/empty.webp'
 
 defineOptions({ name: 'ExportEmptyState' })
 

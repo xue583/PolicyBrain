@@ -17,7 +17,7 @@ import { toErrorMessage } from '@/utils/apiError'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import PanelTabs from '@/components/common/PanelTabs.vue'
-import emptyImg from '@/assets/personalCenter/empty-message.png'
+import emptyImg from '@/assets/personalCenter/empty-message.webp'
 
 defineOptions({ name: 'FollowPanel' })
 

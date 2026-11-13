@@ -18,7 +18,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import FilterRow from '@/components/common/FilterRow.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import SearchRow from '@/components/common/SearchRow.vue'
-import emptyNews from '@/assets/home/empty-news.png'
+import emptyNews from '@/assets/home/empty-news.webp'
 import exportIcon from '../../assets/enterpriseDb/export.png'
 import tipsIcon from '../../assets/enterpriseDb/tips.png'
 

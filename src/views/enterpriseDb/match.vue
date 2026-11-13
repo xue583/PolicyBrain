@@ -37,7 +37,7 @@ import matchIcon from '../../assets/enterpriseDb/match/icon-match.png'
 import publisherIcon from '../../assets/enterpriseDb/match/icon-publisher.png'
 import starIcon from '../../assets/enterpriseDb/match/icon-star.png'
 import amountIcon from '../../assets/enterpriseDb/match/icon-amount.png'
-import emptyNews from '@/assets/home/empty-news.png'
+import emptyNews from '@/assets/home/empty-news.webp'
 
 defineOptions({ name: 'EnterprisePolicyMatch' })
 

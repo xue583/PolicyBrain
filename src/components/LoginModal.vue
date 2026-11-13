@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import frameBg from '../assets/login/header-bg.png'
+import frameBg from '../assets/login/header-bg.webp'
 import closeIcon from '../assets/login/close.png'
 import vipBanner from '../assets/login/register/vip-banner.png'
 import vipBadge from '../assets/login/register/vip-badge.png'

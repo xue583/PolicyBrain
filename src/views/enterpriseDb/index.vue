@@ -20,7 +20,7 @@ import { fetchEnterprisePage } from '@/api/enterprises'
 import { fetchIndustryTree } from '@/api/meta'
 import IndustryCascadeFilter from '@/components/common/IndustryCascadeFilter.vue'
 import industryTagIcon from '../../assets/enterpriseDb/industry-tag.png'
-import emptyNews from '@/assets/home/empty-news.png'
+import emptyNews from '@/assets/home/empty-news.webp'
 import { toIndustryNodes } from '@/utils/industryNodes'
 import { softFail } from '@/utils/softFail'
 

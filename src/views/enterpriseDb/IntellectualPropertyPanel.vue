@@ -10,11 +10,11 @@ import type {
 import EmptyState from '@/components/common/EmptyState.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
-import emptyNews from '@/assets/home/empty-news.png'
-import ipPatentBg from '../../assets/enterpriseDb/container-291.png'
-import ipTrademarkBg from '../../assets/enterpriseDb/container-293.png'
-import ipSoftwareBg from '../../assets/enterpriseDb/container-294.png'
-import ipWorkBg from '../../assets/enterpriseDb/container-295.png'
+import emptyNews from '@/assets/home/empty-news.webp'
+import ipPatentBg from '../../assets/enterpriseDb/container-291.webp'
+import ipTrademarkBg from '../../assets/enterpriseDb/container-293.webp'
+import ipSoftwareBg from '../../assets/enterpriseDb/container-294.webp'
+import ipWorkBg from '../../assets/enterpriseDb/container-295.webp'
 
 defineOptions({ name: 'EnterpriseIntellectualPropertyPanel' })
 

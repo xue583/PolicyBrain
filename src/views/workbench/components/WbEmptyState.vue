@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import emptySearchImg from '@/assets/workbench/wb-empty-search.png'
+import emptySearchImg from '@/assets/workbench/wb-empty-search.webp'
 
 defineOptions({ name: 'WbEmptyState' })
 

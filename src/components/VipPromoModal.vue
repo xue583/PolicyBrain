@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import promoBg from '@/assets/home/vip-promo-bg.png'
+import promoBg from '@/assets/home/vip-promo-bg.webp'
 
 defineOptions({ name: 'VipPromoModal' })
 

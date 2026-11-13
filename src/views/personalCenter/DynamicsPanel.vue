@@ -14,7 +14,7 @@ import {
   companyNames,
   type PolicyChange,
 } from '@/mock/personalCenter'
-import emptyImg from '@/assets/personalCenter/empty-message.png'
+import emptyImg from '@/assets/personalCenter/empty-message.webp'
 import PcFilterRow from './components/PcFilterRow.vue'
 
 defineOptions({ name: 'DynamicsPanel' })

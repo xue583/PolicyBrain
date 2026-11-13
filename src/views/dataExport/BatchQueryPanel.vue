@@ -6,7 +6,7 @@ import stepDownloadIcon from '../../assets/export/download.png'
 import stepUploadIcon from '../../assets/export/upload-icon.png'
 import stepExportIcon from '../../assets/export/export-icon.png'
 import stepArrowIcon from '../../assets/export/step-arrow.png'
-import upload3dIcon from '../../assets/export/upload.png'
+import upload3dIcon from '../../assets/export/upload.webp'
 
 defineOptions({ name: 'ExportBatchQueryPanel' })
 

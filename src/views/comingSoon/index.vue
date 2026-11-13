@@ -9,7 +9,7 @@ import {
   FundOutlined,
   TeamOutlined,
 } from '@ant-design/icons-vue'
-import advertisementImg from '@/assets/api/advertisement.png'
+import advertisementImg from '@/assets/api/advertisement.webp'
 import openImg from '@/assets/api/open.png'
 import notOpenImg from '@/assets/api/notOpen.png'
 import { useRouteKeyword } from '@/composables/useRouteKeyword'

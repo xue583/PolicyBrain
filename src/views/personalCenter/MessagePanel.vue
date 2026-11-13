@@ -15,7 +15,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import PanelTabs from '@/components/common/PanelTabs.vue'
 import msgIcon from '@/assets/personalCenter/msg-icon.png'
-import emptyImg from '@/assets/personalCenter/empty-message.png'
+import emptyImg from '@/assets/personalCenter/empty-message.webp'
 
 defineOptions({ name: 'MessagePanel' })
 

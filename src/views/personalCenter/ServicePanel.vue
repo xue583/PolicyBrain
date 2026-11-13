@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CustomerServiceOutlined } from '@ant-design/icons-vue'
-import serviceImg from '@/assets/personalCenter/service-agent.png'
+import serviceImg from '@/assets/personalCenter/service-agent.webp'
 import qrFrameImg from '@/assets/personalCenter/qr-frame.png'
 import qrCodeImg from '@/assets/personalCenter/qr-service.png'
 import { useServiceContact } from '@/composables/useServiceContact'

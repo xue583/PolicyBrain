@@ -10,7 +10,7 @@ import {
 import EmptyState from '@/components/common/EmptyState.vue'
 import PagedTable from '@/components/common/PagedTable.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
-import emptyNews from '@/assets/home/empty-news.png'
+import emptyNews from '@/assets/home/empty-news.webp'
 
 defineOptions({ name: 'EnterpriseBusinessInfoPanel' })
 

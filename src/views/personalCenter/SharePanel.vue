@@ -22,8 +22,8 @@ import { identityLabel, maskPhone } from '@/utils/userDisplay'
 import EmptyState from '@/components/common/EmptyState.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import PanelTabs from '@/components/common/PanelTabs.vue'
-import bannerImg from '@/assets/personalCenter/share-banner.png'
-import emptyImg from '@/assets/personalCenter/empty-message.png'
+import bannerImg from '@/assets/personalCenter/share-banner.webp'
+import emptyImg from '@/assets/personalCenter/empty-message.webp'
 import SharePosterModal from './SharePosterModal.vue'
 
 defineOptions({ name: 'SharePanel' })

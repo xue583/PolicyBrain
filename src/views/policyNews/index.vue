@@ -25,7 +25,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import FilterRow from '@/components/common/FilterRow.vue'
 import PaginationBar from '@/components/common/PaginationBar.vue'
 import SelectedConditionsBar from '@/components/common/SelectedConditionsBar.vue'
-import emptyNews from '@/assets/home/empty-news.png'
+import emptyNews from '@/assets/home/empty-news.webp'
 
 defineOptions({ name: 'PolicyNews' })
 

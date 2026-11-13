@@ -7,7 +7,7 @@ import type {
 } from '../../mock/enterpriseDb'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SectionTitle from '@/components/common/SectionTitle.vue'
-import emptyNews from '@/assets/home/empty-news.png'
+import emptyNews from '@/assets/home/empty-news.webp'
 
 defineOptions({ name: 'EnterpriseProductIndustryPanel' })
 

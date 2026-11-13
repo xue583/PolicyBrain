@@ -776,7 +776,7 @@ const taskRowIcon = (task: TaskItem) =>
         rgba(243, 247, 253, 1.84) 55%,
         rgba(239, 243, 250, 0.9) 100%
       ),
-      url('../../assets/workbench/wb-chat-banner.png');
+      url('../../assets/workbench/wb-chat-banner.webp');
     background-repeat: no-repeat;
     background-position:
       center,
